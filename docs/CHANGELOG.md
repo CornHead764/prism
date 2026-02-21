@@ -2,6 +2,20 @@
 
 All notable changes to Prism are documented in this file.
 
+## [0.9.5] - 2026-02-21
+
+### Added
+- **API Tokens**: Long-lived bearer tokens for machine-to-machine access
+  - Generate tokens in Settings → Security → API Tokens
+  - Tokens grant parent-level access to all API endpoints
+  - SHA-256 hashed storage — raw token shown only once at creation
+  - Revoke tokens at any time; `lastUsedAt` tracked per token
+  - All existing API routes automatically support `Authorization: Bearer <token>`
+- **Home Assistant Integration Guide** (`docs/home-assistant.md`)
+  - Iframe embedding via `ALLOWED_FRAME_ANCESTORS` + `panel_iframe`
+  - REST sensor examples for calendar events, chores, shopping, meals
+  - Automation examples for TTS announcements and notifications
+
 ## [0.9.4] - 2026-02-21
 
 ### Added

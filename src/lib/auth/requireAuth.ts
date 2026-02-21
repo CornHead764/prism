@@ -1,6 +1,7 @@
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { validateSession } from './session';
+import { validateApiToken } from './apiTokens';
 import { PERMISSIONS, type RolePermissions } from '@/types/user';
 import { db } from '@/lib/db/client';
 import { settings } from '@/lib/db/schema';
@@ -12,10 +13,32 @@ export interface AuthResult {
 }
 
 /**
+ * Extract and validate a Bearer token from the Authorization header.
+ * Returns AuthResult on success, null if no bearer token or invalid.
+ */
+async function checkBearerToken(): Promise<AuthResult | null> {
+  const headerStore = await headers();
+  const authHeader = headerStore.get('authorization');
+  if (!authHeader?.startsWith('Bearer ')) return null;
+
+  const rawToken = authHeader.slice(7);
+  if (!rawToken) return null;
+
+  return validateApiToken(rawToken);
+}
+
+/**
  * Validate the current request's session cookie.
  * Returns { userId, role } on success, or a 401 NextResponse on failure.
+ *
+ * Checks Bearer token first, then falls back to cookie auth.
  */
 export async function requireAuth(): Promise<AuthResult | NextResponse> {
+  // 1. Check Bearer token (API tokens for machine-to-machine access)
+  const bearerAuth = await checkBearerToken();
+  if (bearerAuth) return bearerAuth;
+
+  // 2. Fall back to cookie-based session auth
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get('prism_session')?.value;
 
@@ -40,8 +63,15 @@ export async function requireAuth(): Promise<AuthResult | NextResponse> {
 /**
  * Optional authentication - returns user if logged in, null otherwise.
  * Use this for read-only endpoints that should work for guests.
+ *
+ * Checks Bearer token first, then falls back to cookie auth.
  */
 export async function optionalAuth(): Promise<AuthResult | null> {
+  // 1. Check Bearer token
+  const bearerAuth = await checkBearerToken();
+  if (bearerAuth) return bearerAuth;
+
+  // 2. Fall back to cookie-based session auth
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get('prism_session')?.value;
 

@@ -197,6 +197,12 @@ export const createGoalSchema = z.object({
 
 export const updateGoalSchema = createGoalSchema.partial();
 
+// API TOKEN SCHEMAS
+
+export const createApiTokenSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(100),
+});
+
 // LAYOUT SCHEMAS
 
 const widgetConfigSchema = z.object({

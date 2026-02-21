@@ -7,6 +7,15 @@ CREATE TABLE IF NOT EXISTS public.api_credentials (
     updated_at timestamp without time zone DEFAULT now() NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS public.api_tokens (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    name character varying(100) NOT NULL,
+    token_hash character varying(64) NOT NULL,
+    created_by uuid NOT NULL,
+    last_used_at timestamp without time zone,
+    created_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS public.babysitter_info (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     section character varying(50) NOT NULL,
@@ -394,6 +403,9 @@ ALTER TABLE ONLY public.api_credentials
 ALTER TABLE ONLY public.api_credentials
     ADD CONSTRAINT api_credentials_service_unique UNIQUE (service);
 
+ALTER TABLE ONLY public.api_tokens
+    ADD CONSTRAINT api_tokens_pkey PRIMARY KEY (id);
+
 ALTER TABLE ONLY public.babysitter_info
     ADD CONSTRAINT babysitter_info_pkey PRIMARY KEY (id);
 
@@ -474,6 +486,10 @@ ALTER TABLE ONLY public.tasks
 
 ALTER TABLE ONLY public.users
     ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+
+CREATE INDEX IF NOT EXISTS api_tokens_created_by_idx ON public.api_tokens USING btree (created_by);
+
+CREATE UNIQUE INDEX IF NOT EXISTS api_tokens_token_hash_idx ON public.api_tokens USING btree (token_hash);
 
 CREATE INDEX IF NOT EXISTS babysitter_info_section_idx ON public.babysitter_info USING btree (section);
 
@@ -572,6 +588,9 @@ CREATE INDEX IF NOT EXISTS tasks_list_id_idx ON public.tasks USING btree (list_i
 CREATE INDEX IF NOT EXISTS tasks_task_source_idx ON public.tasks USING btree (task_source_id);
 
 CREATE INDEX IF NOT EXISTS users_email_idx ON public.users USING btree (email);
+
+ALTER TABLE ONLY public.api_tokens
+    ADD CONSTRAINT api_tokens_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE CASCADE;
 
 ALTER TABLE ONLY public.birthdays
     ADD CONSTRAINT birthdays_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
@@ -770,3 +789,4 @@ ALTER TABLE ONLY public.tasks
 
 ALTER TABLE ONLY public.tasks
     ADD CONSTRAINT tasks_task_source_id_fkey FOREIGN KEY (task_source_id) REFERENCES public.task_sources(id) ON DELETE SET NULL;
+

@@ -679,6 +679,27 @@ export const layouts = pgTable('layouts', {
 });
 
 
+export const apiTokens = pgTable('api_tokens', {
+  id: uuid('id').defaultRandom().primaryKey(),
+
+  name: varchar('name', { length: 100 }).notNull(),
+
+  // SHA-256 hex of the raw token (for fast lookup)
+  tokenHash: varchar('token_hash', { length: 64 }).notNull(),
+
+  createdBy: uuid('created_by')
+    .references(() => users.id, { onDelete: 'cascade' })
+    .notNull(),
+
+  lastUsedAt: timestamp('last_used_at'),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  tokenHashIdx: uniqueIndex('api_tokens_token_hash_idx').on(table.tokenHash),
+  createdByIdx: index('api_tokens_created_by_idx').on(table.createdBy),
+}));
+
+
 export const apiCredentials = pgTable('api_credentials', {
   id: uuid('id').defaultRandom().primaryKey(),
 
@@ -1027,6 +1048,13 @@ export const photosRelations = relations(photos, ({ one }) => ({
   source: one(photoSources, {
     fields: [photos.sourceId],
     references: [photoSources.id],
+  }),
+}));
+
+export const apiTokensRelations = relations(apiTokens, ({ one }) => ({
+  createdByUser: one(users, {
+    fields: [apiTokens.createdBy],
+    references: [users.id],
   }),
 }));
 
