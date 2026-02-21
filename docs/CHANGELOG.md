@@ -11,6 +11,9 @@ All notable changes to Prism are documented in this file.
   - SHA-256 hashed storage — raw token shown only once at creation
   - Revoke tokens at any time; `lastUsedAt` tracked per token
   - All existing API routes automatically support `Authorization: Bearer <token>`
+- **Iframe Embedding**: Configurable `ALLOWED_FRAME_ANCESTORS` env var for embedding Prism in Home Assistant, Node-RED dashboards, or any iframe consumer
+  - Defaults to `SAMEORIGIN` when unset; supports comma-separated origins or `*`
+  - Security headers extracted to dedicated module with unit tests
 - **Home Assistant Integration Guide** (`docs/home-assistant.md`)
   - Iframe embedding via `ALLOWED_FRAME_ANCESTORS` + `panel_iframe`
   - REST sensor examples for calendar events, chores, shopping, meals
