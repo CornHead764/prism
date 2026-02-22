@@ -5,6 +5,19 @@ All notable changes to Prism are documented in this file.
 ## [0.9.5] - 2026-02-21
 
 ### Added
+- **E2E Test Suite**: Comprehensive Playwright tests covering core user flows (~40 tests)
+  - Auth: PIN pad open/close, login/logout, incorrect PIN error, child login
+  - Dashboard: widget rendering, sidebar nav links, direct URL routing
+  - Tasks: list loading, toggle completion, status filters, group-by-person view
+  - Chores: list loading, history view, group-by-person, add button visibility
+  - Shopping: list tabs, category display, item checking, shopping mode, progress bar
+  - Calendar: view switching (day/week/month), date navigation, Today button
+  - Settings: section navigation, display/theme settings, family member list, about
+  - Modes: away mode activate/deactivate/overlay, babysitter mode activate/overlay
+  - Shared helpers (`e2e/helpers/`) for auth and database reset between tests
+- **Unit Tests**: Core utility and auth module tests (267 total)
+  - MS To-Do sync integration tests
+  - Google Calendar converter tests
 - **API Tokens**: Long-lived bearer tokens for machine-to-machine access
   - Generate tokens in Settings → Security → API Tokens
   - Tokens grant parent-level access to all API endpoints
