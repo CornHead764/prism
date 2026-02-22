@@ -9,6 +9,10 @@ All notable changes to Prism are documented in this file.
 - **Widget text color**: New "Text" section in properties bar lets you override text/icon color per widget (Auto mode uses luminance detection or theme default)
 - **Calendar transparent mode**: When calendar widget has custom/transparent background, day cell backgrounds are removed so wallpaper shows through the entire widget
 
+### Fixed
+- **Text color persistence**: Widget text color now saves to database (was being stripped by API validation)
+- **Text color coverage**: Overrides Tailwind CSS custom properties (`--foreground`, `--card-foreground`, `--muted-foreground`) so all text in the widget — including muted/secondary text — picks up the chosen color
+
 ### Improved
 - **Calendar dark mode**: Replaced hardcoded `bg-gray-200` past-day backgrounds with theme-aware `bg-muted` variants that adapt to light/dark mode
 - **Properties bar UX**: Opacity buttons only appear when a color fill is selected (not for None or Transparent); Fill palette uses 9-column grid to accommodate Transparent swatch
