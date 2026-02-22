@@ -23,7 +23,7 @@ out/
 .npm
 .pnpm-store/
 .cache/
-cache/
+/cache/
 uploads/
 
 # Logs
