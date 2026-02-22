@@ -5,6 +5,11 @@ All notable changes to Prism are documented in this file.
 ## [0.9.5] - 2026-02-21
 
 ### Added
+- **Tier 3 Unit Tests**: Hook and service coverage (42 tests)
+  - `useIdleDetection` hook: initial state, timeout params, localStorage fallback, default 120s, event listener registration (mousemove/keydown/touchstart), screensaver custom event
+  - `useAwayModeTimeout` hook: default disabled, localStorage persistence, setTimeout dispatch, CustomEvent sync, effect cleanup
+  - `useCalendarFilter` hook: initial "all" selection, toggle all/individual calendars, auto-"all" behavior, filterEvents by groupId/userId, unknown source exclusion
+  - Photo storage service: path construction (originals/thumbs), directory creation, auto-orient via sharp, conditional resize (>1920px), thumbnail generation with prefix, deletion with/without thumbnail, missing file tolerance
 - **Tier 2 Unit Tests**: Integration and hook coverage (41 tests)
   - Calendar sync service: token refresh timing (5-min window, null expiry), source validation (missing/wrong provider/no token), event upsert, deleted event cleanup, per-source error isolation
   - OneDrive integration: OAuth URL generation, token exchange/refresh, folder listing, photo MIME filtering, pagination with `@odata.nextLink`, photo download
