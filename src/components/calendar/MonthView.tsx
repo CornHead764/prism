@@ -15,6 +15,7 @@ import {
   getMonth,
 } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useWidgetBgOverride } from '@/components/widgets/WidgetContainer';
 import type { CalendarEvent } from '@/types/calendar';
 import { seasonalPalettes } from '@/lib/themes/seasonalThemes';
 
@@ -38,6 +39,8 @@ export function MonthView({
   onEventClick,
   onDateClick,
 }: MonthViewProps) {
+  const bgOverride = useWidgetBgOverride();
+  const transparentMode = bgOverride?.hasCustomBg === true;
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const calendarStart = startOfWeek(monthStart);
@@ -95,10 +98,11 @@ export function MonthView({
               key={index}
               onClick={() => onDateClick(date)}
               className={cn(
-                'border border-border rounded-md p-1 cursor-pointer bg-card/85 backdrop-blur-sm',
+                'border border-border rounded-md p-1 cursor-pointer',
+                !transparentMode && 'bg-card/85 backdrop-blur-sm',
                 'flex flex-col min-h-0',
                 !isSameMonth(date, currentDate) && 'opacity-50 text-muted-foreground',
-                isPast && isSameMonth(date, currentDate) && 'bg-gray-200 text-gray-600 dark:bg-muted/40 dark:text-muted-foreground',
+                !transparentMode && isPast && isSameMonth(date, currentDate) && 'bg-muted/50 text-muted-foreground',
                 isToday(date) && 'border-primary border-2'
               )}
             >

@@ -11,6 +11,7 @@ import {
   getWeek,
 } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useWidgetBgOverride } from '@/components/widgets/WidgetContainer';
 import { useOrientation } from '@/lib/hooks/useOrientation';
 import type { CalendarEvent } from '@/types/calendar';
 
@@ -25,6 +26,8 @@ export function TwoWeekView({
   events,
   onEventClick,
 }: TwoWeekViewProps) {
+  const bgOverride = useWidgetBgOverride();
+  const transparentMode = bgOverride?.hasCustomBg === true;
   const weekStart = startOfWeek(currentDate);
   const orientation = useOrientation();
   const isPortrait = orientation === 'portrait';
@@ -52,9 +55,10 @@ export function TwoWeekView({
     return (
       <div
         className={cn(
-          'border border-border rounded-md bg-card/85 backdrop-blur-sm h-full',
+          'border border-border rounded-md h-full',
+          !transparentMode && 'bg-card/85 backdrop-blur-sm',
           'flex flex-col overflow-hidden',
-          isPast && 'bg-gray-200 text-gray-600 dark:bg-muted/40 dark:text-muted-foreground',
+          !transparentMode && isPast && 'bg-muted/50 text-muted-foreground',
           isToday(date) && 'border-primary border-2'
         )}
       >

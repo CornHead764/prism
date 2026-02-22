@@ -176,15 +176,19 @@ function ScreensaverGrid() {
     saveScreensaverLayout(updated);
   }, []);
 
-  const getWidgetStyle = (w: WidgetConfig) => {
-    if (!w.backgroundColor) return undefined;
-    const opacity = w.backgroundOpacity ?? 1;
-    return {
-      backgroundColor: opacity < 1
+  const getWidgetStyle = (w: WidgetConfig): React.CSSProperties | undefined => {
+    if (!w.backgroundColor && !w.textColor) return undefined;
+    const style: React.CSSProperties = { borderRadius: '0.5rem' };
+    if (w.backgroundColor && w.backgroundColor !== 'transparent') {
+      const opacity = w.backgroundOpacity ?? 1;
+      style.backgroundColor = opacity < 1
         ? hexToRgba(w.backgroundColor, opacity)
-        : w.backgroundColor,
-      borderRadius: '0.5rem',
-    };
+        : w.backgroundColor;
+    }
+    if (w.textColor) {
+      style.color = w.textColor;
+    }
+    return style;
   };
 
   const renderWidget = (w: WidgetConfig) => {

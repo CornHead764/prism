@@ -78,8 +78,14 @@ export const WidgetAlignmentProvider = WidgetAlignmentContext.Provider;
 
 // Context for grid-level background override — when the grid wrapper applies a custom
 // background, the Card strips its own bg/border/shadow so there's no double background.
-const WidgetBgOverrideContext = React.createContext<{ hasCustomBg: boolean } | null>(null);
+// Also carries explicit textColor so WidgetContainer can apply it on the Card.
+const WidgetBgOverrideContext = React.createContext<{ hasCustomBg: boolean; textColor?: string } | null>(null);
 export const WidgetBgOverrideProvider = WidgetBgOverrideContext.Provider;
+
+/** Hook for sub-components (e.g. calendar views) to check if widget has custom bg */
+export function useWidgetBgOverride() {
+  return React.useContext(WidgetBgOverrideContext);
+}
 
 // Context for current widget ID so WidgetContainer can self-lookup
 const WidgetIdContext = React.createContext<string | null>(null);
@@ -193,6 +199,7 @@ export function WidgetContainer({
   // When grid-level background is applied, strip Card's own bg so it doesn't double up
   const bgOverride = React.useContext(WidgetBgOverrideContext);
   const stripCardBg = bgOverride?.hasCustomBg === true;
+  const overrideTextColor = bgOverride?.textColor;
 
   // Size classes for the grid
   const sizeClasses: Record<WidgetSize, string> = {
@@ -218,17 +225,17 @@ export function WidgetContainer({
         'overflow-visible',
         // Strip Card styling when grid-level background is applied
         stripCardBg && 'backdrop-blur-none border-transparent shadow-none',
-        // Auto text color based on background luminance
-        // Future: per-widget text color manual override could replace this
-        backgroundColor && (isLightColor(backgroundColor) ? 'text-black' : 'text-white'),
+        // Auto text color based on background luminance (skipped when explicit textColor override)
+        !overrideTextColor && backgroundColor && (isLightColor(backgroundColor) ? 'text-black' : 'text-white'),
         className
       )}
       onClick={onClick}
-      style={
-        stripCardBg
+      style={{
+        ...(stripCardBg
           ? { backgroundColor: 'transparent' }
-          : backgroundColor ? { backgroundColor } : undefined
-      }
+          : backgroundColor ? { backgroundColor } : {}),
+        ...(overrideTextColor ? { color: overrideTextColor } : {}),
+      }}
     >
       {/* WIDGET HEADER */}
       {showHeader && title && (

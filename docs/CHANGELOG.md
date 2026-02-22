@@ -2,6 +2,17 @@
 
 All notable changes to Prism are documented in this file.
 
+## [1.0.2] - 2026-02-22
+
+### Added
+- **Transparent widget background**: New "Transparent" swatch (checkerboard icon) in Fill palette strips the Card background entirely, letting wallpaper show through
+- **Widget text color**: New "Text" section in properties bar lets you override text/icon color per widget (Auto mode uses luminance detection or theme default)
+- **Calendar transparent mode**: When calendar widget has custom/transparent background, day cell backgrounds are removed so wallpaper shows through the entire widget
+
+### Improved
+- **Calendar dark mode**: Replaced hardcoded `bg-gray-200` past-day backgrounds with theme-aware `bg-muted` variants that adapt to light/dark mode
+- **Properties bar UX**: Opacity buttons only appear when a color fill is selected (not for None or Transparent); Fill palette uses 9-column grid to accommodate Transparent swatch
+
 ## [1.0.1] - 2026-02-22
 
 ### Fixed

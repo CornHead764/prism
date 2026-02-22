@@ -13,12 +13,16 @@ import 'react-resizable/css/styles.css';
 
 const overlapCompactor = getCompactor(null, true);
 
-const COLOR_OPTIONS = [
-  null,
+const COLOR_PALETTE = [
   '#3B82F6', '#EC4899', '#10B981', '#F59E0B', '#8B5CF6',
   '#EF4444', '#06B6D4', '#84CC16', '#F97316', '#6366F1',
   '#FFFFFF', '#9CA3AF', '#6B7280', '#374151', '#000000',
 ];
+
+// Fill options: None, Transparent (checkerboard), then colors
+const FILL_OPTIONS: (string | null)[] = [null, 'transparent', ...COLOR_PALETTE];
+// Outline/Text options: None/Auto, then colors
+const COLOR_OPTIONS: (string | null)[] = [null, ...COLOR_PALETTE];
 
 export interface EditorTheme {
   gridBg: string;
@@ -218,7 +222,7 @@ export function LayoutGridEditor({
     };
   }, [onLayoutChange]);
 
-  const updateWidgetColor = useCallback((widgetId: string, updates: { backgroundColor?: string | null; backgroundOpacity?: number; outlineColor?: string | null }) => {
+  const updateWidgetColor = useCallback((widgetId: string, updates: { backgroundColor?: string | null; backgroundOpacity?: number; outlineColor?: string | null; textColor?: string | null }) => {
     const updated = layoutRef.current.map(w => {
       if (w.i === widgetId) {
         return {
@@ -226,6 +230,7 @@ export function LayoutGridEditor({
           backgroundColor: updates.backgroundColor === null ? undefined : (updates.backgroundColor ?? w.backgroundColor),
           backgroundOpacity: updates.backgroundOpacity ?? w.backgroundOpacity,
           outlineColor: updates.outlineColor === null ? undefined : (updates.outlineColor ?? w.outlineColor),
+          textColor: updates.textColor === null ? undefined : (updates.textColor ?? w.textColor),
         };
       }
       return w;
@@ -236,7 +241,7 @@ export function LayoutGridEditor({
   const getWidgetStyle = (widget: WidgetConfig): React.CSSProperties | undefined => {
     if (!widget.backgroundColor && !widget.outlineColor) return undefined;
     const style: React.CSSProperties = { borderRadius: '0.5rem' };
-    if (widget.backgroundColor) {
+    if (widget.backgroundColor && widget.backgroundColor !== 'transparent') {
       const opacity = widget.backgroundOpacity ?? 1;
       style.backgroundColor = opacity < 1
         ? hexToRgba(widget.backgroundColor, opacity)
@@ -249,7 +254,9 @@ export function LayoutGridEditor({
   };
 
   const getTextClass = (widget: WidgetConfig, fallback: string) => {
-    if (!widget.backgroundColor || widget.backgroundOpacity === 0) return fallback;
+    // textColor is applied via context → WidgetContainer inline style, not as a class
+    if (widget.textColor) return '';
+    if (!widget.backgroundColor || widget.backgroundColor === 'transparent' || widget.backgroundOpacity === 0) return fallback;
     return isLightColor(widget.backgroundColor) ? 'text-black' : 'text-white';
   };
 
@@ -268,8 +275,10 @@ export function LayoutGridEditor({
     if (!selectedWidgetConfig || !selectedWidget) return null;
     const bgColor = selectedWidgetConfig.backgroundColor;
     const olColor = selectedWidgetConfig.outlineColor;
+    const txtColor = selectedWidgetConfig.textColor;
     const bgOpacity = selectedWidgetConfig.backgroundOpacity ?? 1;
     const displayName = selectedWidgetConfig.i.charAt(0).toUpperCase() + selectedWidgetConfig.i.slice(1);
+    const hasColorFill = bgColor && bgColor !== 'transparent';
 
     return (
       <div className="bg-card/95 backdrop-blur-sm border-b border-border">
@@ -289,17 +298,33 @@ export function LayoutGridEditor({
           {/* Fill */}
           <div className="shrink-0">
             <div className="text-[10px] text-muted-foreground mb-1">Fill</div>
-            <div className="grid grid-cols-8 gap-1">
-              {COLOR_OPTIONS.map((c, idx) => (
+            <div className="grid grid-cols-9 gap-1">
+              {FILL_OPTIONS.map((c, idx) => (
                 <button
                   key={idx}
                   onClick={() => updateWidgetColor(selectedWidget, { backgroundColor: c })}
                   className={`w-8 h-8 rounded-full border transition-transform hover:scale-110 ${
-                    c === null ? 'bg-gradient-to-br from-white to-gray-400 border-gray-300' : 'border-gray-400'
+                    c === null
+                      ? 'bg-gradient-to-br from-white to-gray-400 border-gray-300'
+                      : c === 'transparent'
+                        ? 'border-gray-300 overflow-hidden'
+                        : 'border-gray-400'
                   } ${bgColor === c || (!bgColor && c === null) ? 'ring-2 ring-primary ring-offset-1' : ''}`}
-                  style={c ? { backgroundColor: c } : undefined}
-                  title={c === null ? 'None' : c}
-                />
+                  style={c && c !== 'transparent' ? { backgroundColor: c } : undefined}
+                  title={c === null ? 'None' : c === 'transparent' ? 'Transparent' : c}
+                >
+                  {c === 'transparent' && (
+                    <svg viewBox="0 0 32 32" className="w-full h-full">
+                      <pattern id="checker" width="8" height="8" patternUnits="userSpaceOnUse">
+                        <rect width="4" height="4" fill="#ccc" />
+                        <rect x="4" y="4" width="4" height="4" fill="#ccc" />
+                        <rect x="4" width="4" height="4" fill="#fff" />
+                        <rect y="4" width="4" height="4" fill="#fff" />
+                      </pattern>
+                      <circle cx="16" cy="16" r="16" fill="url(#checker)" />
+                    </svg>
+                  )}
+                </button>
               ))}
             </div>
           </div>
@@ -322,22 +347,44 @@ export function LayoutGridEditor({
             </div>
           </div>
           <div className="w-px bg-border self-stretch shrink-0" />
-          {/* Opacity */}
+          {/* Opacity — only meaningful with a color fill */}
+          {hasColorFill && (
+            <>
+              <div className="shrink-0">
+                <div className="text-[10px] text-muted-foreground mb-1">Opacity</div>
+                <div className="flex gap-1">
+                  {[0, 0.25, 0.5, 0.75, 1].map((o) => (
+                    <button
+                      key={o}
+                      onClick={() => updateWidgetColor(selectedWidget, { backgroundOpacity: o })}
+                      className={`px-3 min-h-[44px] text-xs rounded border transition-colors ${
+                        bgOpacity === o
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'border-border hover:bg-accent/50'
+                      }`}
+                    >
+                      {Math.round(o * 100)}%
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="w-px bg-border self-stretch shrink-0" />
+            </>
+          )}
+          {/* Text Color */}
           <div className="shrink-0">
-            <div className="text-[10px] text-muted-foreground mb-1">Opacity</div>
-            <div className="flex gap-1">
-              {[0, 0.25, 0.5, 0.75, 1].map((o) => (
+            <div className="text-[10px] text-muted-foreground mb-1">Text</div>
+            <div className="grid grid-cols-8 gap-1">
+              {COLOR_OPTIONS.map((c, idx) => (
                 <button
-                  key={o}
-                  onClick={() => updateWidgetColor(selectedWidget, { backgroundOpacity: o })}
-                  className={`px-3 min-h-[44px] text-xs rounded border transition-colors ${
-                    bgOpacity === o
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'border-border hover:bg-accent/50'
-                  }`}
-                >
-                  {Math.round(o * 100)}%
-                </button>
+                  key={idx}
+                  onClick={() => updateWidgetColor(selectedWidget, { textColor: c })}
+                  className={`w-8 h-8 rounded-full border transition-transform hover:scale-110 ${
+                    c === null ? 'bg-gradient-to-br from-white to-gray-400 border-gray-300' : 'border-gray-400'
+                  } ${txtColor === c || (!txtColor && c === null) ? 'ring-2 ring-primary ring-offset-1' : ''}`}
+                  style={c ? { backgroundColor: c } : undefined}
+                  title={c === null ? 'Auto' : c}
+                />
               ))}
             </div>
           </div>
@@ -491,7 +538,7 @@ export function LayoutGridEditor({
                       }}
                     >
                       <div className={`absolute inset-0 z-10 border-2 border-dashed ${isSelected ? 'border-primary' : theme.borderDash} rounded-lg pointer-events-none`} />
-                      <WidgetBgOverrideProvider value={{ hasCustomBg }}>
+                      <WidgetBgOverrideProvider value={{ hasCustomBg, textColor: w.textColor }}>
                         <div className={`h-full w-full overflow-hidden ${textClass}`}>
                           {renderWidget(w)}
                         </div>
@@ -540,7 +587,7 @@ export function LayoutGridEditor({
 
               return (
                 <div key={w.i} className="relative" style={widgetStyle}>
-                  <WidgetBgOverrideProvider value={{ hasCustomBg }}>
+                  <WidgetBgOverrideProvider value={{ hasCustomBg, textColor: w.textColor }}>
                     <div className={`h-full w-full overflow-hidden ${textClass}`}>
                       {renderWidget(w)}
                     </div>
