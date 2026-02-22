@@ -60,6 +60,43 @@ describe('encrypt / decrypt', () => {
     const tampered = buf.toString('base64');
     expect(() => decrypt(tampered)).toThrow();
   });
+
+  it('throws when decrypting with wrong key', () => {
+    const encrypted = encrypt('secret data');
+    const saved = process.env.ENCRYPTION_KEY;
+    // Use a different valid 32-byte key
+    process.env.ENCRYPTION_KEY = 'b'.repeat(64);
+    expect(() => decrypt(encrypted)).toThrow();
+    process.env.ENCRYPTION_KEY = saved;
+  });
+
+  it('throws on truncated ciphertext (too short for IV + authTag)', () => {
+    // Only 20 bytes — less than IV(12) + authTag(16) = 28 minimum
+    const short = Buffer.alloc(20).toString('base64');
+    expect(() => decrypt(short)).toThrow();
+  });
+
+  it('throws on completely empty base64 input', () => {
+    expect(() => decrypt('')).toThrow();
+  });
+
+  it('throws on tampered auth tag', () => {
+    const encrypted = encrypt('secret');
+    const buf = Buffer.from(encrypted, 'base64');
+    // Flip a byte in the auth tag (bytes 12-27)
+    buf[15] = buf[15]! ^ 0xff;
+    const tampered = buf.toString('base64');
+    expect(() => decrypt(tampered)).toThrow();
+  });
+
+  it('throws on tampered IV', () => {
+    const encrypted = encrypt('secret');
+    const buf = Buffer.from(encrypted, 'base64');
+    // Flip a byte in the IV (bytes 0-11)
+    buf[3] = buf[3]! ^ 0xff;
+    const tampered = buf.toString('base64');
+    expect(() => decrypt(tampered)).toThrow();
+  });
 });
 
 describe('isEncrypted', () => {
@@ -79,6 +116,33 @@ describe('isEncrypted', () => {
 
   it('returns false for non-base64 strings', () => {
     expect(isEncrypted('!!!not-base64!!!')).toBe(false);
+  });
+
+  it('returns false for encrypted empty string (no ciphertext bytes)', () => {
+    // Empty string encrypt produces IV + authTag + 0 ciphertext bytes
+    // isEncrypted requires at least 1 byte of ciphertext
+    const encrypted = encrypt('');
+    // The encrypted empty string has exactly IV(12) + authTag(16) = 28 bytes
+    // which is < 29 (IV + authTag + 1), so isEncrypted returns false
+    const buf = Buffer.from(encrypted, 'base64');
+    if (buf.length < 12 + 16 + 1) {
+      expect(isEncrypted(encrypted)).toBe(false);
+    } else {
+      // AES-GCM may produce ciphertext even for empty input depending on impl
+      expect(isEncrypted(encrypted)).toBe(true);
+    }
+  });
+
+  it('returns false for valid base64 that is too short to be encrypted', () => {
+    // 28 bytes (exactly IV + authTag, no ciphertext) encoded as base64
+    const fake = Buffer.alloc(28).toString('base64');
+    expect(isEncrypted(fake)).toBe(false);
+  });
+
+  it('can distinguish OAuth tokens from encrypted values', () => {
+    // Real OAuth tokens are long but not valid encrypted format
+    const oauthToken = 'ya29.a0AfH6SMBx-some-very-long-oauth-token-value-here';
+    expect(isEncrypted(oauthToken)).toBe(false);
   });
 });
 

@@ -149,6 +149,126 @@ describe('computeWaterfall', () => {
     });
   });
 
+  describe('priority ties and ordering', () => {
+    it('processes goals with same priority in stable input order', () => {
+      const goals = [
+        makeGoal({ id: 'a', pointCost: 5, priority: 1, recurring: false }),
+        makeGoal({ id: 'b', pointCost: 5, priority: 1, recurring: false }),
+        makeGoal({ id: 'c', pointCost: 5, priority: 1, recurring: false }),
+      ];
+      // Only 7 points — should fill in order: a gets 5, b gets 2, c gets 0
+      const completions = [makeCompletion(7, THIS_WEEK_MON)];
+
+      const result = computeWaterfall(goals, completions, NOW);
+      const a = result.goals.find(g => g.goalId === 'a')!;
+      const b = result.goals.find(g => g.goalId === 'b')!;
+      const c = result.goals.find(g => g.goalId === 'c')!;
+
+      expect(a.allocated).toBe(5);
+      expect(a.achieved).toBe(true);
+      expect(b.allocated).toBe(2);
+      expect(b.achieved).toBe(false);
+      expect(c.allocated).toBe(0);
+      expect(c.achieved).toBe(false);
+    });
+  });
+
+  describe('recurring before non-recurring waterfall', () => {
+    it('recurring goals consume points first, overflow goes to non-recurring', () => {
+      const goals = [
+        makeGoal({ id: 'recurring', pointCost: 6, priority: 1, recurring: true, recurrencePeriod: 'weekly' }),
+        makeGoal({ id: 'savings', pointCost: 20, priority: 2, recurring: false }),
+      ];
+      // 10 points this week: recurring takes 6, 4 overflows to savings
+      const completions = [makeCompletion(10, THIS_WEEK_MON)];
+
+      const result = computeWaterfall(goals, completions, NOW);
+      const recurring = result.goals.find(g => g.goalId === 'recurring')!;
+      const savings = result.goals.find(g => g.goalId === 'savings')!;
+
+      expect(recurring.allocated).toBe(6);
+      expect(recurring.achieved).toBe(true);
+      expect(savings.allocated).toBe(4);
+      expect(savings.achieved).toBe(false);
+    });
+
+    it('non-recurring goals accumulate overflow across multiple weeks', () => {
+      const goals = [
+        makeGoal({ id: 'weekly-chore', pointCost: 5, priority: 1, recurring: true, recurrencePeriod: 'weekly' }),
+        makeGoal({ id: 'bike', pointCost: 10, priority: 2, recurring: false }),
+      ];
+      // Week 1: 8 pts (5 to recurring, 3 overflow to bike)
+      // Week 2: 8 pts (5 to recurring, 3 overflow to bike → bike total = 6)
+      const completions = [
+        makeCompletion(8, LAST_WEEK_MON),
+        makeCompletion(8, THIS_WEEK_MON),
+      ];
+
+      const result = computeWaterfall(goals, completions, NOW);
+      const bike = result.goals.find(g => g.goalId === 'bike')!;
+
+      expect(bike.allocated).toBe(6); // 3 + 3
+      expect(bike.achieved).toBe(false);
+    });
+  });
+
+  describe('zero and edge point values', () => {
+    it('skips completions with 0 points in week buckets', () => {
+      const goal = makeGoal({ pointCost: 10, recurring: false });
+      const completions = [
+        makeCompletion(0, THIS_WEEK_MON),
+        makeCompletion(5, THIS_WEEK_MON),
+      ];
+
+      const result = computeWaterfall([goal], completions, NOW);
+      expect(result.goals[0].allocated).toBe(5);
+      // weeklyEarned still counts 0-point completions (they add 0)
+      expect(result.weeklyEarned).toBe(5);
+    });
+
+    it('skips completions with negative points in week buckets', () => {
+      const goal = makeGoal({ pointCost: 10, recurring: false });
+      const completions = [
+        makeCompletion(-3, THIS_WEEK_MON),
+        makeCompletion(5, THIS_WEEK_MON),
+      ];
+
+      const result = computeWaterfall([goal], completions, NOW);
+      // weekBuckets skips pts <= 0, so only 5 goes into waterfall
+      expect(result.goals[0].allocated).toBe(5);
+      // But weeklyEarned counter includes negative points
+      expect(result.weeklyEarned).toBe(2); // 5 + (-3)
+    });
+
+    it('handles goal with pointCost of 0 (always achieved)', () => {
+      const goal = makeGoal({ pointCost: 0, recurring: false });
+      const completions = [makeCompletion(5, THIS_WEEK_MON)];
+
+      const result = computeWaterfall([goal], completions, NOW);
+      expect(result.goals[0].achieved).toBe(true);
+      expect(result.goals[0].allocated).toBe(0);
+    });
+  });
+
+  describe('many goals scenario', () => {
+    it('distributes points across many goals by priority', () => {
+      // 5 goals, priorities 1-5, each costing 3 points
+      const goals = Array.from({ length: 5 }, (_, i) =>
+        makeGoal({ id: `goal-${i + 1}`, pointCost: 3, priority: i + 1, recurring: false })
+      );
+      // 10 points: fills goal-1 (3), goal-2 (3), goal-3 (3), goal-4 gets 1
+      const completions = [makeCompletion(10, THIS_WEEK_MON)];
+
+      const result = computeWaterfall(goals, completions, NOW);
+
+      expect(result.goals.find(g => g.goalId === 'goal-1')!.achieved).toBe(true);
+      expect(result.goals.find(g => g.goalId === 'goal-2')!.achieved).toBe(true);
+      expect(result.goals.find(g => g.goalId === 'goal-3')!.achieved).toBe(true);
+      expect(result.goals.find(g => g.goalId === 'goal-4')!.allocated).toBe(1);
+      expect(result.goals.find(g => g.goalId === 'goal-5')!.allocated).toBe(0);
+    });
+  });
+
   describe('empty inputs', () => {
     it('handles no goals gracefully', () => {
       const result = computeWaterfall([], [makeCompletion(10, THIS_WEEK_MON)], NOW);

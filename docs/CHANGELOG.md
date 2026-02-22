@@ -5,6 +5,12 @@ All notable changes to Prism are documented in this file.
 ## [0.9.5] - 2026-02-21
 
 ### Added
+- **API Route Integration Tests**: Business logic coverage (18 tests)
+  - Chore complete/approve workflow: parent auto-approval, child pending approval, disabled chore rejection, duplicate pending (409), assignment enforcement, approval with deleted user fallback
+  - Family member deletion: child deletion, parent deletion with others remaining, last parent protection, auth/role enforcement
+- **Crypto & Waterfall Edge Cases**: Hardened coverage (15 new tests)
+  - Crypto: wrong key decryption, truncated/empty input, tampered IV/auth tag, isEncrypted false positives, OAuth token distinction
+  - Points waterfall: priority ties (stable ordering), recurring-before-non-recurring overflow, multi-week accumulation, zero/negative points, many-goals distribution
 - **Tier 3 Unit Tests**: Hook and service coverage (42 tests)
   - `useIdleDetection` hook: initial state, timeout params, localStorage fallback, default 120s, event listener registration (mousemove/keydown/touchstart), screensaver custom event
   - `useAwayModeTimeout` hook: default disabled, localStorage persistence, setTimeout dispatch, CustomEvent sync, effect cleanup
