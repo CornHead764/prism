@@ -50,7 +50,7 @@ describe('cn', () => {
   });
 
   it('combines strings with object syntax', () => {
-    const status = 'success';
+    const status: string = 'success';
     expect(cn('badge', {
       'text-green-500': status === 'success',
       'text-red-500': status === 'error',
@@ -79,7 +79,7 @@ describe('cn', () => {
 
   // --- Real-world usage patterns ---
   it('handles typical component variant pattern', () => {
-    const variant = 'destructive';
+    const variant: string = 'destructive';
     const result = cn(
       'inline-flex items-center rounded-md px-3 py-1 text-sm',
       variant === 'default' && 'bg-primary text-primary-foreground',

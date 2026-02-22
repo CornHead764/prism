@@ -151,7 +151,7 @@ describe('listFolders', () => {
     const folders = await listFolders('access-token');
 
     expect(folders).toHaveLength(1);
-    expect(folders[0].name).toBe('Photos');
+    expect(folders[0]!.name).toBe('Photos');
 
     const url = (global.fetch as jest.Mock).mock.calls[0][0];
     expect(url).toContain('/me/drive/root/children');
@@ -269,7 +269,7 @@ describe('listPhotosInFolder', () => {
 
     const photos = await listPhotosInFolder('token', 'folder-id');
     expect(photos).toHaveLength(1);
-    expect(photos[0].name).toBe('photo.jpg');
+    expect(photos[0]!.name).toBe('photo.jpg');
   });
 });
 

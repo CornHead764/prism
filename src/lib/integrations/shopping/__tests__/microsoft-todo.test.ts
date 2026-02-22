@@ -96,9 +96,9 @@ describe('microsoftTodoShoppingProvider', () => {
         updatedAt: new Date('2026-02-16T08:00:00Z'),
         createdAt: new Date('2026-02-15T10:00:00Z'),
       });
-      expect(items[1].name).toBe('Bread');
-      expect(items[1].checked).toBe(true);
-      expect(items[1].notes).toBeNull();
+      expect(items[1]!.name).toBe('Bread');
+      expect(items[1]!.checked).toBe(true);
+      expect(items[1]!.notes).toBeNull();
     });
   });
 

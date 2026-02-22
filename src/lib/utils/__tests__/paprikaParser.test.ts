@@ -6,7 +6,7 @@ describe('parsePaprikaHtml', () => {
       const html = '<html><body><h1>Chocolate Cake</h1></body></html>';
       const recipes = parsePaprikaHtml(html);
       expect(recipes).toHaveLength(1);
-      expect(recipes[0].name).toBe('Chocolate Cake');
+      expect(recipes[0]!.name).toBe('Chocolate Cake');
     });
 
     it('returns empty array for untitled content', () => {
@@ -19,7 +19,7 @@ describe('parsePaprikaHtml', () => {
         <h1>Pasta</h1>
         <div class="description">A tasty pasta dish</div>
       `;
-      const [recipe] = parsePaprikaHtml(html);
+      const recipe = parsePaprikaHtml(html)[0]!;
       expect(recipe.description).toBe('A tasty pasta dish');
     });
 
@@ -32,10 +32,10 @@ describe('parsePaprikaHtml', () => {
           <li>Dressing</li>
         </div>
       `;
-      const [recipe] = parsePaprikaHtml(html);
+      const recipe = parsePaprikaHtml(html)[0]!;
       expect(recipe.ingredients).toHaveLength(3);
-      expect(recipe.ingredients[0].text).toBe('2 cups lettuce');
-      expect(recipe.ingredients[1].text).toBe('1 tomato');
+      expect(recipe.ingredients[0]!.text).toBe('2 cups lettuce');
+      expect(recipe.ingredients[1]!.text).toBe('1 tomato');
     });
 
     it('extracts instructions', () => {
@@ -43,7 +43,7 @@ describe('parsePaprikaHtml', () => {
         <h1>Soup</h1>
         <div class="instructions">Boil water. Add ingredients. Simmer.</div>
       `;
-      const [recipe] = parsePaprikaHtml(html);
+      const recipe = parsePaprikaHtml(html)[0]!;
       expect(recipe.instructions).toBe('Boil water. Add ingredients. Simmer.');
     });
 
@@ -52,7 +52,7 @@ describe('parsePaprikaHtml', () => {
         <h1>Bread</h1>
         source: <a href="https://example.com/bread">Example</a>
       `;
-      const [recipe] = parsePaprikaHtml(html);
+      const recipe = parsePaprikaHtml(html)[0]!;
       expect(recipe.sourceUrl).toBe('https://example.com/bread');
     });
 
@@ -61,7 +61,7 @@ describe('parsePaprikaHtml', () => {
         <h1>Stew</h1>
         categories: Dinner, Comfort Food, Winter
       `;
-      const [recipe] = parsePaprikaHtml(html);
+      const recipe = parsePaprikaHtml(html)[0]!;
       expect(recipe.categories).toEqual(['Dinner', 'Comfort Food', 'Winter']);
     });
 
@@ -70,7 +70,7 @@ describe('parsePaprikaHtml', () => {
         <h1>Pizza</h1>
         <div class="notes">Best served hot. Can freeze dough.</div>
       `;
-      const [recipe] = parsePaprikaHtml(html);
+      const recipe = parsePaprikaHtml(html)[0]!;
       expect(recipe.notes).toBe('Best served hot. Can freeze dough.');
     });
   });
@@ -78,25 +78,25 @@ describe('parsePaprikaHtml', () => {
   describe('time parsing', () => {
     it('parses "30 min"', () => {
       const html = '<h1>Quick Meal</h1> prep time: 30 min';
-      const [recipe] = parsePaprikaHtml(html);
+      const recipe = parsePaprikaHtml(html)[0]!;
       expect(recipe.prepTime).toBe(30);
     });
 
     it('parses "1 hr 30 min"', () => {
       const html = '<h1>Slow Cook</h1> cook time: 1 hr 30 min';
-      const [recipe] = parsePaprikaHtml(html);
+      const recipe = parsePaprikaHtml(html)[0]!;
       expect(recipe.cookTime).toBe(90);
     });
 
     it('parses "2 hours"', () => {
       const html = '<h1>Roast</h1> total time: 2 hours';
-      const [recipe] = parsePaprikaHtml(html);
+      const recipe = parsePaprikaHtml(html)[0]!;
       expect(recipe.totalTime).toBe(120);
     });
 
     it('handles missing time gracefully', () => {
       const html = '<h1>Simple</h1>';
-      const [recipe] = parsePaprikaHtml(html);
+      const recipe = parsePaprikaHtml(html)[0]!;
       expect(recipe.prepTime).toBeUndefined();
       expect(recipe.cookTime).toBeUndefined();
     });
@@ -105,13 +105,13 @@ describe('parsePaprikaHtml', () => {
   describe('servings parsing', () => {
     it('parses "4 servings"', () => {
       const html = '<h1>Dish</h1> servings: 4 servings';
-      const [recipe] = parsePaprikaHtml(html);
+      const recipe = parsePaprikaHtml(html)[0]!;
       expect(recipe.servings).toBe(4);
     });
 
     it('parses "Serves 6"', () => {
       const html = '<h1>Dish</h1> Serves 6';
-      const [recipe] = parsePaprikaHtml(html);
+      const recipe = parsePaprikaHtml(html)[0]!;
       expect(recipe.servings).toBe(6);
     });
   });
@@ -119,19 +119,19 @@ describe('parsePaprikaHtml', () => {
   describe('rating parsing', () => {
     it('counts filled stars', () => {
       const html = '<h1>Good</h1> <span class="rating">★★★★☆</span>';
-      const [recipe] = parsePaprikaHtml(html);
+      const recipe = parsePaprikaHtml(html)[0]!;
       expect(recipe.rating).toBe(4);
     });
 
     it('parses "3 stars"', () => {
       const html = '<h1>OK</h1> rating: 3 stars';
-      const [recipe] = parsePaprikaHtml(html);
+      const recipe = parsePaprikaHtml(html)[0]!;
       expect(recipe.rating).toBe(3);
     });
 
     it('parses "4/5" format', () => {
       const html = '<h1>Nice</h1> rating: 4/5';
-      const [recipe] = parsePaprikaHtml(html);
+      const recipe = parsePaprikaHtml(html)[0]!;
       expect(recipe.rating).toBe(4);
     });
   });
@@ -139,7 +139,7 @@ describe('parsePaprikaHtml', () => {
   describe('HTML entity handling', () => {
     it('decodes HTML entities in text', () => {
       const html = '<h1>Mac &amp; Cheese</h1>';
-      const [recipe] = parsePaprikaHtml(html);
+      const recipe = parsePaprikaHtml(html)[0]!;
       expect(recipe.name).toBe('Mac & Cheese');
     });
 
@@ -148,7 +148,7 @@ describe('parsePaprikaHtml', () => {
         <h1>Recipe</h1>
         <div class="instructions">Step 1<br/>Step 2<br>Step 3</div>
       `;
-      const [recipe] = parsePaprikaHtml(html);
+      const recipe = parsePaprikaHtml(html)[0]!;
       expect(recipe.instructions).toContain('Step 1\nStep 2\nStep 3');
     });
   });
@@ -161,8 +161,8 @@ describe('parsePaprikaHtml', () => {
       `;
       const recipes = parsePaprikaHtml(html);
       expect(recipes).toHaveLength(2);
-      expect(recipes[0].name).toBe('Recipe One');
-      expect(recipes[1].name).toBe('Recipe Two');
+      expect(recipes[0]!.name).toBe('Recipe One');
+      expect(recipes[1]!.name).toBe('Recipe Two');
     });
 
     it('skips articles without a valid name', () => {
@@ -172,7 +172,7 @@ describe('parsePaprikaHtml', () => {
       `;
       const recipes = parsePaprikaHtml(html);
       expect(recipes).toHaveLength(1);
-      expect(recipes[0].name).toBe('Real Recipe');
+      expect(recipes[0]!.name).toBe('Real Recipe');
     });
   });
 

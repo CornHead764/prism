@@ -71,8 +71,8 @@ describe('computeWaterfall', () => {
       ];
 
       const result = computeWaterfall([goal], completions, NOW);
-      expect(result.goals[0].allocated).toBe(15);
-      expect(result.goals[0].achieved).toBe(false);
+      expect(result.goals[0]!.allocated).toBe(15);
+      expect(result.goals[0]!.achieved).toBe(false);
     });
 
     it('marks goal as achieved when accumulated points >= cost', () => {
@@ -83,8 +83,8 @@ describe('computeWaterfall', () => {
       ];
 
       const result = computeWaterfall([goal], completions, NOW);
-      expect(result.goals[0].allocated).toBe(10);
-      expect(result.goals[0].achieved).toBe(true);
+      expect(result.goals[0]!.allocated).toBe(10);
+      expect(result.goals[0]!.achieved).toBe(true);
     });
 
     it('caps allocation at pointCost (no over-allocation)', () => {
@@ -92,7 +92,7 @@ describe('computeWaterfall', () => {
       const completions = [makeCompletion(20, THIS_WEEK_MON)];
 
       const result = computeWaterfall([goal], completions, NOW);
-      expect(result.goals[0].allocated).toBe(5);
+      expect(result.goals[0]!.allocated).toBe(5);
     });
   });
 
@@ -105,8 +105,8 @@ describe('computeWaterfall', () => {
       ];
 
       const result = computeWaterfall([goal], completions, NOW);
-      expect(result.goals[0].allocated).toBe(7);
-      expect(result.goals[0].achieved).toBe(false);
+      expect(result.goals[0]!.allocated).toBe(7);
+      expect(result.goals[0]!.achieved).toBe(false);
     });
 
     it('marks recurring goal achieved when current week points >= cost', () => {
@@ -114,7 +114,7 @@ describe('computeWaterfall', () => {
       const completions = [makeCompletion(5, THIS_WEEK_MON)];
 
       const result = computeWaterfall([goal], completions, NOW);
-      expect(result.goals[0].achieved).toBe(true);
+      expect(result.goals[0]!.achieved).toBe(true);
     });
   });
 
@@ -221,7 +221,7 @@ describe('computeWaterfall', () => {
       ];
 
       const result = computeWaterfall([goal], completions, NOW);
-      expect(result.goals[0].allocated).toBe(5);
+      expect(result.goals[0]!.allocated).toBe(5);
       // weeklyEarned still counts 0-point completions (they add 0)
       expect(result.weeklyEarned).toBe(5);
     });
@@ -235,7 +235,7 @@ describe('computeWaterfall', () => {
 
       const result = computeWaterfall([goal], completions, NOW);
       // weekBuckets skips pts <= 0, so only 5 goes into waterfall
-      expect(result.goals[0].allocated).toBe(5);
+      expect(result.goals[0]!.allocated).toBe(5);
       // But weeklyEarned counter includes negative points
       expect(result.weeklyEarned).toBe(2); // 5 + (-3)
     });
@@ -245,8 +245,8 @@ describe('computeWaterfall', () => {
       const completions = [makeCompletion(5, THIS_WEEK_MON)];
 
       const result = computeWaterfall([goal], completions, NOW);
-      expect(result.goals[0].achieved).toBe(true);
-      expect(result.goals[0].allocated).toBe(0);
+      expect(result.goals[0]!.achieved).toBe(true);
+      expect(result.goals[0]!.allocated).toBe(0);
     });
   });
 

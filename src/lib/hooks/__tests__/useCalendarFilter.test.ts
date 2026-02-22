@@ -99,8 +99,8 @@ describe('useCalendarFilter', () => {
         expect(result.current.calendarGroups.length).toBe(1);
       });
 
-      expect(result.current.calendarGroups[0].id).toBe('api-group-1');
-      expect(result.current.calendarGroups[0].name).toBe('API Group');
+      expect(result.current.calendarGroups[0]!.id).toBe('api-group-1');
+      expect(result.current.calendarGroups[0]!.name).toBe('API Group');
     });
   });
 

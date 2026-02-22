@@ -99,8 +99,8 @@ describe('microsoftTodoProvider', () => {
 
       const tasks = await microsoftTodoProvider.fetchTasks(TOKENS, 'list-1');
 
-      expect(tasks[0].completed).toBe(true);
-      expect(tasks[0].completedAt).toEqual(new Date('2026-02-16T14:00:00'));
+      expect(tasks[0]!.completed).toBe(true);
+      expect(tasks[0]!.completedAt).toEqual(new Date('2026-02-16T14:00:00'));
     });
 
     it('maps importance to priority correctly', async () => {
@@ -119,9 +119,9 @@ describe('microsoftTodoProvider', () => {
 
       const tasks = await microsoftTodoProvider.fetchTasks(TOKENS, 'list-1');
 
-      expect(tasks[0].priority).toBe('high');
-      expect(tasks[1].priority).toBe('medium');
-      expect(tasks[2].priority).toBe('low');
+      expect(tasks[0]!.priority).toBe('high');
+      expect(tasks[1]!.priority).toBe('medium');
+      expect(tasks[2]!.priority).toBe('low');
     });
 
     it('handles missing optional fields', async () => {
@@ -140,9 +140,9 @@ describe('microsoftTodoProvider', () => {
 
       const tasks = await microsoftTodoProvider.fetchTasks(TOKENS, 'list-1');
 
-      expect(tasks[0].description).toBeNull();
-      expect(tasks[0].dueDate).toBeNull();
-      expect(tasks[0].completedAt).toBeNull();
+      expect(tasks[0]!.description).toBeNull();
+      expect(tasks[0]!.dueDate).toBeNull();
+      expect(tasks[0]!.completedAt).toBeNull();
     });
   });
 

@@ -242,7 +242,7 @@ describe('OpenWeather integration', () => {
 
     it('limits forecast to 5 days', async () => {
       // Create 7 days of forecast data
-      const items = [];
+      const items: ReturnType<typeof mockForecastItem>[] = [];
       for (let d = 0; d < 7; d++) {
         const date = new Date(`2026-03-${15 + d}T12:00:00Z`);
         items.push(mockForecastItem(Math.floor(date.getTime() / 1000), 290, 800));

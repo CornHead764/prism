@@ -5,6 +5,14 @@ All notable changes to Prism are documented in this file.
 ## [0.9.5] - 2026-02-21
 
 ### Added
+- **Tier 1 & 2 Unit Tests**: Hooks, services, and API route coverage (52 new tests)
+  - `useHiddenHours` hook: default settings, localStorage persistence, toggleHidden, setTimeRange, getVisibleHours with contiguous range (0-6), wrap-around range (22-6), single hour hide
+  - `useSwipeNavigation` hook: left/right swipe detection, timeout rejection (>500ms), threshold enforcement, vertical swipe rejection, disabled state, default threshold of 50
+  - `computeZones` (screen safe zones): breakpoint cols at 1200/996/768 thresholds, landscape/portrait dimension swapping, row cap at 50, multiple screens, square aspect ratio, iPad 4:3
+  - Avatar storage service: saveAvatar (sharp rotate/resize/jpeg), deleteAvatar (missing file tolerance), getAvatarPath
+  - Photo sync service: source validation (type/folderId/tokens), new photo download, skip existing, delete stale, token refresh on expiry, per-photo error isolation, lastSynced update
+  - Recipe import-url route: missing/invalid URL (400), non-HTTP (400), fetch failure (502), no schema.org data (422), preview mode, successful import (201), auth/role enforcement
+- **CI Type Check Fix**: Fixed all `tsc --noEmit` errors in test files (Object possibly undefined, implicit any, unintentional comparisons)
 - **Auth & Cache Unit Tests**: Session management, auth cascade, and Redis cache layer (79 tests)
   - Session management: token generation (64-char hex, uniqueness), createSession (Redis storage, per-role TTL, user_sessions set, Redis unavailable/error fallback), validateSession (valid/missing/expired cleanup, empty token), invalidateSession/All, login lockout (attempt tracking, TTL, fail-open)
   - Auth cascade (`requireAuth`/`optionalAuth`/`getDisplayAuth`): Bearer token priority, cookie session fallback, 401 responses, displayUserId setting fallback to guest role
