@@ -124,6 +124,7 @@ export function MessagesWidget({
               onAddClick();
             }}
             className="h-8 w-8"
+            aria-label="Add message"
           >
             <Plus className="h-4 w-4" />
           </Button>
@@ -225,6 +226,7 @@ function MessageItem({
               }}
               className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/20 transition-opacity"
               title="Delete message"
+              aria-label="Delete message"
             >
               <Trash2 className="h-3 w-3 text-destructive" />
             </button>

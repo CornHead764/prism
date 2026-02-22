@@ -54,6 +54,9 @@ import { AwayModeOverlay } from '@/components/away-mode';
 // Babysitter Mode overlay
 import { BabysitterModeOverlay } from '@/components/babysitter-mode';
 
+// Toast notifications
+import { Toaster } from '@/components/ui/toaster';
+
 
 /**
  * FONT CONFIGURATION
@@ -269,6 +272,7 @@ export default function RootLayout({
             <BabysitterModeOverlay />
             <AwayModeOverlay />
             <Screensaver />
+            <Toaster />
           </Providers>
         </ErrorBoundary>
       </body>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from '@/components/ui/use-toast';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -37,7 +38,7 @@ export function FamilySection() {
     if (member?.role === 'parent') {
       const parentCount = familyMembers.filter((m) => m.role === 'parent').length;
       if (parentCount <= 1) {
-        alert('Cannot delete the last parent');
+        toast({ title: 'Cannot delete the last parent', variant: 'warning' });
         return;
       }
     }
@@ -164,6 +165,7 @@ export function FamilySection() {
                   variant="ghost"
                   size="icon"
                   onClick={() => setEditingMember(member)}
+                  aria-label="Edit member"
                 >
                   <Edit2 className="h-4 w-4" />
                 </Button>
@@ -172,6 +174,7 @@ export function FamilySection() {
                   size="icon"
                   onClick={() => deleteMember(member.id)}
                   className="text-destructive"
+                  aria-label="Delete member"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>

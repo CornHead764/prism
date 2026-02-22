@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { format, startOfWeek, addDays } from 'date-fns';
+import { toast } from '@/components/ui/use-toast';
+import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import { useAuth } from '@/components/providers/AuthProvider';
 import type { Meal } from '@/types';
 
@@ -11,6 +13,7 @@ export function useMealsViewData() {
   const today = new Date();
   const defaultWeekStart = startOfWeek(today, { weekStartsOn: 1 });
   const { requireAuth } = useAuth();
+  const { confirm, dialogProps: confirmDialogProps } = useConfirmDialog();
 
   const [currentWeek, setCurrentWeek] = useState<Date>(defaultWeekStart);
   const weekOfString = format(currentWeek, 'yyyy-MM-dd');
@@ -82,7 +85,7 @@ export function useMealsViewData() {
   };
 
   const deleteMeal = async (mealId: string) => {
-    if (!confirm('Delete this meal?')) return;
+    if (!await confirm('Delete this meal?', 'This will remove the meal from the planner.')) return;
     try {
       await fetch(`/api/meals/${mealId}`, { method: 'DELETE' });
       await fetchMeals();
@@ -107,7 +110,7 @@ export function useMealsViewData() {
       await fetchMeals();
     } catch (err) {
       console.error('Failed to add meal:', err);
-      alert(err instanceof Error ? err.message : 'Failed to add meal');
+      toast({ title: err instanceof Error ? err.message : 'Failed to add meal', variant: 'destructive' });
     }
   };
 
@@ -149,5 +152,6 @@ export function useMealsViewData() {
     mealsByDay,
     markCooked, unmarkCooked, deleteMeal, addMeal, editMeal, handleDropMeal,
     totalMeals, cookedMeals,
+    confirmDialogProps,
   };
 }

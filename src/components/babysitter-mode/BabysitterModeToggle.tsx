@@ -55,6 +55,7 @@ export function BabysitterModeToggle({
         onClick={handleClick}
         className={className}
         title="Enable Babysitter Mode"
+        aria-label="Enable Babysitter Mode"
       >
         <Baby className="h-4 w-4" />
         {showLabel && <span className="ml-2">Babysitter Mode</span>}

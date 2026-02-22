@@ -243,6 +243,7 @@ export function GoalsView() {
                             onClick={() => handleMoveUp(index)}
                             disabled={index === 0}
                             className="text-muted-foreground hover:text-foreground disabled:opacity-20 p-0.5"
+                            aria-label="Move goal up"
                           >
                             <ChevronUp className="h-3.5 w-3.5" />
                           </button>
@@ -250,6 +251,7 @@ export function GoalsView() {
                             onClick={() => handleMoveDown(index)}
                             disabled={index >= goals.length - 1}
                             className="text-muted-foreground hover:text-foreground disabled:opacity-20 p-0.5"
+                            aria-label="Move goal down"
                           >
                             <ChevronDown className="h-3.5 w-3.5" />
                           </button>
@@ -332,7 +334,7 @@ export function GoalsView() {
                             Reset
                           </Button>
                         )}
-                        <Button variant="ghost" size="sm" onClick={() => openEditModal(goal)}>
+                        <Button variant="ghost" size="sm" onClick={() => openEditModal(goal)} aria-label="Edit goal">
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
                         <Button
@@ -340,6 +342,7 @@ export function GoalsView() {
                           size="sm"
                           onClick={() => handleDelete(goal.id)}
                           className="text-destructive hover:text-destructive"
+                          aria-label="Delete goal"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>

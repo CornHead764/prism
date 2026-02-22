@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from '@/components/ui/use-toast';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import { useSearchParams } from 'next/navigation';
 import {
   RefreshCw,
@@ -65,6 +68,7 @@ const SUCCESS_MESSAGES: Record<string, string> = {
 };
 
 export function ShoppingIntegrationsSection() {
+  const { confirm, dialogProps: confirmDialogProps } = useConfirmDialog();
   const searchParams = useSearchParams();
   const { lists: shoppingLists, loading: listsLoading } = useShoppingLists({ refreshInterval: 0 });
   const [sources, setSources] = useState<ShoppingListSource[]>([]);
@@ -217,7 +221,7 @@ export function ShoppingIntegrationsSection() {
   };
 
   const handleDeleteSource = async (sourceId: string, sourceName: string) => {
-    if (!confirm(`Disconnect "${sourceName}"? Items already synced will remain in Prism.`)) {
+    if (!await confirm(`Disconnect "${sourceName}"?`, 'Items already synced will remain in Prism.')) {
       return;
     }
 
@@ -249,15 +253,15 @@ export function ShoppingIntegrationsSection() {
         await fetchSources();
         const msg = `Sync complete: ${data.created} created, ${data.updated} updated, ${data.deleted} deleted`;
         if (data.errors?.length > 0) {
-          alert(`${msg}\n\nErrors:\n${data.errors.join('\n')}`);
+          toast({ title: msg, description: data.errors.join('\n'), variant: 'warning' });
         }
       } else {
-        alert(`Sync failed: ${data.error || 'Unknown error'}`);
+        toast({ title: `Sync failed: ${data.error || 'Unknown error'}`, variant: 'destructive' });
         await fetchSources();
       }
     } catch (error) {
       console.error('Failed to sync:', error);
-      alert('Sync failed: Network error');
+      toast({ title: 'Sync failed: Network error', variant: 'destructive' });
     } finally {
       setSyncing(null);
     }
@@ -701,6 +705,7 @@ export function ShoppingIntegrationsSection() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 }

@@ -25,6 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { UserAvatar } from '@/components/ui/avatar';
 import { PageWrapper } from '@/components/layout';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useMealsViewData } from './useMealsViewData';
 import { useRecipes, type Recipe } from '@/lib/hooks/useRecipes';
 import { useAuth } from '@/components/providers';
@@ -41,6 +42,7 @@ export function MealsView() {
     mealsByDay,
     markCooked, unmarkCooked, deleteMeal, addMeal, editMeal, handleDropMeal,
     totalMeals, cookedMeals,
+    confirmDialogProps,
   } = useMealsViewData();
 
   const { recipes } = useRecipes({ limit: 100 });
@@ -71,7 +73,7 @@ export function MealsView() {
 
         <div className="flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 py-3">
           <div className="flex items-center justify-center gap-4">
-            <Button variant="ghost" size="icon" onClick={goToPreviousWeek}><ChevronLeft className="h-5 w-5" /></Button>
+            <Button variant="ghost" size="icon" onClick={goToPreviousWeek} aria-label="Previous week"><ChevronLeft className="h-5 w-5" /></Button>
             <div className="text-center">
               <h2 className="text-lg font-semibold">
                 {format(currentWeek, 'MMM d')} - {format(addDays(currentWeek, 6), 'MMM d, yyyy')}
@@ -80,7 +82,7 @@ export function MealsView() {
                 <Button variant="link" size="sm" onClick={goToThisWeek} className="h-auto p-0 text-xs">Go to this week</Button>
               )}
             </div>
-            <Button variant="ghost" size="icon" onClick={goToNextWeek}><ChevronRight className="h-5 w-5" /></Button>
+            <Button variant="ghost" size="icon" onClick={goToNextWeek} aria-label="Next week"><ChevronRight className="h-5 w-5" /></Button>
           </div>
         </div>
 
@@ -118,6 +120,7 @@ export function MealsView() {
             onSave={(updates) => { editMeal(editingMeal.id, updates); setEditingMeal(null); }} />
         )}
       </div>
+      <ConfirmDialog {...confirmDialogProps} />
     </PageWrapper>
   );
 }
@@ -206,8 +209,8 @@ function MealCard({ meal, onMarkCooked, onUnmarkCooked, onEdit, onDelete }: {
         ) : (
           <Button variant="ghost" size="icon" onClick={onMarkCooked} className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" title="Mark as cooked"><CheckCircle2 className="h-4 w-4" /></Button>
         )}
-        <Button variant="ghost" size="icon" onClick={onEdit} className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"><Edit2 className="h-3 w-3" /></Button>
-        <Button variant="ghost" size="icon" onClick={onDelete} className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="h-3 w-3" /></Button>
+        <Button variant="ghost" size="icon" onClick={onEdit} className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Edit meal"><Edit2 className="h-3 w-3" /></Button>
+        <Button variant="ghost" size="icon" onClick={onDelete} className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Delete meal"><Trash2 className="h-3 w-3" /></Button>
       </div>
     </div>
   );
@@ -276,7 +279,7 @@ function MealModal({ weekOf, meal, defaultDay, recipes, onClose, onSave }: {
       <div className="bg-card rounded-lg p-6 max-w-md w-full mx-4 shadow-lg border border-border max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold">{meal ? 'Edit Meal' : 'Add Meal'}</h2>
-          <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close"><X className="h-4 w-4" /></Button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Recipe Picker */}

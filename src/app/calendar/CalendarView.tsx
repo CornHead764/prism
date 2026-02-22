@@ -3,6 +3,9 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import { toast } from '@/components/ui/use-toast';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import {
   ChevronLeft,
   ChevronRight,
@@ -222,6 +225,22 @@ function EventDetailModal({ event, onClose, onEdit, onDeleted }: {
   onEdit: () => void;
   onDeleted: () => void;
 }) {
+  const { confirm, dialogProps } = useConfirmDialog();
+
+  const handleDelete = async () => {
+    const ok = await confirm('Delete this event?', 'Are you sure you want to delete this event?');
+    if (!ok) return;
+    try {
+      const response = await fetch(`/api/events/${event.id}`, { method: 'DELETE' });
+      if (!response.ok) {
+        const err = await response.json();
+        toast({ title: err.error || 'Failed to delete event', variant: 'destructive' });
+        return;
+      }
+      onDeleted();
+    } catch { toast({ title: 'Failed to delete event', variant: 'destructive' }); }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
       <div className="bg-card rounded-lg p-6 max-w-md w-full mx-4 shadow-lg border border-border" onClick={(e) => e.stopPropagation()}>
@@ -235,21 +254,7 @@ function EventDetailModal({ event, onClose, onEdit, onDeleted }: {
         {event.location && <p className="text-sm text-muted-foreground mb-4">{event.location}</p>}
         <p className="text-xs text-muted-foreground">{event.calendarName}</p>
         <div className="flex justify-between mt-6">
-          <Button
-            variant="destructive"
-            onClick={async () => {
-              if (!confirm('Are you sure you want to delete this event?')) return;
-              try {
-                const response = await fetch(`/api/events/${event.id}`, { method: 'DELETE' });
-                if (!response.ok) {
-                  const err = await response.json();
-                  alert(err.error || 'Failed to delete event');
-                  return;
-                }
-                onDeleted();
-              } catch { alert('Failed to delete event'); }
-            }}
-          >
+          <Button variant="destructive" onClick={handleDelete}>
             Delete
           </Button>
           <div className="flex gap-2">
@@ -258,6 +263,7 @@ function EventDetailModal({ event, onClose, onEdit, onDeleted }: {
           </div>
         </div>
       </div>
+      <ConfirmDialog {...dialogProps} />
     </div>
   );
 }

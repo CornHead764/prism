@@ -170,6 +170,7 @@ export function ShoppingWidget({
                 onAddClick();
               }}
               className="h-8 w-8"
+              aria-label="Add shopping item"
             >
               <Plus className="h-4 w-4" />
             </Button>

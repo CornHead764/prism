@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { toast } from '@/components/ui/use-toast';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import Link from 'next/link';
 import { format, isPast, differenceInDays, formatDistanceToNow } from 'date-fns';
 import {
@@ -42,6 +44,7 @@ export function TasksView() {
     completedCount, totalCount,
     taskLists,
     autoSyncing,
+    confirmDialogProps,
   } = useTasksViewData();
 
   // Group by user toggle (default to true)
@@ -337,7 +340,7 @@ export function TasksView() {
                 setShowAddModal(false);
               } catch (err) {
                 console.error('Error creating task:', err);
-                alert('Failed to create task');
+                toast({ title: 'Failed to create task', variant: 'destructive' });
               }
             }}
             familyMembers={familyMembers}
@@ -367,7 +370,7 @@ export function TasksView() {
                 setEditingTask(null);
               } catch (err) {
                 console.error('Error updating task:', err);
-                alert('Failed to update task');
+                toast({ title: 'Failed to update task', variant: 'destructive' });
               }
             }}
             familyMembers={familyMembers}
@@ -380,6 +383,7 @@ export function TasksView() {
           userName={celebratingUser?.name || ''}
           onComplete={() => setCelebratingUser(null)}
         />
+        <ConfirmDialog {...confirmDialogProps} />
       </div>
     </PageWrapper>
   );

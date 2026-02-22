@@ -3,6 +3,8 @@
 import * as React from 'react';
 import { useEffect, useCallback } from 'react';
 import { X, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import type { Photo, PhotoUsageTag } from '@/lib/hooks/usePhotos';
 import { getResolutionQuality, parseUsageTags } from '@/lib/hooks/usePhotos';
 
@@ -32,6 +34,7 @@ export function PhotoLightbox({
   onUpdateUsage,
   autoOrientationEnabled,
 }: PhotoLightboxProps) {
+  const { confirm, dialogProps: confirmDialogProps } = useConfirmDialog();
   const photo = photos[currentIndex];
 
   const goNext = useCallback(() => {
@@ -79,6 +82,7 @@ export function PhotoLightbox({
       <button
         onClick={onClose}
         className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/40 hover:bg-black/60 text-white"
+        aria-label="Close"
       >
         <X className="w-6 h-6" />
       </button>
@@ -89,12 +93,14 @@ export function PhotoLightbox({
           <button
             onClick={goPrev}
             className="absolute left-4 z-10 p-2 rounded-full bg-black/40 hover:bg-black/60 text-white"
+            aria-label="Previous photo"
           >
             <ChevronLeft className="w-8 h-8" />
           </button>
           <button
             onClick={goNext}
             className="absolute right-4 z-10 p-2 rounded-full bg-black/40 hover:bg-black/60 text-white"
+            aria-label="Next photo"
           >
             <ChevronRight className="w-8 h-8" />
           </button>
@@ -151,13 +157,14 @@ export function PhotoLightbox({
         {/* Info row */}
         <div className="flex items-center gap-4 bg-black/60 backdrop-blur-sm rounded-xl px-4 py-2.5">
           <button
-            onClick={() => {
-              if (confirm('Delete this photo?')) {
+            onClick={async () => {
+              if (await confirm('Delete this photo?', 'This action cannot be undone.')) {
                 onDelete(photo.id);
                 onClose();
               }
             }}
             className="p-2 rounded-full hover:bg-white/10 text-white"
+            aria-label="Delete photo"
           >
             <Trash2 className="w-5 h-5" />
           </button>
@@ -185,6 +192,7 @@ export function PhotoLightbox({
           </span>
         </div>
       </div>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 }

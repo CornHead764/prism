@@ -2,6 +2,21 @@
 
 All notable changes to Prism are documented in this file.
 
+## [1.0.0] - 2026-02-22
+
+### Changed
+- **Toast Notifications**: Replaced all 55 browser `alert()` calls with styled toast notifications (success/warning/destructive variants) using shadcn/Radix toast system
+- **Confirm Dialogs**: Replaced all 18 browser `confirm()` calls with styled AlertDialog modals via reusable `useConfirmDialog` hook
+
+### Added
+- **Error Pages**: App-level `error.tsx` and `not-found.tsx` with route-level error boundaries for calendar and settings
+- **Accessibility**: Added ~60 `aria-label` attributes to icon-only buttons across all views, widgets, modals, and settings sections
+- **Stack trace protection**: Error boundaries gate error details behind `NODE_ENV === 'development'`
+
+### Fixed
+- **Console cleanup**: Removed 28 debug `console.log` calls from production code (birthday sync, calendar sync, calendar settings, backup utils)
+- **TypeScript**: Replaced `as any` cast in maintenance route with proper type validation
+
 ## [0.9.5] - 2026-02-21
 
 ### Added

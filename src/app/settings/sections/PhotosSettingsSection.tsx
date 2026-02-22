@@ -2,6 +2,8 @@
 
 import * as React from 'react';
 import { Plus, RefreshCw, Trash2, Cloud, HardDrive, Pin, X } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +23,7 @@ interface PhotoSource {
 }
 
 export function PhotosSettingsSection() {
+  const { confirm, dialogProps: confirmDialogProps } = useConfirmDialog();
   const [sources, setSources] = React.useState<PhotoSource[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [syncing, setSyncing] = React.useState<string | null>(null);
@@ -54,7 +57,7 @@ export function PhotosSettingsSection() {
   };
 
   const handleDelete = async (sourceId: string) => {
-    if (!confirm('Delete this source and all its photos?')) return;
+    if (!await confirm('Delete this source?', 'This will delete the source and all its photos.')) return;
     try {
       await fetch(`/api/photo-sources/${sourceId}`, { method: 'DELETE' });
       await fetchSources();
@@ -213,6 +216,7 @@ export function PhotosSettingsSection() {
                         onClick={() => handleSync(source.id)}
                         disabled={syncing === source.id}
                         title="Sync now"
+                        aria-label="Sync photos"
                       >
                         <RefreshCw className={cn('h-4 w-4', syncing === source.id && 'animate-spin')} />
                       </Button>
@@ -222,6 +226,7 @@ export function PhotosSettingsSection() {
                       size="icon"
                       onClick={() => handleDelete(source.id)}
                       title="Delete source"
+                      aria-label="Delete source"
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
@@ -232,6 +237,7 @@ export function PhotosSettingsSection() {
           )}
         </CardContent>
       </Card>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 }

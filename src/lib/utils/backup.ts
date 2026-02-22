@@ -302,7 +302,6 @@ export async function seedDatabase(): Promise<{ success: boolean; error?: string
         env: { ...process.env },
       });
 
-      console.log('Seed output:', result.stdout);
       return { success: true };
     } catch (altError) {
       return {

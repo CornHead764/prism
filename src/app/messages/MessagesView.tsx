@@ -15,6 +15,9 @@
 
 import * as React from 'react';
 import { useState, useMemo } from 'react';
+import { toast } from '@/components/ui/use-toast';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import Link from 'next/link';
 import { formatDistanceToNow, format } from 'date-fns';
 import {
@@ -43,6 +46,7 @@ import type { FamilyMember } from '@/types';
 export function MessagesView() {
 
   const { activeUser, requireAuth } = useAuth();
+  const { confirm: confirmDelete, dialogProps: confirmDialogProps } = useConfirmDialog();
 
   // State
   const { messages, loading, error, refresh, deleteMessage } = useMessages();
@@ -96,11 +100,11 @@ export function MessagesView() {
     const isOwnMessage = message.author.id === user.id;
 
     if (!isParent && !isOwnMessage) {
-      alert(`This message was posted by ${message.author.name}. Only they or a parent can delete it.`);
+      toast({ title: `This message was posted by ${message.author.name}. Only they or a parent can delete it.`, variant: 'warning' });
       return;
     }
 
-    if (confirm('Delete this message?')) {
+    if (await confirmDelete('Delete this message?', 'This action cannot be undone.')) {
       await deleteMessage(messageId);
     }
   };
@@ -258,6 +262,7 @@ export function MessagesView() {
           }}
         />
       </div>
+      <ConfirmDialog {...confirmDialogProps} />
     </PageWrapper>
   );
 }

@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { format, parseISO, formatDistanceToNow, isPast, differenceInDays } from 'date-fns';
 import { useState, useMemo } from 'react';
+import { toast } from '@/components/ui/use-toast';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   ClipboardList,
   Plus,
@@ -45,6 +47,7 @@ export function ChoresView() {
     filteredChores,
     completeChore, toggleEnabled, deleteChore, editChore,
     enabledCount, dueCount,
+    confirmDialogProps,
   } = useChoresViewData();
 
   // Group by user toggle (default to true)
@@ -406,7 +409,7 @@ export function ChoresView() {
                 setShowAddModal(false);
               } catch (err) {
                 console.error('Error creating chore:', err);
-                alert(err instanceof Error ? err.message : 'Failed to create chore');
+                toast({ title: err instanceof Error ? err.message : 'Failed to create chore', variant: 'destructive' });
               }
             }}
             familyMembers={familyMembers}
@@ -434,7 +437,7 @@ export function ChoresView() {
                 setEditingChore(null);
               } catch (err) {
                 console.error('Error updating chore:', err);
-                alert('Failed to update chore');
+                toast({ title: 'Failed to update chore', variant: 'destructive' });
               }
             }}
             familyMembers={familyMembers}
@@ -446,6 +449,7 @@ export function ChoresView() {
           userName={celebratingUser?.name || ''}
           onComplete={() => setCelebratingUser(null)}
         />
+        <ConfirmDialog {...confirmDialogProps} />
       </div>
     </PageWrapper>
   );

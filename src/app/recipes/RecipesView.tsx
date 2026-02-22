@@ -2,6 +2,9 @@
 
 import * as React from 'react';
 import { useState, useMemo, useEffect } from 'react';
+import { toast } from '@/components/ui/use-toast';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import Link from 'next/link';
 import {
   ChefHat,
@@ -49,6 +52,7 @@ type ViewMode = 'all' | 'favorites';
 
 export function RecipesView() {
   const { requireAuth } = useAuth();
+  const { confirm, dialogProps: confirmDialogProps } = useConfirmDialog();
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('all');
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
@@ -132,12 +136,12 @@ export function RecipesView() {
   }, [recipes, search, filterCuisine, filterCategory]);
 
   const handleDelete = async (recipe: Recipe) => {
-    if (!confirm(`Delete "${recipe.name}"? This cannot be undone.`)) return;
+    if (!await confirm(`Delete "${recipe.name}"?`, 'This cannot be undone.')) return;
     try {
       await deleteRecipe(recipe.id);
       setSelectedRecipe(null);
     } catch (err) {
-      alert('Failed to delete recipe');
+      toast({ title: 'Failed to delete recipe', variant: 'destructive' });
     }
   };
 
@@ -333,6 +337,7 @@ export function RecipesView() {
           onImport={importFromPaprika}
         />
       )}
+      <ConfirmDialog {...confirmDialogProps} />
     </PageWrapper>
   );
 }
@@ -367,6 +372,7 @@ function RecipeCard({ recipe, onClick, onToggleFavorite }: RecipeCardProps) {
               onToggleFavorite();
             }}
             className="flex-shrink-0"
+            aria-label={recipe.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
           >
             <Heart
               className={cn(
@@ -505,9 +511,9 @@ function RecipeDetailModal({
       }));
       await onAddToShoppingList(listId, scaledIngredients);
       setShowListPicker(false);
-      alert(`Added ${scaledIngredients.length} ingredients to shopping list!`);
+      toast({ title: `Added ${scaledIngredients.length} ingredients to shopping list!`, variant: 'success' });
     } catch {
-      alert('Failed to add ingredients to shopping list');
+      toast({ title: 'Failed to add ingredients to shopping list', variant: 'destructive' });
     } finally {
       setAddingToList(false);
     }
@@ -592,6 +598,7 @@ function RecipeDetailModal({
                     className="h-6 w-6"
                     onClick={() => setDesiredServings(Math.max(1, desiredServings - 1))}
                     disabled={desiredServings <= 1}
+                    aria-label="Decrease servings"
                   >
                     <Minus className="h-3 w-3" />
                   </Button>
@@ -601,6 +608,7 @@ function RecipeDetailModal({
                     size="icon"
                     className="h-6 w-6"
                     onClick={() => setDesiredServings(desiredServings + 1)}
+                    aria-label="Increase servings"
                   >
                     <Plus className="h-3 w-3" />
                   </Button>
@@ -753,7 +761,7 @@ function RecipeFormModal({ recipe, onClose, onSave }: RecipeFormModalProps) {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      alert('Recipe name is required');
+      toast({ title: 'Recipe name is required', variant: 'warning' });
       return;
     }
 
@@ -776,7 +784,7 @@ function RecipeFormModal({ recipe, onClose, onSave }: RecipeFormModalProps) {
         notes: notes.trim() || undefined,
       });
     } catch (err) {
-      alert('Failed to save recipe');
+      toast({ title: 'Failed to save recipe', variant: 'destructive' });
     } finally {
       setSaving(false);
     }

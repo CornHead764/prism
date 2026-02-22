@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback, KeyboardEvent, FocusEvent } from 'react';
+import { toast } from '@/components/ui/use-toast';
 import Link from 'next/link';
 import { getMonth } from 'date-fns';
 import {
@@ -358,7 +359,7 @@ export function ShoppingView() {
       setInlineInputs(prev => ({ ...prev, [category]: '' }));
     } catch (err) {
       console.error('Failed to add item:', err);
-      alert('Failed to add item. Please try again.');
+      toast({ title: 'Failed to add item. Please try again.', variant: 'destructive' });
     }
   };
 
@@ -390,7 +391,7 @@ export function ShoppingView() {
       setInlineInputs(prev => ({ ...prev, [`list${colNum}`]: '' }));
     } catch (err) {
       console.error('Failed to add item:', err);
-      alert('Failed to add item. Please try again.');
+      toast({ title: 'Failed to add item. Please try again.', variant: 'destructive' });
     }
   };
 
@@ -476,7 +477,7 @@ export function ShoppingView() {
                       onClick={async () => {
                         const user = await requireAuth("Who's editing this list?");
                         if (user && user.role === 'parent') { setEditingList(activeList); setShowListModal(true); }
-                        else if (user) alert('Only parents can edit list settings');
+                        else if (user) toast({ title: 'Only parents can edit list settings', variant: 'warning' });
                       }}>
                       <Settings className="h-4 w-4 mr-1" />Edit List
                     </Button>
@@ -861,7 +862,7 @@ export function ShoppingView() {
                 if (item.listId !== activeList.id) setActiveListId(item.listId);
               } catch (err) {
                 console.error('Failed to add item:', err);
-                alert('Failed to add item. Please try again.');
+                toast({ title: 'Failed to add item. Please try again.', variant: 'destructive' });
               }
             }} />
         )}
@@ -883,7 +884,7 @@ export function ShoppingView() {
                 setEditingItem(null);
               } catch (err) {
                 console.error('Failed to update item:', err);
-                alert('Failed to update item. Please try again.');
+                toast({ title: 'Failed to update item. Please try again.', variant: 'destructive' });
               }
             }} />
         )}
@@ -919,7 +920,7 @@ export function ShoppingView() {
                 refreshLists();
               } catch (err) {
                 console.error('Failed to save list:', err);
-                alert(err instanceof Error ? err.message : 'Failed to save list. Please try again.');
+                toast({ title: err instanceof Error ? err.message : 'Failed to save list. Please try again.', variant: 'destructive' });
               }
             }}
             onDelete={editingList ? async () => {
@@ -938,7 +939,7 @@ export function ShoppingView() {
                 refreshLists();
               } catch (err) {
                 console.error('Failed to delete list:', err);
-                alert(err instanceof Error ? err.message : 'Failed to delete list. Please try again.');
+                toast({ title: err instanceof Error ? err.message : 'Failed to delete list. Please try again.', variant: 'destructive' });
               }
             } : undefined} />
         )}

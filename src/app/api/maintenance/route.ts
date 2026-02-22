@@ -59,7 +59,11 @@ export async function GET(request: NextRequest) {
     // Apply filters
     const conditions = [];
     if (category) {
-      conditions.push(eq(maintenanceReminders.category, category as any));
+      const validCategories = ['car', 'home', 'appliance', 'yard', 'other'] as const;
+      type Category = typeof validCategories[number];
+      if (validCategories.includes(category as Category)) {
+        conditions.push(eq(maintenanceReminders.category, category as Category));
+      }
     }
     if (upcomingOnly) {
       // Show items due within the next 30 days

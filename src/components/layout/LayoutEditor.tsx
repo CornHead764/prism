@@ -2,6 +2,9 @@
 
 import * as React from 'react';
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { toast } from '@/components/ui/use-toast';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import { LAYOUT_TEMPLATES } from '@/lib/constants/layoutTemplates';
 import { SCREENSAVER_TEMPLATES } from '@/lib/constants/screensaverTemplates';
 import { WIDGET_REGISTRY } from '@/components/widgets/widgetRegistry';
@@ -150,6 +153,7 @@ export function LayoutEditor({
   onDeleteDashboard,
 }: LayoutEditorProps) {
   const { zones, allSizeNames } = useScreenSafeZones();
+  const { confirm: confirmDelete, dialogProps: confirmDialogProps } = useConfirmDialog();
   const effectiveEnabledSizes = enabledSizes.length > 0 ? enabledSizes : allSizeNames;
 
   const [activePopover, setActivePopover] = useState<ActivePopover>(null);
@@ -404,15 +408,17 @@ export function LayoutEditor({
     setActivePopover(null);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (allDashboards.length <= 1) {
-      window.alert('Cannot delete the last dashboard.');
+      toast({ title: 'Cannot delete the last dashboard', variant: 'warning' });
       return;
     }
     const currentSlug = allDashboards.find(d => d.id === currentDashboardId)?.slug;
-    if (window.confirm(`Delete "${layoutName}"? Devices bookmarked at /d/${currentSlug || '...'} will stop working.`)) {
-      onDeleteDashboard?.();
-    }
+    const ok = await confirmDelete(
+      `Delete "${layoutName}"?`,
+      `Devices bookmarked at /d/${currentSlug || '...'} will stop working.`
+    );
+    if (ok) onDeleteDashboard?.();
     setActivePopover(null);
   };
 
@@ -967,6 +973,7 @@ export function LayoutEditor({
           </div>
         </div>
       )}
+      <ConfirmDialog {...confirmDialogProps} />
     </>
   );
 }

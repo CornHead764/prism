@@ -3,6 +3,8 @@
 import * as React from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import { Cloud, HardDrive, RefreshCw, Trash2, FolderOpen } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import { cn } from '@/lib/utils';
 
 interface PhotoSource {
@@ -22,6 +24,7 @@ interface OneDriveFolder {
 }
 
 export function SourceManager() {
+  const { confirm, dialogProps: confirmDialogProps } = useConfirmDialog();
   const [sources, setSources] = useState<PhotoSource[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState<string | null>(null);
@@ -57,7 +60,7 @@ export function SourceManager() {
   };
 
   const handleDelete = async (sourceId: string) => {
-    if (!confirm('Delete this source and all its photos?')) return;
+    if (!await confirm('Delete this source?', 'This will delete the source and all its photos.')) return;
     try {
       await fetch(`/api/photo-sources/${sourceId}`, { method: 'DELETE' });
       await fetchSources();
@@ -141,6 +144,7 @@ export function SourceManager() {
                   onClick={() => handlePickFolder(source.id)}
                   className="p-2 rounded hover:bg-muted transition-colors"
                   title="Pick folder"
+                  aria-label="Pick folder"
                 >
                   <FolderOpen className="w-4 h-4" />
                 </button>
@@ -151,6 +155,7 @@ export function SourceManager() {
                   disabled={syncing === source.id}
                   className="p-2 rounded hover:bg-muted transition-colors"
                   title="Sync now"
+                  aria-label="Sync photos"
                 >
                   <RefreshCw className={cn('w-4 h-4', syncing === source.id && 'animate-spin')} />
                 </button>
@@ -159,6 +164,7 @@ export function SourceManager() {
                 onClick={() => handleDelete(source.id)}
                 className="p-2 rounded hover:bg-destructive/10 text-destructive transition-colors"
                 title="Delete source"
+                aria-label="Delete source"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -195,6 +201,7 @@ export function SourceManager() {
           </button>
         </div>
       )}
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 }

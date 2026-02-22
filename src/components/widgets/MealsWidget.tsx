@@ -90,7 +90,7 @@ export function MealsWidget({
             <span className="text-xs font-normal text-muted-foreground">
               {format(currentWeek, 'MMM d')} - {format(addDays(currentWeek, 6), 'MMM d')}
             </span>
-            <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); goToPreviousWeek(); }} className="h-8 w-8">
+            <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); goToPreviousWeek(); }} className="h-8 w-8" aria-label="Previous week">
               <ChevronLeft className="h-4 w-4" />
             </Button>
             {!isCurrentWeek && (
@@ -98,10 +98,10 @@ export function MealsWidget({
                 Today
               </Button>
             )}
-            <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); goToNextWeek(); }} className="h-8 w-8">
+            <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); goToNextWeek(); }} className="h-8 w-8" aria-label="Next week">
               <ChevronRight className="h-4 w-4" />
             </Button>
-            <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); handleAddClick(); }} className="h-8 w-8">
+            <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); handleAddClick(); }} className="h-8 w-8" aria-label="Add meal">
               <Plus className="h-4 w-4" />
             </Button>
           </div>
@@ -215,11 +215,11 @@ function MealItem({
       </div>
       {isCooked && onUnmarkCooked ? (
         <Button size="icon" variant="ghost" onClick={() => onUnmarkCooked(meal.id)}
-          className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" title="Undo">
+          className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" title="Undo" aria-label="Undo mark as cooked">
           <Undo2 className="h-4 w-4" />
         </Button>
       ) : !isCooked && onMarkCooked ? (
-        <Button size="icon" variant="ghost" onClick={() => onMarkCooked(meal.id)} className="h-7 w-7 shrink-0">
+        <Button size="icon" variant="ghost" onClick={() => onMarkCooked(meal.id)} className="h-7 w-7 shrink-0" aria-label="Mark as cooked">
           <CheckCircle2 className="h-4 w-4" />
         </Button>
       ) : null}
@@ -249,7 +249,7 @@ function WidgetAddMealModal({
       <div className="bg-card rounded-lg p-5 max-w-sm w-full mx-4 shadow-lg border border-border" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold">Add Meal</h2>
-          <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close"><X className="h-4 w-4" /></Button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-3">
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Meal name..." autoFocus />

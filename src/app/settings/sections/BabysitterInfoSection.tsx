@@ -236,6 +236,7 @@ export function BabysitterInfoSection() {
                       size="sm"
                       className="absolute right-0 top-0 h-full px-3"
                       onClick={() => setShowWifiPassword(!showWifiPassword)}
+                      aria-label={showWifiPassword ? 'Hide password' : 'Show password'}
                     >
                       {showWifiPassword ? (
                         <EyeOff className="h-4 w-4" />
@@ -417,7 +418,7 @@ function ItemRow({ item, section, onEdit, onDelete, isDeleting }: ItemRowProps) 
         <span className="text-sm truncate">{label}</span>
       </div>
       <div className="flex items-center gap-1">
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit}>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit} aria-label="Edit item">
           <Pencil className="h-4 w-4" />
         </Button>
         <Button
@@ -426,6 +427,7 @@ function ItemRow({ item, section, onEdit, onDelete, isDeleting }: ItemRowProps) 
           className="h-8 w-8 text-destructive hover:text-destructive"
           onClick={onDelete}
           disabled={isDeleting}
+          aria-label="Delete item"
         >
           <Trash2 className="h-4 w-4" />
         </Button>

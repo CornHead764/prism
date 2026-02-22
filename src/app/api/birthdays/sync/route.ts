@@ -188,8 +188,6 @@ export async function POST() {
     // Look back 30 days and forward 400 days to catch all birthday occurrences
     const timeMin = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const timeMax = new Date(Date.now() + 400 * 24 * 60 * 60 * 1000);
-    console.log('[BirthdaySync] Date range:', timeMin.toISOString(), 'to', timeMax.toISOString());
-
     // 1. Fetch from Birthdays calendar
     try {
       const birthdayEvents = await fetchCalendarEvents(accessToken, BIRTHDAYS_CALENDAR_ID, {
@@ -214,17 +212,9 @@ export async function POST() {
         s.dashboardCalendarName?.toLowerCase().includes('friends')
     );
 
-    console.log('[BirthdaySync] Looking for Friends & Family calendar...');
-    console.log('[BirthdaySync] Found source:', friendsFamilySource ? {
-      id: friendsFamilySource.id,
-      displayName: friendsFamilySource.displayName,
-      sourceCalendarId: friendsFamilySource.sourceCalendarId,
-    } : 'NOT FOUND');
-
     if (friendsFamilySource) {
       try {
         const token = await getAccessToken(friendsFamilySource) || accessToken;
-        console.log('[BirthdaySync] Fetching events from Friends & Family, calendarId:', friendsFamilySource.sourceCalendarId);
         const ffEvents = await fetchCalendarEvents(token, friendsFamilySource.sourceCalendarId, {
           timeMin,
           timeMax,
@@ -232,28 +222,22 @@ export async function POST() {
           singleEvents: true,
           orderBy: 'startTime',
         });
-        console.log('[BirthdaySync] Found', ffEvents.length, 'events in Friends & Family');
         for (const ev of ffEvents) {
-          console.log('[BirthdaySync] Event:', ev.summary, '| Start:', ev.start?.date || ev.start?.dateTime);
           allEvents.push(ev);
           calendarSourceLabel[ev.id] = 'friends_family';
         }
       } catch (err) {
         console.error('[BirthdaySync] Error fetching Friends & Family:', err);
       }
-    } else {
-      console.log('[BirthdaySync] No Friends & Family calendar found in sources');
     }
 
     // Parse all events into upsert-ready rows
     const errors: string[] = [];
     const rows: { name: string; birthDate: string; eventType: string; googleCalendarSource: string }[] = [];
 
-    console.log('[BirthdaySync] Parsing', allEvents.length, 'total events...');
     for (const event of allEvents) {
       const parsed = parseCalendarEvent(event);
       if (!parsed) {
-        console.log('[BirthdaySync] Could not parse event:', event.summary);
         continue;
       }
 
@@ -263,14 +247,10 @@ export async function POST() {
         : `1904-${month}-${day}`;
 
       const calSource = calendarSourceLabel[event.id] || 'google';
-      console.log('[BirthdaySync] Parsed:', parsed.name, parsed.eventType, birthDate);
       rows.push({ name: parsed.name, birthDate, eventType: parsed.eventType, googleCalendarSource: calSource });
     }
-    console.log('[BirthdaySync] Total rows to upsert:', rows.length);
-
     // Upsert each row individually for better error tracking
     let synced = 0;
-    console.log('[BirthdaySync] Upserting', rows.length, 'rows...');
     for (const row of rows) {
       try {
         await db
@@ -294,8 +274,6 @@ export async function POST() {
         errors.push(`Failed to upsert ${row.name}: ${err}`);
       }
     }
-    console.log('[BirthdaySync] Upserted', synced, 'of', rows.length, 'rows');
-
     return NextResponse.json({
       synced,
       total: allEvents.length,

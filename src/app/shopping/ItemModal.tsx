@@ -68,7 +68,7 @@ export function ItemModal({
           <h2 className="text-lg font-bold">
             {item ? 'Edit Item' : 'Add Item'}
           </h2>
-          <Button variant="ghost" size="icon" onClick={onClose}>
+          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
             <X className="h-4 w-4" />
           </Button>
         </div>

@@ -5,6 +5,8 @@ import { useState } from 'react';
 import { X, User, Trash2, ShoppingCart, Wrench, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import type { ShoppingList, FamilyMember } from '@/types';
 
 type ListType = 'grocery' | 'hardware' | 'other';
@@ -28,10 +30,11 @@ export function ListModal({
   const [listType, setListType] = useState<ListType>((list as { listType?: ListType } | null)?.listType || 'grocery');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const { confirm, dialogProps: confirmDialogProps } = useConfirmDialog();
 
   const handleDelete = async () => {
     if (!onDelete) return;
-    if (!confirm(`Delete "${list?.name}"? All items on this list will also be deleted.`)) return;
+    if (!await confirm(`Delete "${list?.name}"?`, 'All items on this list will also be deleted.')) return;
 
     setDeleting(true);
     try {
@@ -71,7 +74,7 @@ export function ListModal({
           <h2 className="text-lg font-bold">
             {list ? 'Edit List' : 'Create New List'}
           </h2>
-          <Button variant="ghost" size="icon" onClick={onClose}>
+          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -196,6 +199,7 @@ export function ListModal({
           </div>
         </form>
       </div>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 }

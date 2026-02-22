@@ -4,6 +4,8 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useAuth, useFamily } from '@/components/providers';
 import { useTasks } from '@/lib/hooks';
 import { useTaskLists } from '@/lib/hooks/useTaskLists';
+import { toast } from '@/components/ui/use-toast';
+import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import type { Task } from '@/types';
 
 const AUTO_SYNC_STALE_MINUTES = 5; // Sync if last sync > 5 min ago
@@ -11,6 +13,7 @@ const AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000; // Background sync every 5 min
 
 export function useTasksViewData() {
   const { requireAuth } = useAuth();
+  const { confirm, dialogProps: confirmDialogProps } = useConfirmDialog();
 
   const {
     tasks: apiTasks,
@@ -150,7 +153,7 @@ export function useTasksViewData() {
     const isParent = user.role === 'parent';
     const isAssignedToUser = !task.assignedTo || task.assignedTo.id === user.id;
     if (!isParent && !isAssignedToUser) {
-      alert(`This task is assigned to ${task.assignedTo?.name}. Only they can mark it complete.`);
+      toast({ title: `This task is assigned to ${task.assignedTo?.name}. Only they can mark it complete.`, variant: 'warning' });
       return false;
     }
     try {
@@ -158,7 +161,7 @@ export function useTasksViewData() {
       return true;
     } catch (err) {
       console.error('Error toggling task:', err);
-      alert('Failed to update task');
+      toast({ title: 'Failed to update task', variant: 'destructive' });
       return false;
     }
   };
@@ -166,22 +169,22 @@ export function useTasksViewData() {
   const editTask = async (task: Task) => {
     const user = await requireAuth("Who's editing this task?");
     if (!user) return;
-    if (user.role !== 'parent') { alert('Only parents can edit tasks.'); return; }
+    if (user.role !== 'parent') { toast({ title: 'Only parents can edit tasks', variant: 'warning' }); return; }
     setEditingTask(task);
   };
 
   const deleteTask = async (taskId: string) => {
     const user = await requireAuth("Who's deleting this task?");
     if (!user) return;
-    if (user.role !== 'parent') { alert('Only parents can delete tasks.'); return; }
-    if (!confirm('Are you sure you want to delete this task?')) return;
+    if (user.role !== 'parent') { toast({ title: 'Only parents can delete tasks', variant: 'warning' }); return; }
+    if (!await confirm('Delete this task?', 'Are you sure you want to delete this task?')) return;
     try {
       const response = await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to delete task');
       refreshTasks();
     } catch (err) {
       console.error('Error deleting task:', err);
-      alert('Failed to delete task');
+      toast({ title: 'Failed to delete task', variant: 'destructive' });
     }
   };
 
@@ -207,5 +210,6 @@ export function useTasksViewData() {
     completedCount, totalCount,
     taskLists,
     autoSyncing,
+    confirmDialogProps,
   };
 }

@@ -17,6 +17,8 @@ import { WidgetErrorBoundary } from '@/components/dashboard/WidgetErrorBoundary'
 import { useDashboardData } from './useDashboardData';
 import { useDashboardLayout } from './useDashboardLayout';
 import { buildWidgetProps } from './useWidgetProps';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 
 class WidgetBoundary extends React.Component<
   { name: string; children: React.ReactNode },
@@ -55,6 +57,7 @@ export function Dashboard({
   useEffect(() => { setIsMounted(true); }, []);
 
   const { activeUser, requireAuth, clearActiveUser } = useAuth();
+  const { confirm: confirmAction, dialogProps: confirmDialogProps } = useConfirmDialog();
   const data = useDashboardData();
 
   const [showAddMessage, setShowAddMessage] = useState(false);
@@ -180,7 +183,7 @@ export function Dashboard({
 
   const widgetProps = buildWidgetProps(data, requireAuth, {
     setShowAddTask, setShowAddMessage, setShowAddChore, setShowAddShopping,
-  }, weatherLocation);
+  }, weatherLocation, confirmAction);
 
   const handleLogin = async () => {
     await requireAuth('Login', 'Select your profile');
@@ -343,6 +346,7 @@ export function Dashboard({
             onItemCreated={() => { data.shopping.refresh(); }} />
         )}
       </DashboardLayout>
+      <ConfirmDialog {...confirmDialogProps} />
     </AppShell>
   );
 }

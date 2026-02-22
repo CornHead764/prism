@@ -55,6 +55,7 @@ export function AwayModeToggle({
         onClick={handleClick}
         className={className}
         title="Enable Away Mode"
+        aria-label="Enable Away Mode"
       >
         <TreePalm className="h-4 w-4" />
         {showLabel && <span className="ml-2">Away Mode</span>}

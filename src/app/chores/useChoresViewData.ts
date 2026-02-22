@@ -4,6 +4,8 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { isPast, parseISO } from 'date-fns';
 import { useAuth, useFamily } from '@/components/providers';
 import { useChores } from '@/lib/hooks';
+import { toast } from '@/components/ui/use-toast';
+import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import type { Chore } from '@/types';
 
 export interface ChoreCompletion {
@@ -20,6 +22,7 @@ export interface ChoreCompletion {
 
 export function useChoresViewData() {
   const { requireAuth } = useAuth();
+  const { confirm, dialogProps: confirmDialogProps } = useConfirmDialog();
 
   const {
     chores: apiChores,
@@ -112,14 +115,14 @@ export function useChoresViewData() {
     const isParent = user.role === 'parent';
     const isAssignedToUser = !chore.assignedTo || chore.assignedTo.id === user.id;
     if (!isParent && !isAssignedToUser) {
-      alert(`This chore is assigned to ${chore.assignedTo?.name}. Only they can mark it complete.`);
+      toast({ title: `This chore is assigned to ${chore.assignedTo?.name}. Only they can mark it complete.`, variant: 'warning' });
       return false;
     }
     try {
       // Parent approving a pending completion
       if (isParent && chore.pendingApproval) {
         await apiApproveChore(choreId, chore.pendingApproval.completionId);
-        alert(`Approved! ${chore.pendingApproval.completedBy.name} earned ${chore.pointValue} points for "${chore.title}".`);
+        toast({ title: `Approved! ${chore.pendingApproval.completedBy.name} earned ${chore.pointValue} points for "${chore.title}".`, variant: 'success' });
         refreshChores();
         return true;
       }
@@ -130,10 +133,10 @@ export function useChoresViewData() {
       // If parent is completing a chore assigned to a child, ask who actually did it
       if (isParent && chore.assignedTo && chore.assignedTo.id !== user.id) {
         const assigneeName = chore.assignedTo.name;
-        const choice = confirm(
-          `This chore is assigned to ${assigneeName}.\n\n` +
-          `Click OK to record ${assigneeName} as completing it (they'll get the points).\n\n` +
-          `Click Cancel to cancel.`
+        const choice = await confirm(
+          `Record ${assigneeName} as completing this?`,
+          `This chore is assigned to ${assigneeName}. They'll get the points.`,
+          { confirmLabel: `Credit ${assigneeName}`, variant: 'default' }
         );
         if (choice) {
           completedById = chore.assignedTo.id;
@@ -149,21 +152,21 @@ export function useChoresViewData() {
       });
       if (!response.ok) {
         const data = await response.json();
-        if (data.alreadyPending) { alert(data.message); return false; }
+        if (data.alreadyPending) { toast({ title: data.message, variant: 'warning' }); return false; }
         throw new Error(data.error || 'Failed to complete chore');
       }
       const result = await response.json();
       if (result.requiresApproval) {
         const completerName = familyMembers.find(m => m.id === completedById)?.name || 'They';
-        alert(`Great job! "${chore.title}" is now pending parental approval for ${completerName}.`);
+        toast({ title: `Great job! "${chore.title}" is now pending parental approval for ${completerName}.`, variant: 'success' });
       } else {
-        alert(`Chore completed! ${chore.pointValue} points awarded.`);
+        toast({ title: `Chore completed! ${chore.pointValue} points awarded.`, variant: 'success' });
       }
       refreshChores();
       return true;
     } catch (err) {
       console.error('Error completing chore:', err);
-      alert(err instanceof Error ? err.message : 'Failed to complete chore');
+      toast({ title: err instanceof Error ? err.message : 'Failed to complete chore', variant: 'destructive' });
       return false;
     }
   };
@@ -173,7 +176,7 @@ export function useChoresViewData() {
     if (!chore) return;
     const user = await requireAuth("Who's updating this chore?");
     if (!user) return;
-    if (user.role !== 'parent') { alert('Only parents can enable or disable chores.'); return; }
+    if (user.role !== 'parent') { toast({ title: 'Only parents can enable or disable chores', variant: 'warning' }); return; }
     try {
       const response = await fetch(`/api/chores/${choreId}`, {
         method: 'PATCH',
@@ -190,8 +193,8 @@ export function useChoresViewData() {
   const deleteChore = async (choreId: string) => {
     const user = await requireAuth("Who's deleting this chore?");
     if (!user) return;
-    if (user.role !== 'parent') { alert('Only parents can delete chores.'); return; }
-    if (!confirm('Are you sure you want to delete this chore?')) return;
+    if (user.role !== 'parent') { toast({ title: 'Only parents can delete chores', variant: 'warning' }); return; }
+    if (!await confirm('Delete this chore?', 'Are you sure you want to delete this chore?')) return;
     try {
       const response = await fetch(`/api/chores/${choreId}`, { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to delete chore');
@@ -204,7 +207,7 @@ export function useChoresViewData() {
   const editChore = async (chore: Chore) => {
     const user = await requireAuth("Who's editing this chore?");
     if (!user) return;
-    if (user.role !== 'parent') { alert('Only parents can edit chores.'); return; }
+    if (user.role !== 'parent') { toast({ title: 'Only parents can edit chores', variant: 'warning' }); return; }
     setEditingChore(chore);
   };
 
@@ -231,5 +234,6 @@ export function useChoresViewData() {
     filteredChores,
     completeChore, toggleEnabled, deleteChore, editChore,
     enabledCount, dueCount,
+    confirmDialogProps,
   };
 }

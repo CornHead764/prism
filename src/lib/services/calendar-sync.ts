@@ -106,7 +106,6 @@ export async function syncGoogleCalendarSource(
   }
 
   // Process each event using upsert to prevent duplicates
-  console.log(`[Sync] Processing ${googleEvents.length} events from Google for source ${sourceId}`);
   for (const googleEvent of googleEvents) {
     try {
       const internalEvent = convertGoogleEventToInternal(googleEvent, sourceId);
@@ -163,18 +162,11 @@ export async function syncGoogleCalendarSource(
     ),
   });
 
-  let deleted = 0;
   for (const prismEvent of prismEventsToCheck) {
     // Only delete if it has an external_event_id (was synced) but is no longer in Google
     if (prismEvent.externalEventId && !googleEventIds.has(prismEvent.externalEventId)) {
-      console.log(`[Sync] Deleting event "${prismEvent.title}" (${prismEvent.id}) - no longer in Google`);
       await db.delete(events).where(eq(events.id, prismEvent.id));
-      deleted++;
     }
-  }
-
-  if (deleted > 0) {
-    console.log(`[Sync] Deleted ${deleted} events that were removed from Google`);
   }
 
   // Update last synced timestamp
@@ -213,11 +205,9 @@ export async function syncAllGoogleCalendars(
   // Sync each source (catch errors per-source so one bad calendar doesn't crash all)
   for (const source of sources) {
     try {
-      console.log(`[Sync] Starting sync for calendar: ${source.dashboardCalendarName} (${source.id})`);
       const result = await syncGoogleCalendarSource(source.id, options);
       total += result.synced;
       allErrors.push(...result.errors);
-      console.log(`[Sync] Completed sync for ${source.dashboardCalendarName}: ${result.synced} events`);
     } catch (error) {
       const errorMsg = `Failed to sync calendar "${source.dashboardCalendarName}": ${error instanceof Error ? error.message : String(error)}`;
       console.error(`[Sync] ${errorMsg}`);

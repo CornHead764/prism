@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from '@/components/ui/use-toast';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import { RefreshCw, ExternalLink, Plus, Trash2, Pencil, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -12,6 +15,7 @@ import { useFamily } from '@/components/providers';
 import { CalendarColorPicker } from '../components/CalendarColorPicker';
 
 export function CalendarsSection() {
+  const { confirm, dialogProps: confirmDialogProps } = useConfirmDialog();
   const { members: familyMembers } = useFamily();
   const { calendars, loading: calendarsLoading, refresh: refreshCalendars } = useCalendarSources();
   const [syncing, setSyncing] = useState(false);
@@ -143,14 +147,12 @@ export function CalendarsSection() {
   const handleSyncCalendars = async () => {
     setSyncing(true);
     try {
-      console.log('[Settings] Starting calendar sync...');
       const response = await fetch('/api/calendars/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
       });
       const data = await response.json();
-      console.log('[Settings] Sync response:', response.status, data);
 
       // Also sync birthdays from Google Calendar
       let birthdaysSynced = 0;
@@ -162,7 +164,6 @@ export function CalendarsSection() {
         if (birthdayResponse.ok) {
           const birthdayData = await birthdayResponse.json();
           birthdaysSynced = birthdayData.synced || 0;
-          console.log('[Settings] Birthday sync response:', birthdayData);
         }
       } catch (birthdayError) {
         console.warn('Birthday sync failed:', birthdayError);
@@ -179,14 +180,14 @@ export function CalendarsSection() {
             message += `\n...and ${data.errors.length - 5} more`;
           }
         }
-        alert(message);
+        toast({ title: message, variant: 'success' });
         refreshCalendars();
       } else {
-        alert(`Sync failed: ${data.error || data.message || 'Unknown error'}\n${data.errors?.join('\n') || ''}`);
+        toast({ title: `Sync failed: ${data.error || data.message || 'Unknown error'}`, description: data.errors?.join('\n') || undefined, variant: 'destructive' });
       }
     } catch (error) {
       console.error('Failed to sync calendars:', error);
-      alert(`Sync error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast({ title: `Sync error: ${error instanceof Error ? error.message : 'Unknown error'}`, variant: 'destructive' });
     } finally {
       setSyncing(false);
     }
@@ -428,7 +429,7 @@ export function CalendarsSection() {
                       size="icon"
                       className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
                       onClick={async () => {
-                        if (!confirm(`Remove "${cal.dashboardCalendarName}" and all its events?`)) return;
+                        if (!await confirm(`Remove "${cal.dashboardCalendarName}"?`, 'This will remove the calendar and all its events.')) return;
                         setUpdatingCalendar(cal.id);
                         try {
                           await fetch(`/api/calendars/${cal.id}`, { method: 'DELETE' });
@@ -595,7 +596,7 @@ export function CalendarsSection() {
                       size="icon"
                       className="h-7 w-7 text-destructive"
                       onClick={async () => {
-                        if (!confirm(`Delete group "${group.name}"? Sources will be unassigned.`)) return;
+                        if (!await confirm(`Delete group "${group.name}"?`, 'Sources will be unassigned.')) return;
                         try {
                           await fetch(`/api/calendar-groups/${group.id}`, { method: 'DELETE' });
                           setCalGroups((prev) => prev.filter((g) => g.id !== group.id));
@@ -636,6 +637,7 @@ export function CalendarsSection() {
           </div>
         </CardContent>
       </Card>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 }

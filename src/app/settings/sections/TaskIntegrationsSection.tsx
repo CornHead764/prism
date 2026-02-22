@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from '@/components/ui/use-toast';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import { useSearchParams } from 'next/navigation';
 import {
   RefreshCw,
@@ -78,6 +81,7 @@ const SUCCESS_MESSAGES: Record<string, string> = {
 };
 
 export function TaskIntegrationsSection() {
+  const { confirm, dialogProps: confirmDialogProps } = useConfirmDialog();
   const searchParams = useSearchParams();
   const { lists: taskLists, loading: listsLoading, createList, updateList, deleteList } = useTaskLists();
   const [sources, setSources] = useState<TaskSource[]>([]);
@@ -331,7 +335,7 @@ export function TaskIntegrationsSection() {
   };
 
   const handleDeleteSource = async (sourceId: string, sourceName: string) => {
-    if (!confirm(`Disconnect "${sourceName}"? Tasks already synced will remain in Prism.`)) {
+    if (!await confirm(`Disconnect "${sourceName}"?`, 'Tasks already synced will remain in Prism.')) {
       return;
     }
 
@@ -363,15 +367,15 @@ export function TaskIntegrationsSection() {
         await fetchSources();
         const msg = `Sync complete: ${data.created} created, ${data.updated} updated, ${data.deleted} deleted`;
         if (data.errors?.length > 0) {
-          alert(`${msg}\n\nErrors:\n${data.errors.join('\n')}`);
+          toast({ title: msg, description: data.errors.join('\n'), variant: 'warning' });
         }
       } else {
-        alert(`Sync failed: ${data.error || 'Unknown error'}`);
+        toast({ title: `Sync failed: ${data.error || 'Unknown error'}`, variant: 'destructive' });
         await fetchSources();
       }
     } catch (error) {
       console.error('Failed to sync:', error);
-      alert('Sync failed: Network error');
+      toast({ title: 'Sync failed: Network error', variant: 'destructive' });
     } finally {
       setSyncing(null);
     }
@@ -524,9 +528,9 @@ export function TaskIntegrationsSection() {
       console.error('Failed to create list:', error);
       const message = error instanceof Error ? error.message : 'Failed to create list';
       if (message.includes('401') || message.includes('unauthorized')) {
-        alert('Please log in first to create a task list.');
+        toast({ title: 'Please log in first to create a task list.', variant: 'warning' });
       } else {
-        alert(message);
+        toast({ title: message, variant: 'destructive' });
       }
     } finally {
       setCreatingList(false);
@@ -560,7 +564,7 @@ export function TaskIntegrationsSection() {
     try {
       // Note: Changing task list would require re-mapping tasks
       // For now, we'll just show a message
-      alert('Changing the target list requires disconnecting and reconnecting. Tasks already synced will remain in the original list.');
+      toast({ title: 'Changing the target list requires disconnecting and reconnecting. Tasks already synced will remain in the original list.', variant: 'warning' });
     } finally {
       setUpdatingSource(null);
     }
@@ -901,12 +905,12 @@ export function TaskIntegrationsSection() {
                         className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                         disabled={deletingListId === list.id}
                         onClick={async () => {
-                          if (!confirm(`Delete "${list.name}"? Tasks in this list will be unassigned.`)) return;
+                          if (!await confirm(`Delete "${list.name}"?`, 'Tasks in this list will be unassigned.')) return;
                           setDeletingListId(list.id);
                           try {
                             await deleteList(list.id);
                           } catch (err) {
-                            alert(err instanceof Error ? err.message : 'Failed to delete list');
+                            toast({ title: err instanceof Error ? err.message : 'Failed to delete list', variant: 'destructive' });
                           } finally {
                             setDeletingListId(null);
                           }
@@ -988,7 +992,7 @@ export function TaskIntegrationsSection() {
                       setEditingList(null);
                       setEditListName('');
                     } catch (err) {
-                      alert(err instanceof Error ? err.message : 'Failed to update list');
+                      toast({ title: err instanceof Error ? err.message : 'Failed to update list', variant: 'destructive' });
                     } finally {
                       setSavingList(false);
                     }
@@ -1015,7 +1019,7 @@ export function TaskIntegrationsSection() {
                   setEditingList(null);
                   setEditListName('');
                 } catch (err) {
-                  alert(err instanceof Error ? err.message : 'Failed to update list');
+                  toast({ title: err instanceof Error ? err.message : 'Failed to update list', variant: 'destructive' });
                 } finally {
                   setSavingList(false);
                 }
@@ -1360,6 +1364,7 @@ export function TaskIntegrationsSection() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
 }

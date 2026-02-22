@@ -386,6 +386,7 @@ export function AddEventModal({
                     }`}
                     style={{ backgroundColor: color }}
                     title={color}
+                    aria-label={`Select color ${color}`}
                   />
                 ))}
                 {activeUser?.color && !['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6B7280'].includes(activeUser.color) && (
@@ -397,6 +398,7 @@ export function AddEventModal({
                     }`}
                     style={{ backgroundColor: activeUser.color }}
                     title={`Your color (${activeUser.color})`}
+                    aria-label={`Select your color ${activeUser.color}`}
                   />
                 )}
               </div>

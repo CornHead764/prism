@@ -1,5 +1,6 @@
 'use client';
 
+import { toast } from '@/components/ui/use-toast';
 import type { useDashboardData } from './useDashboardData';
 
 interface ModalSetters {
@@ -12,11 +13,14 @@ interface ModalSetters {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type RequireAuthFn = (prompt: string, title?: string) => Promise<any>;
 
+type ConfirmFn = (title: string, description?: string, options?: { confirmLabel?: string; variant?: 'default' | 'destructive' }) => Promise<boolean>;
+
 export function buildWidgetProps(
   data: ReturnType<typeof useDashboardData>,
   requireAuth: RequireAuthFn,
   modals: ModalSetters,
   weatherLocation: string,
+  confirmAction?: ConfirmFn,
 ): Record<string, Record<string, unknown>> {
   return {
     clock: {},
@@ -80,7 +84,7 @@ export function buildWidgetProps(
           // Parent approving a pending completion
           if (chore.pendingApproval && user.role === 'parent') {
             await data.chores.approveChore(choreId, chore.pendingApproval.completionId);
-            alert(`Approved! ${chore.pendingApproval.completedBy.name} earned ${chore.pointValue} points for "${chore.title}".`);
+            toast({ title: `Approved! ${chore.pendingApproval.completedBy.name} earned ${chore.pointValue} points for "${chore.title}".`, variant: 'success' });
             data.chores.refresh();
             return;
           }
@@ -92,11 +96,13 @@ export function buildWidgetProps(
           // If parent is completing a chore assigned to someone else, ask who did it
           if (isParent && chore.assignedTo && chore.assignedTo.id !== user.id) {
             const assigneeName = chore.assignedTo.name;
-            const choice = confirm(
-              `This chore is assigned to ${assigneeName}.\n\n` +
-              `Click OK to record ${assigneeName} as completing it (they'll get the points).\n\n` +
-              `Click Cancel to cancel.`
-            );
+            const choice = confirmAction
+              ? await confirmAction(
+                  `Record ${assigneeName} as completing this?`,
+                  `This chore is assigned to ${assigneeName}. They'll get the points.`,
+                  { confirmLabel: `Credit ${assigneeName}`, variant: 'default' }
+                )
+              : true;
             if (choice) {
               completedById = chore.assignedTo.id;
             } else {
@@ -106,14 +112,14 @@ export function buildWidgetProps(
 
           const result = await data.chores.completeChore(choreId, { completedBy: completedById });
           if (result?.requiresApproval) {
-            alert(`Great job! "${chore.title}" is now pending parental approval.`);
+            toast({ title: `Great job! "${chore.title}" is now pending parental approval.`, variant: 'success' });
           } else {
-            alert(`Chore completed! ${chore.pointValue} points awarded.`);
+            toast({ title: `Chore completed! ${chore.pointValue} points awarded.`, variant: 'success' });
           }
           data.chores.refresh();
         } catch (err) {
           console.error('Failed to complete chore:', err);
-          alert('Failed to complete chore. Please try again.');
+          toast({ title: 'Failed to complete chore. Please try again.', variant: 'destructive' });
         }
       },
       onAddClick: async () => {

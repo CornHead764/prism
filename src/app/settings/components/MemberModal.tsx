@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { toast } from '@/components/ui/use-toast';
 import { X, Upload, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -44,12 +45,12 @@ export function MemberModal({
     if (!file) return;
 
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      alert('Please select a JPEG, PNG, or WebP image.');
+      toast({ title: 'Please select a JPEG, PNG, or WebP image.', variant: 'warning' });
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('File too large. Max 5MB.');
+      toast({ title: 'File too large. Max 5MB.', variant: 'warning' });
       return;
     }
 
@@ -104,7 +105,7 @@ export function MemberModal({
           <h2 className="text-lg font-bold">
             {member ? 'Edit Member' : 'Add Family Member'}
           </h2>
-          <Button variant="ghost" size="icon" onClick={onClose}>
+          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
             <X className="h-4 w-4" />
           </Button>
         </div>

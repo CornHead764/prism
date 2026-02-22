@@ -168,9 +168,7 @@ export function useCalendarEvents(
         );
 
         if (needsSync) {
-          console.log('[AutoSync] Calendars stale, triggering background sync...');
           await syncCalendars();
-          console.log('[AutoSync] Background sync complete');
         }
 
         setLastSyncCheck(new Date());

@@ -159,6 +159,7 @@ export function WeekView({
                     : 'hover:bg-accent text-muted-foreground'
                 )}
                 title={hiddenSettings.enabled ? 'Show all hours' : 'Hide time block'}
+                aria-label={hiddenSettings.enabled ? 'Show all hours' : 'Hide time block'}
               >
                 <Clock className="h-3 w-3" />
               </button>
@@ -213,6 +214,7 @@ export function WeekView({
                 : 'hover:bg-accent text-muted-foreground'
             )}
             title={hiddenSettings.enabled ? 'Show all hours' : 'Hide time block'}
+            aria-label={hiddenSettings.enabled ? 'Show all hours' : 'Hide time block'}
           >
             <Clock className="h-4 w-4" />
           </button>
