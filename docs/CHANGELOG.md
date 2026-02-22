@@ -5,62 +5,16 @@ All notable changes to Prism are documented in this file.
 ## [0.9.5] - 2026-02-21
 
 ### Added
-- **Tier 1 & 2 Unit Tests**: Hooks, services, and API route coverage (52 new tests)
-  - `useHiddenHours` hook: default settings, localStorage persistence, toggleHidden, setTimeRange, getVisibleHours with contiguous range (0-6), wrap-around range (22-6), single hour hide
-  - `useSwipeNavigation` hook: left/right swipe detection, timeout rejection (>500ms), threshold enforcement, vertical swipe rejection, disabled state, default threshold of 50
-  - `computeZones` (screen safe zones): breakpoint cols at 1200/996/768 thresholds, landscape/portrait dimension swapping, row cap at 50, multiple screens, square aspect ratio, iPad 4:3
-  - Avatar storage service: saveAvatar (sharp rotate/resize/jpeg), deleteAvatar (missing file tolerance), getAvatarPath
-  - Photo sync service: source validation (type/folderId/tokens), new photo download, skip existing, delete stale, token refresh on expiry, per-photo error isolation, lastSynced update
-  - Recipe import-url route: missing/invalid URL (400), non-HTTP (400), fetch failure (502), no schema.org data (422), preview mode, successful import (201), auth/role enforcement
-- **CI Type Check Fix**: Fixed all `tsc --noEmit` errors in test files (Object possibly undefined, implicit any, unintentional comparisons)
-- **Auth & Cache Unit Tests**: Session management, auth cascade, and Redis cache layer (79 tests)
-  - Session management: token generation (64-char hex, uniqueness), createSession (Redis storage, per-role TTL, user_sessions set, Redis unavailable/error fallback), validateSession (valid/missing/expired cleanup, empty token), invalidateSession/All, login lockout (attempt tracking, TTL, fail-open)
-  - Auth cascade (`requireAuth`/`optionalAuth`/`getDisplayAuth`): Bearer token priority, cookie session fallback, 401 responses, displayUserId setting fallback to guest role
-  - Redis cache utilities: getCached (hit/miss/invalid JSON/Redis error fallback), setCache, invalidateCache (scanIterator with string and array keys), deleteCache, cacheExists, getCacheTTL, graceful degradation on all error paths
-- **API Route Integration Tests**: Business logic coverage (18 tests)
-  - Chore complete/approve workflow: parent auto-approval, child pending approval, disabled chore rejection, duplicate pending (409), assignment enforcement, approval with deleted user fallback
-  - Family member deletion: child deletion, parent deletion with others remaining, last parent protection, auth/role enforcement
-- **Crypto & Waterfall Edge Cases**: Hardened coverage (15 new tests)
-  - Crypto: wrong key decryption, truncated/empty input, tampered IV/auth tag, isEncrypted false positives, OAuth token distinction
-  - Points waterfall: priority ties (stable ordering), recurring-before-non-recurring overflow, multi-week accumulation, zero/negative points, many-goals distribution
-- **Tier 3 Unit Tests**: Hook and service coverage (42 tests)
-  - `useIdleDetection` hook: initial state, timeout params, localStorage fallback, default 120s, event listener registration (mousemove/keydown/touchstart), screensaver custom event
-  - `useAwayModeTimeout` hook: default disabled, localStorage persistence, setTimeout dispatch, CustomEvent sync, effect cleanup
-  - `useCalendarFilter` hook: initial "all" selection, toggle all/individual calendars, auto-"all" behavior, filterEvents by groupId/userId, unknown source exclusion
-  - Photo storage service: path construction (originals/thumbs), directory creation, auto-orient via sharp, conditional resize (>1920px), thumbnail generation with prefix, deletion with/without thumbnail, missing file tolerance
-- **Tier 2 Unit Tests**: Integration and hook coverage (41 tests)
-  - Calendar sync service: token refresh timing (5-min window, null expiry), source validation (missing/wrong provider/no token), event upsert, deleted event cleanup, per-source error isolation
-  - OneDrive integration: OAuth URL generation, token exchange/refresh, folder listing, photo MIME filtering, pagination with `@odata.nextLink`, photo download
-  - `useVisibilityPolling` hook: interval setup, pause on hidden, immediate resume on visible, cleanup on unmount, disabled when interval <= 0
-- **Tier 1 Unit Tests**: High-impact coverage for core utilities (80 tests)
-  - Color utility (`isLightColor`): luminance calculation, boundary values, a11y contrast
-  - Class merging (`cn`): Tailwind conflict resolution, conditionals, object/array syntax, modifier handling
-  - Rate limiting: window logic, boundary conditions, Redis failure fallback, user isolation, 429 headers
-  - OpenWeather: Kelvin→Fahrenheit/m/s→mph conversions, all 10 condition code ranges, forecast aggregation
-  - Backup utilities: path traversal defense, filename validation, file filtering, size formatting
-- **CRUD Mutation Tests**: E2E tests for create/edit/delete flows (25 tests)
-  - Task CRUD: create via modal, edit, toggle complete, delete, API listing
-  - Chore CRUD: create via modal/API, parent auto-approve, child approval workflow, disable prevents completion
-  - Shopping CRUD: add item via API/modal, check/uncheck, create list, delete item
-  - Event CRUD: create via API/modal, edit, delete, toggle all-day
-  - Message CRUD: post, list, pin toggle, delete, parent delete others' messages
-  - Shared cleanup helpers (`e2e/helpers/cleanup.ts`) for API-based test resource cleanup
-- **calculateNextDue Unit Tests**: 22 tests for chore scheduling logic covering all 8 frequency branches, startDay overrides, and edge cases
-- **withAuth Unit Tests**: 8 tests for the API auth wrapper middleware (auth, permissions, rate limiting)
-- **Extracted calculateNextDue**: DRY refactor — shared utility at `src/lib/utils/calculateNextDue.ts` used by both chore complete and approve routes
-- **E2E Test Suite**: Comprehensive Playwright tests covering core user flows (~40 tests)
-  - Auth: PIN pad open/close, login/logout, incorrect PIN error, child login
-  - Dashboard: widget rendering, sidebar nav links, direct URL routing
-  - Tasks: list loading, toggle completion, status filters, group-by-person view
-  - Chores: list loading, history view, group-by-person, add button visibility
-  - Shopping: list tabs, category display, item checking, shopping mode, progress bar
-  - Calendar: view switching (day/week/month), date navigation, Today button
-  - Settings: section navigation, display/theme settings, family member list, about
-  - Modes: away mode activate/deactivate/overlay, babysitter mode activate/overlay
-  - Shared helpers (`e2e/helpers/`) for auth and database reset between tests
-- **Unit Tests**: Core utility and auth module tests (267 total)
-  - MS To-Do sync integration tests
-  - Google Calendar converter tests
+- **Comprehensive Test Suite**: 635 unit tests (39 suites) + 76 E2E tests
+  - Core utilities: cn, color, crypto, formatters, backup, security headers, recipeParser, paprikaParser, validateFileType, calculateNextDue, pointWaterfall
+  - Auth & cache: session management, requireAuth cascade, API tokens, rate limiting, Redis cache layer (all with graceful fallback testing)
+  - Hooks (renderHook): useIdleDetection, useAwayModeTimeout, useCalendarFilter, useVisibilityPolling, useHiddenHours, useSwipeNavigation, useScreenSafeZones
+  - Integrations: OpenWeather, OneDrive, Google Calendar, MS To-Do (tasks + shopping), calendar sync
+  - Services: photo-storage, photo-sync, avatar-storage
+  - API routes: chore complete/approve workflow, family member deletion, recipe URL import, withAuth middleware
+  - E2E (Playwright): auth flows, dashboard, tasks/chores/shopping/calendar/settings navigation, CRUD mutations for all 5 modules, away/babysitter mode
+- **Extracted calculateNextDue**: DRY refactor — shared utility used by both chore complete and approve routes
+- **CI Type Check Fix**: All test files pass strict `tsc --noEmit`
 - **API Tokens**: Long-lived bearer tokens for machine-to-machine access
   - Generate tokens in Settings → Security → API Tokens
   - Tokens grant parent-level access to all API endpoints
