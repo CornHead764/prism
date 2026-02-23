@@ -37,7 +37,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
-import { isLightColor, hexToHslValues } from '@/lib/utils/color';
+import { isLightColor, hexToHslValues, hexToRgba } from '@/lib/utils/color';
 
 /**
  * WIDGET ALIGNMENT
@@ -79,7 +79,7 @@ export const WidgetAlignmentProvider = WidgetAlignmentContext.Provider;
 // Context for grid-level background override — when the grid wrapper applies a custom
 // background, the Card strips its own bg/border/shadow so there's no double background.
 // Also carries explicit textColor so WidgetContainer can apply it on the Card.
-const WidgetBgOverrideContext = React.createContext<{ hasCustomBg: boolean; textColor?: string } | null>(null);
+const WidgetBgOverrideContext = React.createContext<{ hasCustomBg: boolean; textColor?: string; textOpacity?: number } | null>(null);
 export const WidgetBgOverrideProvider = WidgetBgOverrideContext.Provider;
 
 /** Hook for sub-components (e.g. calendar views) to check if widget has custom bg */
@@ -200,6 +200,7 @@ export function WidgetContainer({
   const bgOverride = React.useContext(WidgetBgOverrideContext);
   const stripCardBg = bgOverride?.hasCustomBg === true;
   const overrideTextColor = bgOverride?.textColor;
+  const overrideTextOpacity = bgOverride?.textOpacity ?? 1;
 
   // Size classes for the grid
   const sizeClasses: Record<WidgetSize, string> = {
@@ -234,19 +235,24 @@ export function WidgetContainer({
         ...(stripCardBg
           ? { backgroundColor: 'transparent' }
           : backgroundColor ? { backgroundColor } : {}),
-        ...(overrideTextColor ? {
-          color: overrideTextColor,
-          // Override Tailwind CSS custom properties so text-foreground, text-muted-foreground,
-          // text-card-foreground, text-primary, text-seasonal-accent etc. all resolve to the chosen color
-          '--foreground': hexToHslValues(overrideTextColor),
-          '--card-foreground': hexToHslValues(overrideTextColor),
-          '--muted-foreground': hexToHslValues(overrideTextColor),
-          '--primary': hexToHslValues(overrideTextColor),
-          '--seasonal-accent': hexToHslValues(overrideTextColor),
-          // Override border colors so Select/dropdown outlines pick up the custom color
-          '--input': hexToHslValues(overrideTextColor),
-          '--border': hexToHslValues(overrideTextColor),
-        } as React.CSSProperties : {}),
+        ...(overrideTextColor ? (() => {
+          const hsl = hexToHslValues(overrideTextColor);
+          // When text opacity < 1, append alpha to HSL values so Tailwind's hsl() picks it up
+          const hslVal = overrideTextOpacity < 1 ? `${hsl} / ${overrideTextOpacity}` : hsl;
+          return {
+            color: overrideTextOpacity < 1 ? hexToRgba(overrideTextColor, overrideTextOpacity) : overrideTextColor,
+            // Override Tailwind CSS custom properties so text-foreground, text-muted-foreground,
+            // text-card-foreground, text-primary, text-seasonal-accent etc. all resolve to the chosen color
+            '--foreground': hslVal,
+            '--card-foreground': hslVal,
+            '--muted-foreground': hslVal,
+            '--primary': hslVal,
+            '--seasonal-accent': hslVal,
+            // Override border colors so Select/dropdown outlines pick up the custom color
+            '--input': hslVal,
+            '--border': hslVal,
+          } as React.CSSProperties;
+        })() : {}),
       }}
     >
       {/* WIDGET HEADER */}
@@ -284,8 +290,9 @@ export function WidgetContainer({
       {/* WIDGET CONTENT */}
       <CardContent
         className={cn(
-          // Fill remaining space
-          'flex-1 flex flex-col',
+          // Fill remaining space; min-h-0 overrides flex min-height:auto
+          // so overflow-auto can scroll when content exceeds cell height
+          'flex-1 flex flex-col min-h-0',
           // Allow content scrolling within widget
           'overflow-auto',
           // Remove padding if no header

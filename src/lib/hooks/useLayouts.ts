@@ -12,7 +12,9 @@ export interface WidgetConfig {
   backgroundColor?: string;
   backgroundOpacity?: number;
   outlineColor?: string;
+  outlineOpacity?: number;
   textColor?: string;
+  textOpacity?: number;
   settings?: Record<string, unknown>;
 }
 

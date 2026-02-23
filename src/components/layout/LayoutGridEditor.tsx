@@ -219,7 +219,7 @@ export function LayoutGridEditor({
     };
   }, [onLayoutChange]);
 
-  const updateWidgetColor = useCallback((widgetId: string, updates: { backgroundColor?: string | null; backgroundOpacity?: number; outlineColor?: string | null; textColor?: string | null }) => {
+  const updateWidgetColor = useCallback((widgetId: string, updates: { backgroundColor?: string | null; backgroundOpacity?: number; outlineColor?: string | null; outlineOpacity?: number; textColor?: string | null; textOpacity?: number }) => {
     const updated = layoutRef.current.map(w => {
       if (w.i === widgetId) {
         return {
@@ -227,7 +227,9 @@ export function LayoutGridEditor({
           backgroundColor: updates.backgroundColor === null ? undefined : (updates.backgroundColor ?? w.backgroundColor),
           backgroundOpacity: updates.backgroundOpacity ?? w.backgroundOpacity,
           outlineColor: updates.outlineColor === null ? undefined : (updates.outlineColor ?? w.outlineColor),
+          outlineOpacity: updates.outlineOpacity ?? w.outlineOpacity,
           textColor: updates.textColor === null ? undefined : (updates.textColor ?? w.textColor),
+          textOpacity: updates.textOpacity ?? w.textOpacity,
         };
       }
       return w;
@@ -245,7 +247,8 @@ export function LayoutGridEditor({
         : widget.backgroundColor;
     }
     if (widget.outlineColor) {
-      style.border = `2px solid ${widget.outlineColor}`;
+      const olOpacity = widget.outlineOpacity ?? 1;
+      style.border = `2px solid ${olOpacity < 1 ? hexToRgba(widget.outlineColor, olOpacity) : widget.outlineColor}`;
     }
     return style;
   };
@@ -292,8 +295,12 @@ export function LayoutGridEditor({
     const olColor = selectedWidgetConfig.outlineColor;
     const txtColor = selectedWidgetConfig.textColor;
     const bgOpacity = selectedWidgetConfig.backgroundOpacity ?? 1;
+    const olOpacity = selectedWidgetConfig.outlineOpacity ?? 1;
+    const txtOpacity = selectedWidgetConfig.textOpacity ?? 1;
     const displayName = selectedWidgetConfig.i.charAt(0).toUpperCase() + selectedWidgetConfig.i.slice(1);
     const hasColorFill = bgColor && bgColor !== 'transparent';
+    const hasColorOutline = !!olColor;
+    const hasColorText = !!txtColor;
     const activeColor = getActiveColor(selectedWidgetConfig);
 
     const palette = getColorPalette(paletteId, isDark);
@@ -420,24 +427,28 @@ export function LayoutGridEditor({
             />
           </div>
 
-          {/* Opacity — inline on swatch row, visible when solid fill */}
-          {hasColorFill && (
+          {/* Opacity — inline on swatch row, visible when active target has a color */}
+          {((colorTarget === 'fill' && hasColorFill) || (colorTarget === 'outline' && hasColorOutline) || (colorTarget === 'text' && hasColorText)) && (
             <>
               <div className="w-px h-6 bg-border mx-0.5" />
-              {[0, 0.25, 0.5, 0.75, 1].map((o) => (
-                <button
-                  key={o}
-                  onClick={() => updateWidgetColor(selectedWidget, { backgroundOpacity: o })}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  className={`w-8 h-8 rounded-full text-[10px] border transition-colors touch-manipulation ${
-                    bgOpacity === o
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'border-border hover:bg-accent/50'
-                  }`}
-                >
-                  {Math.round(o * 100)}%
-                </button>
-              ))}
+              {[0, 0.25, 0.5, 0.75, 1].map((o) => {
+                const currentOpacity = colorTarget === 'fill' ? bgOpacity : colorTarget === 'outline' ? olOpacity : txtOpacity;
+                const opacityKey = colorTarget === 'fill' ? 'backgroundOpacity' : colorTarget === 'outline' ? 'outlineOpacity' : 'textOpacity';
+                return (
+                  <button
+                    key={o}
+                    onClick={() => updateWidgetColor(selectedWidget, { [opacityKey]: o })}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className={`w-8 h-8 rounded-full text-[10px] border transition-colors touch-manipulation ${
+                      currentOpacity === o
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'border-border hover:bg-accent/50'
+                    }`}
+                  >
+                    {Math.round(o * 100)}%
+                  </button>
+                );
+              })}
             </>
           )}
         </div>
@@ -447,12 +458,16 @@ export function LayoutGridEditor({
           <div className="flex gap-1">
             {([
               { id: 'fill' as const, icon: PaintBucket, label: 'Fill', color: bgColor, opacity: bgOpacity },
-              { id: 'outline' as const, icon: Square, label: 'Outline', color: olColor, opacity: 1 },
-              { id: 'text' as const, icon: Type, label: 'Text', color: txtColor, opacity: 1 },
+              { id: 'outline' as const, icon: Square, label: 'Outline', color: olColor, opacity: olOpacity },
+              { id: 'text' as const, icon: Type, label: 'Text', color: txtColor, opacity: txtOpacity },
             ]).map(({ id, icon: Icon, label, color, opacity }) => {
               const fillColor = color && color !== 'transparent' ? color : '#999';
-              const fillLevel = !color || color === 'transparent' ? 0 : id === 'fill' ? opacity : 1;
+              const fillLevel = !color || color === 'transparent' ? 0 : opacity;
               const isActive = colorTarget === id;
+              // Contrasting stroke: light stroke on dark fills, dark stroke on light fills
+              const ballStroke = fillLevel > 0 && color && color !== 'transparent'
+                ? (isLightColor(color) ? '#333' : '#fff')
+                : (isActive ? 'rgba(255,255,255,0.6)' : '#999');
 
               return (
                 <button
@@ -469,7 +484,7 @@ export function LayoutGridEditor({
                   <span>{label}</span>
                   {/* Harvey ball indicator */}
                   <svg viewBox="0 0 16 16" className="w-4 h-4 shrink-0">
-                    <circle cx="8" cy="8" r="7" fill={isActive ? 'rgba(255,255,255,0.3)' : '#e5e5e5'} stroke={isActive ? 'rgba(255,255,255,0.6)' : '#999'} strokeWidth="1" />
+                    <circle cx="8" cy="8" r="7" fill={isActive ? 'rgba(255,255,255,0.3)' : '#e5e5e5'} stroke={ballStroke} strokeWidth="1" />
                     {fillLevel > 0 && (
                       <>
                         <defs>
@@ -477,7 +492,7 @@ export function LayoutGridEditor({
                             <rect x="0" y={16 - fillLevel * 16} width="16" height={fillLevel * 16} />
                           </clipPath>
                         </defs>
-                        <circle cx="8" cy="8" r="7" fill={fillColor} stroke={fillColor} strokeWidth="0.5" clipPath={`url(#hb-${id})`} />
+                        <circle cx="8" cy="8" r="7" fill={fillColor} clipPath={`url(#hb-${id})`} />
                       </>
                     )}
                     {color === 'transparent' && (
@@ -648,7 +663,7 @@ export function LayoutGridEditor({
                       }}
                     >
                       <div className={`absolute inset-0 z-10 border-2 border-dashed ${isSelected ? 'border-primary' : theme.borderDash} rounded-lg pointer-events-none`} />
-                      <WidgetBgOverrideProvider value={{ hasCustomBg, textColor: w.textColor }}>
+                      <WidgetBgOverrideProvider value={{ hasCustomBg, textColor: w.textColor, textOpacity: w.textOpacity }}>
                         <div className={`h-full w-full overflow-hidden ${textClass}`}>
                           {renderWidget(w)}
                         </div>
@@ -697,7 +712,7 @@ export function LayoutGridEditor({
 
               return (
                 <div key={w.i} className="relative" style={widgetStyle}>
-                  <WidgetBgOverrideProvider value={{ hasCustomBg, textColor: w.textColor }}>
+                  <WidgetBgOverrideProvider value={{ hasCustomBg, textColor: w.textColor, textOpacity: w.textOpacity }}>
                     <div className={`h-full w-full overflow-auto ${textClass}`}>
                       {renderWidget(w)}
                     </div>
