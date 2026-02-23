@@ -243,6 +243,9 @@ export function WidgetContainer({
           '--muted-foreground': hexToHslValues(overrideTextColor),
           '--primary': hexToHslValues(overrideTextColor),
           '--seasonal-accent': hexToHslValues(overrideTextColor),
+          // Override border colors so Select/dropdown outlines pick up the custom color
+          '--input': hexToHslValues(overrideTextColor),
+          '--border': hexToHslValues(overrideTextColor),
         } as React.CSSProperties : {}),
       }}
     >

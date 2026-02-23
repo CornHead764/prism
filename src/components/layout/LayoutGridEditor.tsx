@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import { ResponsiveGridLayout as RGL, useContainerWidth, getCompactor } from 'react-grid-layout';
 import type { LayoutItem, Layout } from 'react-grid-layout';
-import { PaintBucket, Square, Type, Ban, Sparkles } from 'lucide-react';
+import { PaintBucket, Square, Type } from 'lucide-react';
 import { isLightColor, hexToRgba } from '@/lib/utils/color';
 import { useScreenSafeZones } from '@/lib/hooks/useScreenSafeZones';
 import { WidgetBgOverrideProvider } from '@/components/widgets/WidgetContainer';
@@ -343,49 +343,34 @@ export function LayoutGridEditor({
 
         {/* Row 3: Special swatch + themed colors + B/W + custom picker */}
         <div className="flex items-center gap-1 px-3 pb-1.5">
-          {/* Special swatch — changes per target */}
-          {colorTarget === 'fill' ? (
-            <button
-              onClick={() => applyColorToTarget(selectedWidget, 'transparent')}
-              onPointerDown={(e) => e.stopPropagation()}
-              className={`w-8 h-8 rounded-full border border-gray-300 overflow-hidden transition-transform hover:scale-110 touch-manipulation ${
-                bgColor === 'transparent' ? 'ring-2 ring-primary ring-offset-1' : ''
-              }`}
-              title="Transparent"
-            >
-              <svg viewBox="0 0 32 32" className="w-full h-full">
-                <pattern id="checker-props" width="8" height="8" patternUnits="userSpaceOnUse">
-                  <rect width="4" height="4" fill="#ccc" />
-                  <rect x="4" y="4" width="4" height="4" fill="#ccc" />
-                  <rect x="4" width="4" height="4" fill="#fff" />
-                  <rect y="4" width="4" height="4" fill="#fff" />
-                </pattern>
-                <circle cx="16" cy="16" r="16" fill="url(#checker-props)" />
-              </svg>
-            </button>
-          ) : colorTarget === 'outline' ? (
-            <button
-              onClick={() => applyColorToTarget(selectedWidget, null)}
-              onPointerDown={(e) => e.stopPropagation()}
-              className={`w-8 h-8 rounded-full border border-gray-400 flex items-center justify-center transition-transform hover:scale-110 touch-manipulation ${
-                !olColor ? 'ring-2 ring-primary ring-offset-1' : ''
-              }`}
-              title="None"
-            >
-              <Ban className="w-4 h-4 text-muted-foreground" />
-            </button>
-          ) : (
-            <button
-              onClick={() => applyColorToTarget(selectedWidget, null)}
-              onPointerDown={(e) => e.stopPropagation()}
-              className={`w-8 h-8 rounded-full border border-gray-400 flex items-center justify-center transition-transform hover:scale-110 touch-manipulation ${
-                !txtColor ? 'ring-2 ring-primary ring-offset-1' : ''
-              }`}
-              title="Auto"
-            >
-              <Sparkles className="w-4 h-4 text-muted-foreground" />
-            </button>
-          )}
+          {/* Special swatch — checkerboard for all targets */}
+          {(() => {
+            const specialValue = colorTarget === 'fill' ? 'transparent' : null;
+            const isSpecialSelected = colorTarget === 'fill'
+              ? bgColor === 'transparent'
+              : colorTarget === 'outline' ? !olColor : !txtColor;
+            const title = colorTarget === 'fill' ? 'Transparent' : colorTarget === 'outline' ? 'None' : 'Auto';
+            return (
+              <button
+                onClick={() => applyColorToTarget(selectedWidget, specialValue)}
+                onPointerDown={(e) => e.stopPropagation()}
+                className={`w-8 h-8 rounded-full border border-gray-300 overflow-hidden transition-transform hover:scale-110 touch-manipulation ${
+                  isSpecialSelected ? 'ring-2 ring-primary ring-offset-1' : ''
+                }`}
+                title={title}
+              >
+                <svg viewBox="0 0 32 32" className="w-full h-full">
+                  <pattern id="checker-props" width="8" height="8" patternUnits="userSpaceOnUse">
+                    <rect width="4" height="4" fill="#ccc" />
+                    <rect x="4" y="4" width="4" height="4" fill="#ccc" />
+                    <rect x="4" width="4" height="4" fill="#fff" />
+                    <rect y="4" width="4" height="4" fill="#fff" />
+                  </pattern>
+                  <circle cx="16" cy="16" r="16" fill="url(#checker-props)" />
+                </svg>
+              </button>
+            );
+          })()}
 
           <div className="w-px h-6 bg-border mx-0.5" />
 
@@ -436,67 +421,84 @@ export function LayoutGridEditor({
           </div>
         </div>
 
-        {/* Row 4: Target buttons + opacity */}
-        <div className="flex items-center gap-2 px-3 pb-2">
-          {/* Target buttons */}
+        {/* Row 4: Target buttons with harvey ball indicators */}
+        <div className="flex items-center gap-2 px-3 pb-1.5">
           <div className="flex gap-1">
             {([
-              { id: 'fill' as const, icon: PaintBucket, label: 'Fill', color: bgColor },
-              { id: 'outline' as const, icon: Square, label: 'Outline', color: olColor },
-              { id: 'text' as const, icon: Type, label: 'Text', color: txtColor },
-            ]).map(({ id, icon: Icon, label, color }) => (
+              { id: 'fill' as const, icon: PaintBucket, label: 'Fill', color: bgColor, opacity: bgOpacity },
+              { id: 'outline' as const, icon: Square, label: 'Outline', color: olColor, opacity: 1 },
+              { id: 'text' as const, icon: Type, label: 'Text', color: txtColor, opacity: 1 },
+            ]).map(({ id, icon: Icon, label, color, opacity }) => {
+              const fillColor = color && color !== 'transparent' ? color : '#999';
+              const fillLevel = !color || color === 'transparent' ? 0 : id === 'fill' ? opacity : 1;
+              const isActive = colorTarget === id;
+
+              return (
+                <button
+                  key={id}
+                  onClick={() => setColorTarget(id)}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className={`relative flex items-center gap-1.5 px-2.5 min-h-[44px] min-w-[44px] text-xs rounded border transition-colors touch-manipulation ${
+                    isActive
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'border-border hover:bg-accent/50'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{label}</span>
+                  {/* Harvey ball indicator */}
+                  <svg viewBox="0 0 16 16" className="w-4 h-4 shrink-0">
+                    <circle cx="8" cy="8" r="7" fill={isActive ? 'rgba(255,255,255,0.3)' : '#e5e5e5'} stroke={isActive ? 'rgba(255,255,255,0.6)' : '#999'} strokeWidth="1" />
+                    {fillLevel > 0 && (
+                      <>
+                        <defs>
+                          <clipPath id={`hb-${id}`}>
+                            <rect x="0" y={16 - fillLevel * 16} width="16" height={fillLevel * 16} />
+                          </clipPath>
+                        </defs>
+                        <circle cx="8" cy="8" r="7" fill={fillColor} clipPath={`url(#hb-${id})`} />
+                      </>
+                    )}
+                    {color === 'transparent' && (
+                      <>
+                        <defs>
+                          <pattern id="hb-checker" width="4" height="4" patternUnits="userSpaceOnUse">
+                            <rect width="2" height="2" fill="#ccc" />
+                            <rect x="2" y="2" width="2" height="2" fill="#ccc" />
+                            <rect x="2" width="2" height="2" fill="#fff" />
+                            <rect y="2" width="2" height="2" fill="#fff" />
+                          </pattern>
+                        </defs>
+                        <circle cx="8" cy="8" r="7" fill="url(#hb-checker)" />
+                      </>
+                    )}
+                  </svg>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Row 5: Opacity — always visible when widget has a solid fill */}
+        {hasColorFill && (
+          <div className="flex items-center gap-1 px-3 pb-2" onPointerDown={(e) => e.stopPropagation()}>
+            <span className="text-xs text-muted-foreground mr-1">Opacity</span>
+            {[0, 0.25, 0.5, 0.75, 1].map((o) => (
               <button
-                key={id}
-                onClick={() => setColorTarget(id)}
+                key={o}
+                onClick={() => updateWidgetColor(selectedWidget, { backgroundOpacity: o })}
                 onPointerDown={(e) => e.stopPropagation()}
-                className={`relative flex items-center gap-1.5 px-2.5 min-h-[44px] min-w-[44px] text-xs rounded border transition-colors touch-manipulation ${
-                  colorTarget === id
+                className={`px-2.5 min-h-[44px] text-xs rounded border transition-colors touch-manipulation ${
+                  bgOpacity === o
                     ? 'bg-primary text-primary-foreground border-primary'
                     : 'border-border hover:bg-accent/50'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{label}</span>
-                {/* Color indicator dot */}
-                <span
-                  className="w-3 h-3 rounded-full border border-gray-400 shrink-0"
-                  style={{
-                    backgroundColor: color && color !== 'transparent' ? color : undefined,
-                    background: color === 'transparent'
-                      ? 'repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 50%/6px 6px'
-                      : !color
-                        ? 'linear-gradient(135deg, #ddd 50%, #999 50%)'
-                        : undefined,
-                  }}
-                />
+                {Math.round(o * 100)}%
               </button>
             ))}
           </div>
-
-          {/* Opacity — only when fill target is active AND fill is a solid color */}
-          {colorTarget === 'fill' && hasColorFill && (
-            <>
-              <div className="w-px h-8 bg-border" />
-              <div className="flex items-center gap-1">
-                <span className="text-[10px] text-muted-foreground mr-1">Opacity</span>
-                {[0, 0.25, 0.5, 0.75, 1].map((o) => (
-                  <button
-                    key={o}
-                    onClick={() => updateWidgetColor(selectedWidget, { backgroundOpacity: o })}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    className={`px-2.5 min-h-[44px] text-xs rounded border transition-colors touch-manipulation ${
-                      bgOpacity === o
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'border-border hover:bg-accent/50'
-                    }`}
-                  >
-                    {Math.round(o * 100)}%
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+        )}
       </div>
     );
   };
@@ -696,7 +698,7 @@ export function LayoutGridEditor({
               return (
                 <div key={w.i} className="relative" style={widgetStyle}>
                   <WidgetBgOverrideProvider value={{ hasCustomBg, textColor: w.textColor }}>
-                    <div className={`h-full w-full overflow-hidden ${textClass}`}>
+                    <div className={`h-full w-full overflow-auto ${textClass}`}>
                       {renderWidget(w)}
                     </div>
                   </WidgetBgOverrideProvider>
