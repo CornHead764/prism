@@ -728,7 +728,7 @@ export function LayoutGridEditor({
               return (
                 <div key={w.i} className="relative" style={widgetStyle}>
                   <WidgetBgOverrideProvider value={{ hasCustomBg, textColor: w.textColor, textOpacity: w.textOpacity }}>
-                    <div className={`h-full w-full overflow-auto ${textClass}`}>
+                    <div className={`h-full w-full overflow-hidden ${textClass}`}>
                       {renderWidget(w)}
                     </div>
                   </WidgetBgOverrideProvider>

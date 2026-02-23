@@ -215,7 +215,9 @@ const widgetConfigSchema = z.object({
   backgroundColor: z.string().optional(),
   backgroundOpacity: z.number().min(0).max(1).optional(),
   outlineColor: z.string().optional(),
+  outlineOpacity: z.number().min(0).max(1).optional(),
   textColor: z.string().optional(),
+  textOpacity: z.number().min(0).max(1).optional(),
   settings: z.record(z.unknown()).optional(),
 });
 

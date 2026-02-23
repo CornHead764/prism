@@ -365,8 +365,9 @@
   animation: float 3s ease-in-out infinite;
 }
 
-/* Allow color picker dropdowns to overflow grid items */
-.react-grid-item {
+/* Allow color picker dropdowns to overflow grid items in edit mode only;
+   display mode needs overflow containment for widget internal scrolling */
+.editing-mode .react-grid-item {
   overflow: visible !important;
 }
 

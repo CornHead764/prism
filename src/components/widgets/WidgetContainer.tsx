@@ -290,9 +290,9 @@ export function WidgetContainer({
       {/* WIDGET CONTENT */}
       <CardContent
         className={cn(
-          // Fill remaining space; min-h-0 overrides flex min-height:auto
-          // so overflow-auto can scroll when content exceeds cell height
-          'flex-1 flex flex-col min-h-0',
+          // Fill remaining space; h-0 + flex-1 establishes definite height,
+          // min-h-0 overrides flex min-height:auto so overflow-auto scrolls
+          'flex-1 flex flex-col h-0 min-h-0',
           // Allow content scrolling within widget
           'overflow-auto',
           // Remove padding if no header
