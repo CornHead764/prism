@@ -141,7 +141,29 @@ describe('validateSession', () => {
 
     const result = await validateSession('valid-token');
 
-    expect(result).toEqual(sessionData);
+    expect(result).not.toBeNull();
+    expect(result!.userId).toBe('user-1');
+    expect(result!.role).toBe('parent');
+    expect(result!.createdAt).toBe(sessionData.createdAt);
+    // Sliding window refreshes expiresAt to full session duration
+    expect(result!.expiresAt).toBeGreaterThanOrEqual(sessionData.expiresAt);
+  });
+
+  it('refreshes TTL on successful validation (sliding window)', async () => {
+    const sessionData = {
+      userId: 'user-1', role: 'parent',
+      createdAt: Date.now(), expiresAt: Date.now() + 60000,
+    };
+    mockRedisClient.get.mockResolvedValueOnce(JSON.stringify(sessionData));
+
+    await validateSession('valid-token');
+
+    // Should write back with refreshed TTL (parent = 1800s)
+    expect(mockRedisClient.setEx).toHaveBeenCalledWith(
+      'session:valid-token',
+      30 * 60,
+      expect.any(String)
+    );
   });
 
   it('returns null for missing session', async () => {
