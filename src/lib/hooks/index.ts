@@ -27,3 +27,4 @@ export { useScreenOrientation } from './useScreenOrientation';
 export type { ScreenOrientation } from './useScreenOrientation';
 export { useIsMobile } from './useIsMobile';
 export { useSwipeNavigation } from './useSwipeNavigation';
+export { useHiddenPages } from './useHiddenPages';

@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/ThemeProvider';
+import { useHiddenPages } from '@/lib/hooks/useHiddenPages';
 
 interface NavItem {
   label: string;
@@ -63,9 +64,13 @@ export function MobileNav({ user, onLogin, onLogout }: MobileNavProps) {
   const pathname = usePathname();
   const [showMore, setShowMore] = useState(false);
   const { theme, setTheme } = useTheme();
+  const { isPageHidden } = useHiddenPages();
+
+  const visiblePrimary = primaryItems.filter((item) => !isPageHidden(item.href));
+  const visibleSecondary = secondaryItems.filter((item) => !isPageHidden(item.href));
 
   // Check if current path is in secondary items
-  const isSecondaryActive = secondaryItems.some(item => pathname === item.href);
+  const isSecondaryActive = visibleSecondary.some(item => pathname === item.href);
 
   // Cycle through themes: light → dark → system → light
   const cycleTheme = () => {
@@ -91,7 +96,7 @@ export function MobileNav({ user, onLogin, onLogout }: MobileNavProps) {
       {showMore && (
         <div className="fixed bottom-16 left-0 right-0 bg-card border-t border-border z-50 animate-in slide-in-from-bottom-4">
           <div className="grid grid-cols-3 gap-1 p-2">
-            {secondaryItems.map((item) => {
+            {visibleSecondary.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
               return (
@@ -172,7 +177,7 @@ export function MobileNav({ user, onLogin, onLogout }: MobileNavProps) {
       {/* Bottom navigation bar - visibility controlled by AppShell */}
       <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-40 safe-area-bottom">
         <div className="flex items-center justify-around h-16">
-          {primaryItems.map((item) => {
+          {visiblePrimary.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
             return (

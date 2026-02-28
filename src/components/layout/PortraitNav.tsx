@@ -10,28 +10,10 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  Home,
-  Calendar,
-  CheckSquare,
-  ClipboardList,
-  ShoppingCart,
-  UtensilsCrossed,
-  ChefHat,
-  MessageSquare,
-  ImageIcon,
-  Settings,
-  Trophy,
-  Baby,
-  User,
-} from 'lucide-react';
+import { User } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-interface NavItem {
-  label: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
+import { ALL_NAV_ITEMS } from '@/lib/constants/navItems';
+import { useHiddenPages } from '@/lib/hooks/useHiddenPages';
 
 export interface PortraitNavProps {
   user?: {
@@ -44,23 +26,10 @@ export interface PortraitNavProps {
   onLogout?: () => void;
 }
 
-const navItems: NavItem[] = [
-  { label: 'Home', href: '/', icon: Home },
-  { label: 'Calendar', href: '/calendar', icon: Calendar },
-  { label: 'Tasks', href: '/tasks', icon: CheckSquare },
-  { label: 'Chores', href: '/chores', icon: ClipboardList },
-  { label: 'Goals', href: '/goals', icon: Trophy },
-  { label: 'Shopping', href: '/shopping', icon: ShoppingCart },
-  { label: 'Meals', href: '/meals', icon: UtensilsCrossed },
-  { label: 'Recipes', href: '/recipes', icon: ChefHat },
-  { label: 'Messages', href: '/messages', icon: MessageSquare },
-  { label: 'Photos', href: '/photos', icon: ImageIcon },
-  { label: 'Babysitter', href: '/babysitter', icon: Baby },
-  { label: 'Settings', href: '/settings', icon: Settings },
-];
-
 export function PortraitNav({ user, onLogin, onLogout }: PortraitNavProps) {
   const pathname = usePathname();
+  const { filterNavItems } = useHiddenPages();
+  const navItems = filterNavItems(ALL_NAV_ITEMS);
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';

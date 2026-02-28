@@ -20,6 +20,7 @@ import {
   Baby,
   Database,
   Link2,
+  ToggleLeft,
 } from 'lucide-react';
 import { PrismIcon } from '@/components/ui/PrismIcon';
 import { cn } from '@/lib/utils';
@@ -37,6 +38,7 @@ import { ShoppingIntegrationsSection } from './sections/ShoppingIntegrationsSect
 import { WishListIntegrationsSection } from './sections/WishListIntegrationsSection';
 import { BabysitterInfoSection } from './sections/BabysitterInfoSection';
 import { BackupSection } from './sections/BackupSection';
+import { FeaturesSection } from './sections/FeaturesSection';
 
 import { ConnectedAccountsSection } from './sections/ConnectedAccountsSection';
 
@@ -131,6 +133,7 @@ export function SettingsView() {
     { id: 'photos', label: 'Photos', icon: ImageIcon },
     { id: 'babysitter', label: 'Babysitter Info', icon: Baby },
     { id: 'display', label: 'Display', icon: Palette },
+    { id: 'features', label: 'Features', icon: ToggleLeft },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'backups', label: 'Backups', icon: Database },
     { id: 'about', label: 'About', icon: Info },
@@ -188,6 +191,7 @@ export function SettingsView() {
               {activeSection === 'photos' && <PhotosSettingsSection />}
               {activeSection === 'babysitter' && <BabysitterInfoSection />}
               {activeSection === 'display' && <DisplaySection />}
+              {activeSection === 'features' && <FeaturesSection />}
               {activeSection === 'security' && <SecuritySection />}
               {activeSection === 'backups' && <BackupSection />}
               {activeSection === 'about' && (
