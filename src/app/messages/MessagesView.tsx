@@ -25,6 +25,7 @@ import {
   Pin,
   AlertTriangle,
   Trash2,
+  Clock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -274,6 +275,12 @@ function MessageCard({
                 <Badge variant="destructive" className="gap-1 text-xs">
                   <AlertTriangle className="h-3 w-3" />
                   Important
+                </Badge>
+              )}
+              {message.expiresAt && (
+                <Badge variant="outline" className="gap-1 text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  Expires {formatDistanceToNow(message.expiresAt, { addSuffix: true })}
                 </Badge>
               )}
             </div>

@@ -16,7 +16,7 @@
 
 import * as React from 'react';
 import { useState, useEffect } from 'react';
-import { Loader2, Pin, AlertTriangle } from 'lucide-react';
+import { Loader2, Pin, AlertTriangle, Clock } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -89,6 +89,7 @@ export function AddMessageModal({
   const [authorId, setAuthorId] = useState<string>(currentUser?.id || defaultAuthor || '');
   const [pinned, setPinned] = useState(false);
   const [important, setImportant] = useState(false);
+  const [expiresIn, setExpiresIn] = useState<string>('never');
 
   // Loading/error state
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -107,6 +108,7 @@ export function AddMessageModal({
       setAuthorId(currentUser?.id || defaultAuthor || '');
       setPinned(false);
       setImportant(false);
+      setExpiresIn('never');
       setError(null);
     }
   }, [open, currentUser, defaultAuthor]);
@@ -144,6 +146,18 @@ export function AddMessageModal({
     setError(null);
 
     try {
+      const durationMs: Record<string, number> = {
+        '12h': 12 * 60 * 60 * 1000,
+        '1d': 24 * 60 * 60 * 1000,
+        '2d': 2 * 24 * 60 * 60 * 1000,
+        '3d': 3 * 24 * 60 * 60 * 1000,
+        '7d': 7 * 24 * 60 * 60 * 1000,
+      };
+
+      const expiresAt = expiresIn !== 'never' && durationMs[expiresIn]
+        ? new Date(Date.now() + durationMs[expiresIn]).toISOString()
+        : undefined;
+
       const response = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -152,6 +166,7 @@ export function AddMessageModal({
           authorId,
           pinned,
           important,
+          ...(expiresAt && { expiresAt }),
         }),
       });
 
@@ -270,6 +285,24 @@ export function AddMessageModal({
                 <AlertTriangle className="h-3.5 w-3.5" />
                 Mark as important
               </Label>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+              <Label htmlFor="expiresIn" className="text-sm whitespace-nowrap">Expires after</Label>
+              <Select value={expiresIn} onValueChange={setExpiresIn}>
+                <SelectTrigger id="expiresIn" className="h-8 w-[130px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="never">Never</SelectItem>
+                  <SelectItem value="12h">12 hours</SelectItem>
+                  <SelectItem value="1d">1 day</SelectItem>
+                  <SelectItem value="2d">2 days</SelectItem>
+                  <SelectItem value="3d">3 days</SelectItem>
+                  <SelectItem value="7d">7 days</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

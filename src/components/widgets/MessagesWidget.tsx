@@ -48,6 +48,7 @@ export interface FamilyMessage {
   createdAt: Date;
   pinned: boolean;
   important: boolean;
+  expiresAt?: Date | null;
 }
 
 

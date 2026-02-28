@@ -60,6 +60,7 @@ export function useMessages(
           pinned: boolean;
           important: boolean;
           createdAt: string;
+          expiresAt?: string | null;
           author: {
             id: string;
             name: string;
@@ -72,6 +73,7 @@ export function useMessages(
           pinned: msg.pinned,
           important: msg.important,
           createdAt: new Date(msg.createdAt),
+          expiresAt: msg.expiresAt ? new Date(msg.expiresAt) : null,
           author: {
             id: msg.author.id,
             name: msg.author.name,
