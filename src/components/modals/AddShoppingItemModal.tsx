@@ -159,7 +159,7 @@ export function AddShoppingItemModal({
   async function fetchShoppingLists() {
     try {
       setLoadingLists(true);
-      const response = await fetch('/api/shopping/lists');
+      const response = await fetch('/api/shopping-lists');
       if (response.ok) {
         const data = await response.json();
         setShoppingLists(data.lists || []);
@@ -193,7 +193,7 @@ export function AddShoppingItemModal({
         notes: notes.trim() || undefined,
       };
 
-      const url = isEditMode ? `/api/shopping/items/${item.id}` : '/api/shopping/items';
+      const url = isEditMode ? `/api/shopping-items/${item.id}` : '/api/shopping-items';
       const method = isEditMode ? 'PATCH' : 'POST';
 
       const response = await fetch(url, {

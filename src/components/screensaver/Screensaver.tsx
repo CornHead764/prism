@@ -202,7 +202,15 @@ function ScreensaverGrid() {
     const reg = WIDGET_REGISTRY[w.i];
     if (!reg) return null;
     const Component = reg.component;
-    const props = { ...widgetProps[w.i] || {}, gridW: w.w, gridH: w.h };
+    const rawProps = { ...widgetProps[w.i] || {}, gridW: w.w, gridH: w.h };
+    // Strip interactive callbacks — screensaver widgets are display-only
+    // (any interaction exits the screensaver, so buttons/dropdowns are misleading)
+    const {
+      onAddClick, onAddMeal, onListChange, onItemToggle, onTaskToggle,
+      onChoreComplete, onEventClick, onMessageClick, onDeleteClick,
+      onMarkCooked, onUnmarkCooked,
+      ...props
+    } = rawProps as Record<string, unknown>;
     return (
       <React.Suspense fallback={<div className="flex items-center justify-center h-full opacity-50 text-sm">Loading...</div>}>
         <div className="h-full w-full [&_*]:!bg-transparent [&_.bg-card]:!bg-white/10 [&_.border-border]:!border-white/20">

@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { useCalendarSources } from '@/lib/hooks';
 import { useFamily } from '@/components/providers';
 import { CalendarColorPicker } from '../components/CalendarColorPicker';
@@ -421,22 +422,12 @@ export function CalendarsSection() {
                       <span className="text-xs text-muted-foreground">
                         {cal.enabled ? 'Enabled' : 'Disabled'}
                       </span>
-                      <button
-                        onClick={() => updateCalendar(cal.id, { enabled: !cal.enabled })}
+                      <Switch
+                        checked={cal.enabled}
+                        onCheckedChange={() => updateCalendar(cal.id, { enabled: !cal.enabled })}
                         disabled={updatingCalendar === cal.id}
-                        className={cn(
-                          "relative w-10 h-5 rounded-full transition-colors",
-                          cal.enabled ? "bg-primary" : "bg-muted",
-                          updatingCalendar === cal.id && "opacity-50"
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform",
-                            cal.enabled ? "translate-x-5" : "translate-x-0.5"
-                          )}
-                        />
-                      </button>
+                        className="data-[state=checked]:bg-blue-500"
+                      />
                     </label>
                   </div>
                   <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border">
@@ -510,8 +501,9 @@ export function CalendarsSection() {
                             <Badge variant="outline" className="text-[10px] px-1 py-0 opacity-60">Read-only</Badge>
                           )}
                         </div>
-                        <button
-                          onClick={async () => {
+                        <Switch
+                          checked={(cal as { showInEventModal?: boolean }).showInEventModal !== false && isWritable}
+                          onCheckedChange={async () => {
                             if (!isWritable) return;
                             const newValue = !(cal as { showInEventModal?: boolean }).showInEventModal;
                             setUpdatingCalendar(cal.id);
@@ -528,19 +520,8 @@ export function CalendarsSection() {
                             setUpdatingCalendar(null);
                           }}
                           disabled={updatingCalendar === cal.id || !isWritable}
-                          className={cn(
-                            "relative w-10 h-5 rounded-full transition-colors",
-                            (cal as { showInEventModal?: boolean }).showInEventModal !== false && isWritable ? "bg-primary" : "bg-muted",
-                            (updatingCalendar === cal.id || !isWritable) && "opacity-50 cursor-not-allowed"
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              "absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform",
-                              (cal as { showInEventModal?: boolean }).showInEventModal !== false && isWritable ? "translate-x-5" : "translate-x-0.5"
-                            )}
-                          />
-                        </button>
+                          className="data-[state=checked]:bg-blue-500"
+                        />
                       </div>
                     );
                   })()}
