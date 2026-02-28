@@ -12,7 +12,7 @@
  */
 
 import { Suspense } from 'react';
-import { SettingsView } from './SettingsView';
+import { SettingsPinGate } from './SettingsPinGate';
 
 
 /**
@@ -31,7 +31,7 @@ export default function SettingsPage() {
   return (
     <main className="min-h-screen bg-background">
       <Suspense fallback={<SettingsSkeleton />}>
-        <SettingsView />
+        <SettingsPinGate />
       </Suspense>
     </main>
   );

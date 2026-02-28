@@ -3,6 +3,7 @@ import { requireAuth, requireRole } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { settings } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { logActivity } from '@/lib/services/auditLog';
 
 const WIFI_SETTINGS_KEY = 'wifiConfig';
 
@@ -68,6 +69,13 @@ export async function POST(request: NextRequest) {
         target: settings.key,
         set: { value: config },
       });
+
+    logActivity({
+      userId: auth.userId,
+      action: 'update',
+      entityType: 'setting',
+      summary: `Updated setting: WiFi config (${config.ssid})`,
+    });
 
     return NextResponse.json({ success: true, config });
   } catch (error) {

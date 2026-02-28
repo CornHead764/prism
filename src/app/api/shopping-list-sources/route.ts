@@ -4,6 +4,7 @@ import { shoppingListSources, shoppingLists, users } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { invalidateCache, getCached } from '@/lib/cache/redis';
+import { logActivity } from '@/lib/services/auditLog';
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth();
@@ -128,6 +129,14 @@ export async function POST(request: NextRequest) {
     }
 
     await invalidateCache('shopping-list-sources:*');
+
+    logActivity({
+      userId: auth.userId,
+      action: 'create',
+      entityType: 'integration',
+      entityId: newSource.id,
+      summary: `Connected shopping list sync: ${newSource.provider} (${newSource.externalListName || newSource.externalListId})`,
+    });
 
     return NextResponse.json({
       id: newSource.id,

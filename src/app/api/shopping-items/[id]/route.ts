@@ -13,6 +13,7 @@ import { eq } from 'drizzle-orm';
 import { updateShoppingItemSchema, validateRequest } from '@/lib/validations';
 import { requireAuth } from '@/lib/auth';
 import { invalidateCache } from '@/lib/cache/redis';
+import { logActivity } from '@/lib/services/auditLog';
 
 /**
  * Route params type
@@ -130,6 +131,19 @@ export async function PATCH(
 
     await invalidateCache('shopping-lists:*');
 
+    const checkedToggled = 'checked' in validation.data;
+    const summary = checkedToggled
+      ? (validation.data.checked ? `Checked off: ${updatedItem.name}` : `Unchecked: ${updatedItem.name}`)
+      : `Updated item: ${updatedItem.name}`;
+
+    logActivity({
+      userId: auth.userId,
+      action: 'update',
+      entityType: 'shopping_item',
+      entityId: updatedItem.id,
+      summary,
+    });
+
     return NextResponse.json({
       id: updatedItem.id,
       listId: updatedItem.listId,
@@ -186,6 +200,14 @@ export async function DELETE(
       .where(eq(shoppingItems.id, id));
 
     await invalidateCache('shopping-lists:*');
+
+    logActivity({
+      userId: auth.userId,
+      action: 'delete',
+      entityType: 'shopping_item',
+      entityId: existingItem.id,
+      summary: `Removed item: ${existingItem.name}`,
+    });
 
     return NextResponse.json({
       message: 'Shopping item deleted successfully',

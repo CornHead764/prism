@@ -719,6 +719,22 @@ export const apiCredentials = pgTable('api_credentials', {
 });
 
 
+export const auditLogs = pgTable('audit_logs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+  action: varchar('action', { length: 50 }).notNull(),
+  entityType: varchar('entity_type', { length: 50 }).notNull(),
+  entityId: varchar('entity_id', { length: 255 }),
+  summary: varchar('summary', { length: 500 }).notNull(),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  createdAtIdx: index('audit_logs_created_at_idx').on(table.createdAt),
+  userIdIdx: index('audit_logs_user_id_idx').on(table.userId),
+  entityTypeIdx: index('audit_logs_entity_type_idx').on(table.entityType),
+}));
+
+
 // Relations define relationships for Drizzle's relation queries.
 // These don't affect the database schema - they're for TypeScript types.
 
@@ -737,6 +753,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   maintenanceReminders: many(maintenanceReminders),
   maintenanceCompletions: many(maintenanceCompletions),
   familyMessages: many(familyMessages),
+  auditLogs: many(auditLogs),
 }));
 
 export const calendarSourcesRelations = relations(calendarSources, ({ one, many }) => ({
@@ -1052,6 +1069,13 @@ export const photosRelations = relations(photos, ({ one }) => ({
   source: one(photoSources, {
     fields: [photos.sourceId],
     references: [photoSources.id],
+  }),
+}));
+
+export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [auditLogs.userId],
+    references: [users.id],
   }),
 }));
 

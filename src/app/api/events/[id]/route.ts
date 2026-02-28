@@ -22,6 +22,7 @@ import { eq } from 'drizzle-orm';
 import { invalidateCache } from '@/lib/cache/redis';
 import { updateCalendarEvent, deleteCalendarEvent, refreshAccessToken } from '@/lib/integrations/google-calendar';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
+import { logActivity } from '@/lib/services/auditLog';
 
 
 interface RouteParams {
@@ -373,6 +374,14 @@ export async function PATCH(
     // Invalidate events cache
     await invalidateCache('events:*');
 
+    logActivity({
+      userId: auth.userId,
+      action: 'update',
+      entityType: 'event',
+      entityId: updatedEvent.id,
+      summary: `Updated event: ${updatedEvent.title}`,
+    });
+
     return NextResponse.json({
       id: updatedEvent.id,
       title: updatedEvent.title,
@@ -501,6 +510,14 @@ export async function DELETE(
 
     // Invalidate events cache
     await invalidateCache('events:*');
+
+    logActivity({
+      userId: auth.userId,
+      action: 'delete',
+      entityType: 'event',
+      entityId: existingEvent.id,
+      summary: `Deleted event: ${existingEvent.title}`,
+    });
 
     return NextResponse.json({
       message: 'Event deleted successfully',

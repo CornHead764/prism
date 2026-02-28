@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Sun, Moon, Monitor } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { useTheme } from '@/components/providers';
@@ -367,20 +368,10 @@ function WallpaperSettingsCard() {
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium">Enable wallpaper</span>
-          <button
-            onClick={() => setEnabled(!enabled)}
-            className={cn(
-              'relative w-10 h-5 rounded-full transition-colors',
-              enabled ? 'bg-primary' : 'bg-muted'
-            )}
-          >
-            <span
-              className={cn(
-                'absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform',
-                enabled ? 'translate-x-5' : 'translate-x-0.5'
-              )}
-            />
-          </button>
+          <Switch
+            checked={enabled}
+            onCheckedChange={setEnabled}
+          />
         </div>
         {enabled && (
           <>
@@ -407,20 +398,10 @@ function WallpaperSettingsCard() {
                   Only show landscape photos on landscape screens and portrait on portrait screens
                 </p>
               </div>
-              <button
-                onClick={() => setAutoOrientation(!autoOrientation)}
-                className={cn(
-                  'relative w-10 h-5 rounded-full transition-colors flex-shrink-0',
-                  autoOrientation ? 'bg-primary' : 'bg-muted'
-                )}
-              >
-                <span
-                  className={cn(
-                    'absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform',
-                    autoOrientation ? 'translate-x-5' : 'translate-x-0.5'
-                  )}
-                />
-              </button>
+              <Switch
+                checked={autoOrientation}
+                onCheckedChange={setAutoOrientation}
+              />
             </div>
           </>
         )}

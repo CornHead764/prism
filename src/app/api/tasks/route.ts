@@ -7,6 +7,7 @@ import { eq, desc, asc, and, lte, gte, sql } from 'drizzle-orm';
 import { formatTaskRow } from '@/lib/utils/formatters';
 import { createTaskSchema } from '@/lib/validations';
 import { invalidateCache } from '@/lib/cache/redis';
+import { logActivity } from '@/lib/services/auditLog';
 
 
 export async function GET(request: NextRequest) {
@@ -179,6 +180,14 @@ export async function POST(request: NextRequest) {
       }
 
       await invalidateCache('tasks:*');
+
+      logActivity({
+        userId: auth.userId,
+        action: 'create',
+        entityType: 'task',
+        entityId: newTask.id,
+        summary: `Created task: ${data.title.trim()}`,
+      });
 
       return NextResponse.json(formatTaskRow(taskWithUser), { status: 201 });
     } catch (error) {

@@ -25,6 +25,7 @@ import { completeChoreSchema, validateRequest } from '@/lib/validations';
 import { invalidateCache } from '@/lib/cache/redis';
 import { rateLimitGuard } from '@/lib/cache/rateLimit';
 import { calculateNextDue } from '@/lib/utils/calculateNextDue';
+import { logActivity } from '@/lib/services/auditLog';
 
 /**
  * Route params type
@@ -220,6 +221,14 @@ export async function POST(
 
     await invalidateCache('chores:*');
     await invalidateCache('goals:*');
+
+    logActivity({
+      userId: auth.userId,
+      action: 'complete',
+      entityType: 'chore',
+      entityId: choreId,
+      summary: `Completed chore: ${chore.title}`,
+    });
 
     return NextResponse.json({
       id: completion.id,

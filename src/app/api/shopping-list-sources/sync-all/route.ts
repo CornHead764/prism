@@ -6,6 +6,7 @@ import { requireAuth, requireRole } from '@/lib/auth';
 import { invalidateCache } from '@/lib/cache/redis';
 import { getShoppingProvider } from '@/lib/integrations/shopping';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
+import { logActivity } from '@/lib/services/auditLog';
 import type { ShoppingProviderTokens, SyncResult } from '@/lib/integrations/shopping/types';
 
 /**
@@ -151,6 +152,13 @@ export async function POST(request: NextRequest) {
     await invalidateCache('shopping-list-sources:*');
 
     const successCount = results.filter(r => r.success).length;
+
+    logActivity({
+      userId: auth.userId,
+      action: 'sync',
+      entityType: 'integration',
+      summary: `Synced all shopping list sources: ${successCount}/${sources.length} succeeded`,
+    });
 
     return NextResponse.json({
       success: true,

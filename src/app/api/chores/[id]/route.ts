@@ -14,6 +14,7 @@ import { chores, users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { updateChoreSchema, validateRequest } from '@/lib/validations';
 import { invalidateCache } from '@/lib/cache/redis';
+import { logActivity } from '@/lib/services/auditLog';
 
 /**
  * Route params type
@@ -212,6 +213,14 @@ export async function PATCH(
     await invalidateCache('chores:*');
     await invalidateCache('points:*');
 
+    logActivity({
+      userId: auth.userId,
+      action: 'update',
+      entityType: 'chore',
+      entityId: id,
+      summary: `Updated chore: ${updatedChoreWithUser.title}`,
+    });
+
     return NextResponse.json({
       id: updatedChoreWithUser.id,
       title: updatedChoreWithUser.title,
@@ -278,6 +287,14 @@ export async function DELETE(
 
     await invalidateCache('chores:*');
     await invalidateCache('points:*');
+
+    logActivity({
+      userId: auth.userId,
+      action: 'delete',
+      entityType: 'chore',
+      entityId: id,
+      summary: `Deleted chore: ${existingChore.title}`,
+    });
 
     return NextResponse.json({
       message: 'Chore deleted successfully',

@@ -3,6 +3,7 @@ import { requireAuth, requireRole } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { calendarSources } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { logActivity } from '@/lib/services/auditLog';
 
 export async function POST() {
   const auth = await requireAuth();
@@ -15,6 +16,13 @@ export async function POST() {
     await db
       .delete(calendarSources)
       .where(eq(calendarSources.provider, 'google'));
+
+    logActivity({
+      userId: auth.userId,
+      action: 'delete',
+      entityType: 'integration',
+      summary: 'Disconnected Google Calendar integration',
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

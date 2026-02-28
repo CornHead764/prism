@@ -20,6 +20,7 @@ import { eq, and, asc, aliasedTable } from 'drizzle-orm';
 import { createMealSchema, validateRequest } from '@/lib/validations';
 import { formatMealRow } from '@/lib/utils/formatters';
 import { getCached, invalidateCache } from '@/lib/cache/redis';
+import { logActivity } from '@/lib/services/auditLog';
 
 const cookedByUser = aliasedTable(users, 'cookedByUser');
 
@@ -173,6 +174,14 @@ export async function POST(request: NextRequest) {
     }
 
     await invalidateCache('meals:*');
+
+    logActivity({
+      userId: auth.userId,
+      action: 'create',
+      entityType: 'meal',
+      entityId: newMeal.id,
+      summary: `Added meal: ${newMeal.name} (${newMeal.dayOfWeek} ${newMeal.mealType})`,
+    });
 
     return NextResponse.json({
       id: newMeal.id,

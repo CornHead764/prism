@@ -6,6 +6,7 @@ import { requireAuth, requireRole } from '@/lib/auth';
 import { invalidateCache } from '@/lib/cache/redis';
 import { getWishItemProvider } from '@/lib/integrations/wish-items';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
+import { logActivity } from '@/lib/services/auditLog';
 import type {
   WishItemProviderTokens,
   ExternalWishItem,
@@ -148,6 +149,14 @@ export async function POST(
 
     await invalidateCache('wish:*');
     await invalidateCache('wish-item-sources:*');
+
+    logActivity({
+      userId: auth.userId,
+      action: 'sync',
+      entityType: 'integration',
+      entityId: sourceId,
+      summary: `Synced wish item source: ${source.provider} (${source.externalListName || source.externalListId}) - ${result.created} created, ${result.updated} updated, ${result.deleted} deleted`,
+    });
 
     return NextResponse.json({
       success: true,

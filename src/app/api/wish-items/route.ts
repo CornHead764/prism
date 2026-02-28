@@ -17,6 +17,7 @@ import { wishItems, users } from '@/lib/db/schema';
 import { eq, asc, sql } from 'drizzle-orm';
 import { createWishItemSchema, validateRequest } from '@/lib/validations';
 import { invalidateCache } from '@/lib/cache/redis';
+import { logActivity } from '@/lib/services/auditLog';
 
 // Alias for claimedBy user join
 import { alias } from 'drizzle-orm/pg-core';
@@ -151,6 +152,14 @@ export async function POST(request: NextRequest) {
     }
 
     await invalidateCache('wish-items:*');
+
+    logActivity({
+      userId: auth.userId,
+      action: 'create',
+      entityType: 'wish_item',
+      entityId: newItem.id,
+      summary: `Added wish item: ${name}`,
+    });
 
     return NextResponse.json({
       id: newItem.id,

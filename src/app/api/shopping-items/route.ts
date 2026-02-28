@@ -20,6 +20,7 @@ import { shoppingItems, users } from '@/lib/db/schema';
 import { eq, and, asc } from 'drizzle-orm';
 import { createShoppingItemSchema, validateRequest } from '@/lib/validations';
 import { invalidateCache } from '@/lib/cache/redis';
+import { logActivity } from '@/lib/services/auditLog';
 
 /**
  * GET /api/shopping-items
@@ -172,6 +173,14 @@ export async function POST(request: NextRequest) {
     }
 
     await invalidateCache('shopping-lists:*');
+
+    logActivity({
+      userId: auth.userId,
+      action: 'create',
+      entityType: 'shopping_item',
+      entityId: newItem.id,
+      summary: `Added item: ${newItem.name}`,
+    });
 
     return NextResponse.json({
       id: newItem.id,

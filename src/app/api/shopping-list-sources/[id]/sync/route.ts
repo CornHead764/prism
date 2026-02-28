@@ -6,6 +6,7 @@ import { requireAuth, requireRole } from '@/lib/auth';
 import { invalidateCache } from '@/lib/cache/redis';
 import { getShoppingProvider } from '@/lib/integrations/shopping';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
+import { logActivity } from '@/lib/services/auditLog';
 import type {
   ShoppingProviderTokens,
   ExternalShoppingItem,
@@ -146,6 +147,14 @@ export async function POST(
 
     await invalidateCache('shopping:*');
     await invalidateCache('shopping-list-sources:*');
+
+    logActivity({
+      userId: auth.userId,
+      action: 'sync',
+      entityType: 'integration',
+      entityId: sourceId,
+      summary: `Synced shopping list source: ${source.provider} (${source.externalListName || source.externalListId}) - ${result.created} created, ${result.updated} updated, ${result.deleted} deleted`,
+    });
 
     return NextResponse.json({
       success: true,

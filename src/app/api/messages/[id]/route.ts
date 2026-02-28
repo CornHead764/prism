@@ -15,6 +15,7 @@ import { familyMessages, users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { formatMessageRow } from '@/lib/utils/formatters';
+import { logActivity } from '@/lib/services/auditLog';
 
 
 interface RouteParams {
@@ -191,6 +192,14 @@ export async function PATCH(
       );
     }
 
+    logActivity({
+      userId: auth.userId,
+      action: 'update',
+      entityType: 'message',
+      entityId: id,
+      summary: 'Updated message',
+    });
+
     return NextResponse.json(formatMessageRow(updatedMessage));
   } catch (error) {
     console.error('Error updating message:', error);
@@ -255,6 +264,14 @@ export async function DELETE(
     await db
       .delete(familyMessages)
       .where(eq(familyMessages.id, id));
+
+    logActivity({
+      userId: auth.userId,
+      action: 'delete',
+      entityType: 'message',
+      entityId: id,
+      summary: 'Deleted message',
+    });
 
     return NextResponse.json({
       message: 'Message deleted successfully',

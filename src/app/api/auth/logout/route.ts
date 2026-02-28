@@ -16,6 +16,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { invalidateSession } from '@/lib/auth/session';
+import { logActivity } from '@/lib/services/auditLog';
 
 // Determine if cookies should be secure based on APP_URL/BASE_URL scheme
 const appUrl = process.env.APP_URL || process.env.BASE_URL;
@@ -49,6 +50,13 @@ export async function POST() {
     if (sessionToken) {
       await invalidateSession(sessionToken, userId);
     }
+
+    logActivity({
+      userId: userId || null,
+      action: 'logout',
+      entityType: 'session',
+      summary: 'Logged out',
+    });
 
     // Clear the session cookie
     // Setting maxAge: 0 immediately expires the cookie

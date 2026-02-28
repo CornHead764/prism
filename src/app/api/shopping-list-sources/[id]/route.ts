@@ -4,6 +4,7 @@ import { shoppingListSources } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { invalidateCache } from '@/lib/cache/redis';
+import { logActivity } from '@/lib/services/auditLog';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -40,6 +41,14 @@ export async function DELETE(
 
     await invalidateCache('shopping-list-sources:*');
     await invalidateCache('shopping:*');
+
+    logActivity({
+      userId: auth.userId,
+      action: 'delete',
+      entityType: 'integration',
+      entityId: source.id,
+      summary: `Deleted shopping list source: ${source.provider} (${source.externalListName || source.externalListId})`,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -97,6 +106,14 @@ export async function PATCH(
       .returning();
 
     await invalidateCache('shopping-list-sources:*');
+
+    logActivity({
+      userId: auth.userId,
+      action: 'update',
+      entityType: 'integration',
+      entityId: updated!.id,
+      summary: `Updated shopping list source: ${updated!.provider} (${updated!.externalListName || updated!.externalListId})`,
+    });
 
     return NextResponse.json({
       id: updated!.id,

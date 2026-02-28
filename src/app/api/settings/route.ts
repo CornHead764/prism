@@ -3,6 +3,7 @@ import { requireAuth, requireRole } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { settings } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { logActivity } from '@/lib/services/auditLog';
 import type { AuthResult } from '@/lib/auth';
 
 export async function GET() {
@@ -61,6 +62,13 @@ export async function PATCH(request: NextRequest) {
         .insert(settings)
         .values({ key: body.key, value: body.value });
     }
+
+    logActivity({
+      userId: (auth as AuthResult).userId,
+      action: existing ? 'update' : 'create',
+      entityType: 'setting',
+      summary: `Updated setting: ${body.key}`,
+    });
 
     return NextResponse.json({ key: body.key, value: body.value });
   } catch (error) {

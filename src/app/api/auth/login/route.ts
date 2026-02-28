@@ -35,6 +35,7 @@ import {
   recordFailedLogin,
   clearLoginAttempts,
 } from '@/lib/auth/session';
+import { logActivity } from '@/lib/services/auditLog';
 
 // Determine if cookies should be secure based on APP_URL/BASE_URL scheme
 const appUrl = process.env.APP_URL || process.env.BASE_URL;
@@ -159,6 +160,13 @@ export async function POST(request: NextRequest) {
         path: '/',
       });
 
+      logActivity({
+        userId: user.id,
+        action: 'login',
+        entityType: 'session',
+        summary: `Logged in as guest: ${user.name}`,
+      });
+
       return NextResponse.json({
         user: {
           id: user.id,
@@ -230,6 +238,13 @@ export async function POST(request: NextRequest) {
       sameSite: 'lax',
       expires: session.expiresAt,
       path: '/',
+    });
+
+    logActivity({
+      userId: user.id,
+      action: 'login',
+      entityType: 'session',
+      summary: `Logged in: ${user.name}`,
     });
 
     return NextResponse.json({

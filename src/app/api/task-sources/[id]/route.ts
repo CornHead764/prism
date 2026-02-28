@@ -4,6 +4,7 @@ import { taskSources } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { invalidateCache } from '@/lib/cache/redis';
+import { logActivity } from '@/lib/services/auditLog';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -129,6 +130,14 @@ export async function PATCH(
 
     await invalidateCache('task-sources:*');
 
+    logActivity({
+      userId: auth.userId,
+      action: 'update',
+      entityType: 'integration',
+      entityId: updated.id,
+      summary: `Updated task source: ${updated.provider} (${updated.externalListName || updated.externalListId})`,
+    });
+
     // Don't return tokens in response
     return NextResponse.json({
       id: updated.id,
@@ -179,6 +188,14 @@ export async function DELETE(
     await db.delete(taskSources).where(eq(taskSources.id, id));
 
     await invalidateCache('task-sources:*');
+
+    logActivity({
+      userId: auth.userId,
+      action: 'delete',
+      entityType: 'integration',
+      entityId: existing.id,
+      summary: `Deleted task source: ${existing.provider} (${existing.externalListName || existing.externalListId})`,
+    });
 
     return NextResponse.json({
       message: 'Task source deleted successfully',

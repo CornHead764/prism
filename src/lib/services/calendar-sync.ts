@@ -243,66 +243,90 @@ export async function syncAllGoogleCalendars(
   });
 
   // Update showInEventModal based on actual Google accessRole.
-  // Use the first source with a valid token to fetch the calendar list.
-  const tokenSource = sources.find((s) => s.accessToken);
-  if (tokenSource) {
+  // Group sources by their refresh token to handle multiple Google accounts.
+  // Each unique refresh token represents a different Google account.
+  const tokenGroups = new Map<string, typeof sources>();
+  for (const source of sources) {
+    if (!source.refreshToken) continue;
+    const key = source.refreshToken; // Encrypted token as grouping key
+    const group = tokenGroups.get(key) || [];
+    group.push(source);
+    tokenGroups.set(key, group);
+  }
+
+  // Build a combined role map across all Google accounts
+  const combinedRoleMap = new Map<string, string>();
+  const checkedSourceIds = new Set<string>();
+
+  for (const [, group] of tokenGroups) {
+    const representative = group[0];
+    if (!representative?.accessToken) continue;
+
     try {
-      let accessToken = decrypt(tokenSource.accessToken!);
-      if (tokenNeedsRefresh(tokenSource.tokenExpiresAt) && tokenSource.refreshToken) {
-        const refreshToken = decrypt(tokenSource.refreshToken);
+      let accessToken = decrypt(representative.accessToken);
+      if (tokenNeedsRefresh(representative.tokenExpiresAt) && representative.refreshToken) {
+        const refreshToken = decrypt(representative.refreshToken);
         const newTokens = await refreshAccessToken(refreshToken);
         accessToken = newTokens.access_token;
       }
       const googleCalendars = await fetchCalendarList(accessToken);
-      const roleMap = new Map(googleCalendars.map((c) => [c.id, c.accessRole]));
-      for (const source of sources) {
-        const role = roleMap.get(source.sourceCalendarId);
-        if (role === undefined) {
-          // Calendar no longer in Google — track failure, don't immediately disable
-          const prevErrors = (source.syncErrors as Record<string, unknown>) || {};
-          const prevFailures = (typeof prevErrors.consecutiveNotFound === 'number' ? prevErrors.consecutiveNotFound : 0);
-          const consecutiveNotFound = prevFailures + 1;
-          const DISABLE_THRESHOLD = 3;
-          const shouldAutoDisable = consecutiveNotFound >= DISABLE_THRESHOLD && !prevErrors.userOverride;
-
-          await db
-            .update(calendarSources)
-            .set({
-              ...(shouldAutoDisable ? { enabled: false, showInEventModal: false } : {}),
-              syncErrors: {
-                lastError: `Calendar not found in Google. Check ${consecutiveNotFound}/${DISABLE_THRESHOLD}.`,
-                consecutiveNotFound,
-                ...(shouldAutoDisable ? { autoDisabled: true, autoDisabledAt: new Date().toISOString() } : {}),
-                ...(prevErrors.userOverride ? { userOverride: true } : {}),
-                timestamp: new Date().toISOString(),
-              },
-              updatedAt: new Date(),
-            })
-            .where(eq(calendarSources.id, source.id));
-          continue;
-        }
-        // Calendar found — clear any not-found counters (preserve userOverride)
-        const prevErrors = (source.syncErrors as Record<string, unknown>) || {};
-        if (prevErrors.consecutiveNotFound) {
-          await db
-            .update(calendarSources)
-            .set({
-              syncErrors: prevErrors.userOverride ? { userOverride: true } : null,
-              updatedAt: new Date(),
-            })
-            .where(eq(calendarSources.id, source.id));
-        }
-        const isWritable = role === 'writer' || role === 'owner';
-        if (source.showInEventModal !== isWritable) {
-          await db
-            .update(calendarSources)
-            .set({ showInEventModal: isWritable, updatedAt: new Date() })
-            .where(eq(calendarSources.id, source.id));
-        }
+      for (const cal of googleCalendars) {
+        combinedRoleMap.set(cal.id, cal.accessRole);
+      }
+      for (const s of group) {
+        checkedSourceIds.add(s.id);
       }
     } catch (error) {
-      // Non-fatal: log and continue with event sync
-      console.error('[Sync] Failed to update calendar access roles:', error);
+      console.error(`[Sync] Failed to fetch calendar list for account group:`, error);
+    }
+  }
+
+  // Now check each source against the combined map
+  for (const source of sources) {
+    if (!checkedSourceIds.has(source.id)) continue;
+
+    const role = combinedRoleMap.get(source.sourceCalendarId);
+    if (role === undefined) {
+      // Calendar no longer in any connected Google account
+      const prevErrors = (source.syncErrors as Record<string, unknown>) || {};
+      const prevFailures = (typeof prevErrors.consecutiveNotFound === 'number' ? prevErrors.consecutiveNotFound : 0);
+      const consecutiveNotFound = prevFailures + 1;
+      const DISABLE_THRESHOLD = 3;
+      const shouldAutoDisable = consecutiveNotFound >= DISABLE_THRESHOLD && !prevErrors.userOverride;
+
+      await db
+        .update(calendarSources)
+        .set({
+          ...(shouldAutoDisable ? { enabled: false, showInEventModal: false } : {}),
+          syncErrors: {
+            lastError: `Calendar not found in Google. Check ${consecutiveNotFound}/${DISABLE_THRESHOLD}.`,
+            consecutiveNotFound,
+            ...(shouldAutoDisable ? { autoDisabled: true, autoDisabledAt: new Date().toISOString() } : {}),
+            ...(prevErrors.userOverride ? { userOverride: true } : {}),
+            timestamp: new Date().toISOString(),
+          },
+          updatedAt: new Date(),
+        })
+        .where(eq(calendarSources.id, source.id));
+      continue;
+    }
+    // Calendar found — clear any not-found counters (preserve userOverride)
+    const prevErrors = (source.syncErrors as Record<string, unknown>) || {};
+    if (prevErrors.consecutiveNotFound) {
+      await db
+        .update(calendarSources)
+        .set({
+          syncErrors: prevErrors.userOverride ? { userOverride: true } : null,
+          updatedAt: new Date(),
+        })
+        .where(eq(calendarSources.id, source.id));
+    }
+    const isWritable = role === 'writer' || role === 'owner';
+    if (source.showInEventModal !== isWritable) {
+      await db
+        .update(calendarSources)
+        .set({ showInEventModal: isWritable, updatedAt: new Date() })
+        .where(eq(calendarSources.id, source.id));
     }
   }
 

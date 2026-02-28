@@ -3,6 +3,7 @@ import { requireAuth, requireRole } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { settings } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { logActivity } from '@/lib/services/auditLog';
 
 const BABYSITTER_MODE_KEY = 'babysitterMode';
 
@@ -75,6 +76,14 @@ export async function POST(request: NextRequest) {
     } else {
       await db.insert(settings).values({ key: BABYSITTER_MODE_KEY, value: newState });
     }
+
+    logActivity({
+      userId: auth.userId,
+      action: 'toggle',
+      entityType: 'setting',
+      entityId: BABYSITTER_MODE_KEY,
+      summary: enabled ? 'Enabled babysitter mode' : 'Disabled babysitter mode',
+    });
 
     return NextResponse.json(newState);
   } catch (error) {

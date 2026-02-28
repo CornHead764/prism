@@ -3,6 +3,7 @@ import { requireAuth, requireRole } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { taskSources } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { logActivity } from '@/lib/services/auditLog';
 
 /**
  * POST /api/task-sources/sync-all
@@ -92,6 +93,13 @@ export async function POST(request: NextRequest) {
         errors.push(`Sync failed: ${result.reason}`);
       }
     }
+
+    logActivity({
+      userId: auth.userId,
+      action: 'sync',
+      entityType: 'integration',
+      summary: `Synced all task sources: ${syncedCount} synced, ${totalCreated} created, ${totalUpdated} updated, ${totalDeleted} deleted`,
+    });
 
     return NextResponse.json({
       synced: syncedCount,

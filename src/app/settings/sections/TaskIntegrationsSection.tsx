@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -682,22 +683,11 @@ export function TaskIntegrationsSection() {
                           />
                         </Button>
 
-                        <button
-                          onClick={() => handleToggleSync(source.id, !source.syncEnabled)}
+                        <Switch
+                          checked={source.syncEnabled}
+                          onCheckedChange={(checked) => handleToggleSync(source.id, checked)}
                           disabled={isUpdating}
-                          className={cn(
-                            'relative w-10 h-5 rounded-full transition-colors',
-                            source.syncEnabled ? 'bg-primary' : 'bg-muted',
-                            isUpdating && 'opacity-50'
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              'absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform',
-                              source.syncEnabled ? 'translate-x-5' : 'translate-x-0.5'
-                            )}
-                          />
-                        </button>
+                        />
 
                         <Button
                           variant="ghost"

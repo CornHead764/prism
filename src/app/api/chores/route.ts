@@ -21,6 +21,7 @@ import { eq, and, desc, isNull, or, lte } from 'drizzle-orm';
 import { createChoreSchema, validateRequest } from '@/lib/validations';
 import { format } from 'date-fns';
 import { getCached, invalidateCache } from '@/lib/cache/redis';
+import { logActivity } from '@/lib/services/auditLog';
 
 /**
  * GET /api/chores
@@ -237,6 +238,14 @@ export async function POST(request: NextRequest) {
     }
 
     await invalidateCache('chores:*');
+
+    logActivity({
+      userId: auth.userId,
+      action: 'create',
+      entityType: 'chore',
+      entityId: newChore.id,
+      summary: `Created chore: ${title.trim()}`,
+    });
 
     return NextResponse.json(newChore, { status: 201 });
   } catch (error) {

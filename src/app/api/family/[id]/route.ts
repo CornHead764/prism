@@ -5,6 +5,7 @@ import { users, calendarGroups } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { invalidateCache } from '@/lib/cache/redis';
+import { logActivity } from '@/lib/services/auditLog';
 
 export async function GET(
   request: NextRequest,
@@ -192,6 +193,14 @@ export async function PATCH(
     await invalidateCache('family:*');
     await invalidateCache('calendar-groups:*');
 
+    logActivity({
+      userId: auth.userId,
+      action: 'update',
+      entityType: 'user',
+      entityId: updatedMember.id,
+      summary: `Updated member: ${updatedMember.name}`,
+    });
+
     return NextResponse.json({
       id: updatedMember.id,
       name: updatedMember.name,
@@ -254,6 +263,14 @@ export async function DELETE(
     });
 
     await invalidateCache('family:*');
+
+    logActivity({
+      userId: auth.userId,
+      action: 'delete',
+      entityType: 'user',
+      entityId: id,
+      summary: `Removed member: ${currentMember.name}`,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

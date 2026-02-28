@@ -4,6 +4,7 @@ import { wishItemSources } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { invalidateCache } from '@/lib/cache/redis';
+import { logActivity } from '@/lib/services/auditLog';
 import type { SyncResult } from '@/lib/integrations/wish-items/types';
 
 /**
@@ -85,6 +86,13 @@ export async function POST(request: NextRequest) {
     await invalidateCache('wish-item-sources:*');
 
     const successCount = results.filter(r => r.success).length;
+
+    logActivity({
+      userId: auth.userId,
+      action: 'sync',
+      entityType: 'integration',
+      summary: `Synced all wish item sources: ${successCount}/${sources.length} succeeded`,
+    });
 
     return NextResponse.json({
       success: true,

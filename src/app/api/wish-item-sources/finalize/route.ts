@@ -5,6 +5,7 @@ import { wishItemSources, users } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getRedisClient } from '@/lib/cache/getRedisClient';
 import { invalidateCache } from '@/lib/cache/redis';
+import { logActivity } from '@/lib/services/auditLog';
 
 /**
  * POST /api/wish-item-sources/finalize
@@ -117,6 +118,13 @@ export async function POST(request: NextRequest) {
     await redis.del(tempKey);
 
     await invalidateCache('wish-item-sources:*');
+
+    logActivity({
+      userId: auth.userId,
+      action: existing ? 'update' : 'create',
+      entityType: 'integration',
+      summary: `Finalized wish list sync connection: microsoft_todo (${externalListName || externalListId})`,
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

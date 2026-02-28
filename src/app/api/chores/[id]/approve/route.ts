@@ -15,6 +15,7 @@ import { eq, and, isNull } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { invalidateCache } from '@/lib/cache/redis';
 import { calculateNextDue } from '@/lib/utils/calculateNextDue';
+import { logActivity } from '@/lib/services/auditLog';
 
 /**
  * Route params type
@@ -167,6 +168,14 @@ export async function POST(
 
     await invalidateCache('chores:*');
     await invalidateCache('goals:*');
+
+    logActivity({
+      userId: auth.userId,
+      action: 'approve',
+      entityType: 'chore',
+      entityId: choreId,
+      summary: `Approved chore: ${chore.title}`,
+    });
 
     return NextResponse.json({
       message: `Chore "${chore.title}" approved!`,

@@ -8,6 +8,7 @@ import {
   fetchCalendarList,
 } from '@/lib/integrations/google-calendar';
 import { encrypt } from '@/lib/utils/crypto';
+import { logActivity } from '@/lib/services/auditLog';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
@@ -66,13 +67,20 @@ export async function GET(request: Request) {
     const encryptedAccessToken = encrypt(tokens.access_token);
     const encryptedRefreshToken = tokens.refresh_token ? encrypt(tokens.refresh_token) : null;
 
-    // If re-authenticating, update ALL Google calendar sources (they share the same OAuth token)
+    // If re-authenticating, update only calendar sources that belong to this Google account.
+    // Build a set of calendar IDs visible to this account so we don't overwrite tokens
+    // for calendars that belong to a different Google account.
     if (reauthSourceId) {
-      // Per-source update to preserve userOverride flag in syncErrors
+      const reAuthCalendars = await fetchCalendarList(tokens.access_token);
+      const calendarIdSet = new Set(reAuthCalendars.map((c) => c.id));
+
       const existingSources = await db.select().from(calendarSources)
         .where(eq(calendarSources.provider, 'google'));
 
       for (const source of existingSources) {
+        // Only update sources whose calendar ID is visible to this Google account
+        if (!calendarIdSet.has(source.sourceCalendarId)) continue;
+
         const prev = (source.syncErrors as Record<string, unknown>) || {};
         await db.update(calendarSources).set({
           accessToken: encryptedAccessToken,
@@ -83,8 +91,7 @@ export async function GET(request: Request) {
         }).where(eq(calendarSources.id, source.id));
       }
 
-      // Also update showInEventModal based on current accessRole
-      const reAuthCalendars = await fetchCalendarList(tokens.access_token);
+      // Update showInEventModal based on current accessRole
       for (const calendar of reAuthCalendars) {
         const isWritable = calendar.accessRole === 'writer' || calendar.accessRole === 'owner';
         const existing = await db.query.calendarSources.findFirst({
@@ -101,6 +108,13 @@ export async function GET(request: Request) {
             .where(eq(calendarSources.id, existing.id));
         }
       }
+
+      logActivity({
+        userId: auth.userId,
+        action: 'update',
+        entityType: 'integration',
+        summary: 'Re-authenticated Google Calendar integration',
+      });
 
       return NextResponse.redirect(`${BASE_URL}/settings?section=${returnSection}&success=google_reauth`);
     }
@@ -155,6 +169,13 @@ export async function GET(request: Request) {
         });
       }
     }
+
+    logActivity({
+      userId: auth.userId,
+      action: 'create',
+      entityType: 'integration',
+      summary: `Connected Google Calendar integration (${calendars.length} calendars)`,
+    });
 
     // Redirect back to settings with success message
     return NextResponse.redirect(`${BASE_URL}/settings?section=${returnSection}&success=google_connected`);

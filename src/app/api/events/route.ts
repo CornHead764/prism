@@ -27,6 +27,7 @@ import { createEventSchema, validateRequest } from '@/lib/validations';
 import { getCached, invalidateCache } from '@/lib/cache/redis';
 import { createCalendarEvent, refreshAccessToken } from '@/lib/integrations/google-calendar';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
+import { logActivity } from '@/lib/services/auditLog';
 
 // Cache events for 5 minutes
 const EVENTS_CACHE_TTL = 5 * 60;
@@ -499,6 +500,14 @@ export async function POST(request: NextRequest) {
 
     // Invalidate events cache
     await invalidateCache('events:*');
+
+    logActivity({
+      userId: auth.userId,
+      action: 'create',
+      entityType: 'event',
+      entityId: newEvent.id,
+      summary: `Created event: ${newEvent.title}`,
+    });
 
     return NextResponse.json(
       googleWarning ? { ...response, warning: googleWarning } : response,

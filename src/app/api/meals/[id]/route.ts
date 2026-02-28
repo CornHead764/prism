@@ -15,6 +15,7 @@ import { eq, aliasedTable } from 'drizzle-orm';
 import { updateMealSchema, validateRequest } from '@/lib/validations';
 import { formatMealRow } from '@/lib/utils/formatters';
 import { invalidateCache } from '@/lib/cache/redis';
+import { logActivity } from '@/lib/services/auditLog';
 
 const cookedByUser = aliasedTable(users, 'cookedByUser');
 
@@ -210,6 +211,18 @@ export async function PATCH(
 
     await invalidateCache('meals:*');
 
+    const patchSummary = ('cookedBy' in validation.data && validation.data.cookedBy)
+      ? `Marked cooked: ${updatedMealWithUser.name}`
+      : `Updated meal: ${updatedMealWithUser.name}`;
+
+    logActivity({
+      userId: auth.userId,
+      action: 'update',
+      entityType: 'meal',
+      entityId: id,
+      summary: patchSummary,
+    });
+
     return NextResponse.json(formatMealRow(updatedMealWithUser));
   } catch (error) {
     console.error('Error updating meal:', error);
@@ -253,6 +266,14 @@ export async function DELETE(
       .where(eq(meals.id, id));
 
     await invalidateCache('meals:*');
+
+    logActivity({
+      userId: auth.userId,
+      action: 'delete',
+      entityType: 'meal',
+      entityId: id,
+      summary: `Deleted meal: ${existingMeal.name}`,
+    });
 
     return NextResponse.json({
       message: 'Meal deleted successfully',

@@ -3,6 +3,7 @@ import { requireAuth, requireRole } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { settings } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { logActivity } from '@/lib/services/auditLog';
 
 const AWAY_MODE_KEY = 'awayMode';
 
@@ -47,12 +48,15 @@ export async function POST(request: NextRequest) {
 
     // Auto-activation can only enable, not disable
     // Manual control requires authentication
+    let authUserId: string | null = null;
     if (!autoActivated || !enabled) {
       const auth = await requireAuth();
       if (auth instanceof NextResponse) return auth;
 
       const forbidden = requireRole(auth, 'canToggleAwayMode');
       if (forbidden) return forbidden;
+
+      authUserId = auth.userId;
     }
 
     const newState: AwayModeState = enabled
@@ -81,6 +85,14 @@ export async function POST(request: NextRequest) {
     } else {
       await db.insert(settings).values({ key: AWAY_MODE_KEY, value: newState });
     }
+
+    logActivity({
+      userId: authUserId,
+      action: 'toggle',
+      entityType: 'setting',
+      entityId: AWAY_MODE_KEY,
+      summary: enabled ? 'Enabled away mode' : 'Disabled away mode',
+    });
 
     return NextResponse.json(newState);
   } catch (error) {

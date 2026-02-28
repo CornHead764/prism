@@ -21,6 +21,7 @@ import { db } from '@/lib/db/client';
 import { familyMessages, users } from '@/lib/db/schema';
 import { eq, desc, asc, and, gt, isNull, or, sql } from 'drizzle-orm';
 import { formatMessageRow } from '@/lib/utils/formatters';
+import { logActivity } from '@/lib/services/auditLog';
 
 
 /**
@@ -257,6 +258,14 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    logActivity({
+      userId: body.authorId,
+      action: 'create',
+      entityType: 'message',
+      entityId: newMessage.id,
+      summary: 'Posted message',
+    });
 
     return NextResponse.json(formatMessageRow(messageWithAuthor), { status: 201 });
     } catch (error) {

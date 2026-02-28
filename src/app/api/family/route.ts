@@ -5,6 +5,7 @@ import { users } from '@/lib/db/schema';
 
 import bcrypt from 'bcryptjs';
 import { getCached, invalidateCache } from '@/lib/cache/redis';
+import { logActivity } from '@/lib/services/auditLog';
 
 interface FamilyMemberResponse {
   id: string;
@@ -152,6 +153,14 @@ export async function POST(request: NextRequest) {
     };
 
     await invalidateCache('family:*');
+
+    logActivity({
+      userId: auth.userId,
+      action: 'create',
+      entityType: 'user',
+      entityId: newMember.id,
+      summary: `Added member: ${newMember.name}`,
+    });
 
     return NextResponse.json(response, { status: 201 });
   } catch (error) {

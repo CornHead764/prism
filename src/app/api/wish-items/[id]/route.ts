@@ -13,6 +13,7 @@ import { eq } from 'drizzle-orm';
 import { updateWishItemSchema, validateRequest } from '@/lib/validations';
 import { requireAuth } from '@/lib/auth';
 import { invalidateCache } from '@/lib/cache/redis';
+import { logActivity } from '@/lib/services/auditLog';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -77,6 +78,14 @@ export async function PATCH(
 
     await invalidateCache('wish-items:*');
 
+    logActivity({
+      userId: auth.userId,
+      action: 'update',
+      entityType: 'wish_item',
+      entityId: updated.id,
+      summary: `Updated wish item: ${updated.name}`,
+    });
+
     return NextResponse.json({
       id: updated.id,
       memberId: updated.memberId,
@@ -136,6 +145,14 @@ export async function DELETE(
     await db.delete(wishItems).where(eq(wishItems.id, id));
 
     await invalidateCache('wish-items:*');
+
+    logActivity({
+      userId: auth.userId,
+      action: 'delete',
+      entityType: 'wish_item',
+      entityId: existing.id,
+      summary: `Removed wish item: ${existing.name}`,
+    });
 
     return NextResponse.json({
       message: 'Wish item deleted',

@@ -21,6 +21,7 @@ import {
   Database,
   Link2,
   ToggleLeft,
+  ClipboardList,
 } from 'lucide-react';
 import { PrismIcon } from '@/components/ui/PrismIcon';
 import { cn } from '@/lib/utils';
@@ -39,6 +40,7 @@ import { WishListIntegrationsSection } from './sections/WishListIntegrationsSect
 import { BabysitterInfoSection } from './sections/BabysitterInfoSection';
 import { BackupSection } from './sections/BackupSection';
 import { FeaturesSection } from './sections/FeaturesSection';
+import { ActivityLogSection } from './sections/ActivityLogSection';
 
 import { ConnectedAccountsSection } from './sections/ConnectedAccountsSection';
 
@@ -136,6 +138,7 @@ export function SettingsView() {
     { id: 'features', label: 'Features', icon: ToggleLeft },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'backups', label: 'Backups', icon: Database },
+    { id: 'activity', label: 'Activity Log', icon: ClipboardList },
     { id: 'about', label: 'About', icon: Info },
   ];
 
@@ -194,6 +197,7 @@ export function SettingsView() {
               {activeSection === 'features' && <FeaturesSection />}
               {activeSection === 'security' && <SecuritySection />}
               {activeSection === 'backups' && <BackupSection />}
+              {activeSection === 'activity' && <ActivityLogSection />}
               {activeSection === 'about' && (
                 <div className="space-y-6">
                   <div>

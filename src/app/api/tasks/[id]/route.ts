@@ -22,6 +22,7 @@ import { eq } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { formatTaskRow } from '@/lib/utils/formatters';
 import { invalidateCache } from '@/lib/cache/redis';
+import { logActivity } from '@/lib/services/auditLog';
 
 
 /**
@@ -296,6 +297,17 @@ export async function PATCH(
 
     await invalidateCache('tasks:*');
 
+    const actionSummary = body.completed
+      ? `Completed task: ${updatedTaskWithUser.title}`
+      : `Updated task: ${updatedTaskWithUser.title}`;
+    logActivity({
+      userId: auth.userId,
+      action: body.completed ? 'complete' : 'update',
+      entityType: 'task',
+      entityId: id,
+      summary: actionSummary,
+    });
+
     return NextResponse.json(formatTaskRow(updatedTaskWithUser));
   } catch (error) {
     console.error('Error updating task:', error);
@@ -369,6 +381,14 @@ export async function DELETE(
       .where(eq(tasks.id, id));
 
     await invalidateCache('tasks:*');
+
+    logActivity({
+      userId: auth.userId,
+      action: 'delete',
+      entityType: 'task',
+      entityId: id,
+      summary: `Deleted task: ${existingTask.title}`,
+    });
 
     // Return success response with deleted task info
     return NextResponse.json({
