@@ -111,6 +111,7 @@ describe('formatMealRow', () => {
     description: null,
     recipe: null,
     recipeUrl: null,
+    recipeId: null,
     prepTime: 10,
     cookTime: 20,
     servings: 4,
