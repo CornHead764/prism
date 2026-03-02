@@ -5,6 +5,7 @@ const SSR_FALLBACK = 60;
 /**
  * Measures container width via ResizeObserver and computes square cell size.
  * In fillHeight mode, row height is derived from viewport height instead.
+ * Returns width and mounted for callers that need container measurement info.
  */
 export function useSquareCells(
   cols: number,
@@ -14,18 +15,23 @@ export function useSquareCells(
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [cellSize, setCellSize] = useState(SSR_FALLBACK);
+  const [width, setWidth] = useState(0);
+  const [mounted, setMounted] = useState(false);
 
   const compute = useCallback(() => {
     if (fillHeight) {
+      setMounted(true);
       const vh = typeof window !== 'undefined' ? window.innerHeight : 720;
       setCellSize(Math.max(30, Math.floor((vh - 2 * containerPadding - 11 * gap) / 12)));
       return;
     }
     const el = containerRef.current;
     if (!el) return;
-    const width = el.clientWidth;
-    if (width <= 0) return;
-    const available = width - 2 * containerPadding - (cols - 1) * gap;
+    const w = el.clientWidth;
+    setWidth(w);
+    setMounted(true);
+    if (w <= 0) return;
+    const available = w - 2 * containerPadding - (cols - 1) * gap;
     setCellSize(Math.floor(available / cols));
   }, [cols, containerPadding, gap, fillHeight]);
 
@@ -44,5 +50,5 @@ export function useSquareCells(
     return () => ro.disconnect();
   }, [compute, fillHeight]);
 
-  return { containerRef, cellSize };
+  return { containerRef, cellSize, width, mounted };
 }
