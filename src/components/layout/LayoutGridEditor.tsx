@@ -493,9 +493,7 @@ export function LayoutGridEditor({
 
   const combinedRef = useCallback((node: HTMLDivElement | null) => {
     (scrollContainerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
-    if (containerRef && 'current' in containerRef) {
-      (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
-    }
+    containerRef(node);
   }, [containerRef]);
 
   if (isEditable) {
