@@ -40,6 +40,8 @@ interface UseChoresOptions {
   showDisabled?: boolean;
   /** Auto-refresh interval in milliseconds (0 = disabled) */
   refreshInterval?: number;
+  /** When false, skip initial fetch and polling. Fetch triggers when enabled transitions to true. */
+  enabled?: boolean;
 }
 
 interface UseChoresResult {
@@ -59,6 +61,7 @@ export function useChores(options: UseChoresOptions = {}): UseChoresResult {
     assignedTo,
     showDisabled = false,
     refreshInterval = 5 * 60 * 1000,
+    enabled = true,
   } = options;
 
   const [chores, setChores] = useState<Chore[]>([]);
@@ -207,13 +210,13 @@ export function useChores(options: UseChoresOptions = {}): UseChoresResult {
     [fetchChores]
   );
 
-  // Initial fetch
+  // Initial fetch (skipped when disabled)
   useEffect(() => {
-    fetchChores();
-  }, [fetchChores]);
+    if (enabled) fetchChores();
+  }, [fetchChores, enabled]);
 
-  // Set up refresh interval with visibility-based pause
-  useVisibilityPolling(fetchChores, refreshInterval);
+  // Set up refresh interval with visibility-based pause (disabled when not enabled)
+  useVisibilityPolling(fetchChores, enabled ? refreshInterval : 0);
 
   return {
     chores,

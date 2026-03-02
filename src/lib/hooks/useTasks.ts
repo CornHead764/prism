@@ -9,6 +9,7 @@ interface UseTasksOptions {
   showCompleted?: boolean;
   limit?: number;
   refreshInterval?: number;
+  enabled?: boolean;
 }
 
 function transformTasks(json: unknown): Task[] {
@@ -58,6 +59,7 @@ export function useTasks(options: UseTasksOptions = {}) {
     showCompleted = false,
     limit = 50,
     refreshInterval = 5 * 60 * 1000,
+    enabled,
   } = options;
 
   const params = new URLSearchParams();
@@ -71,6 +73,7 @@ export function useTasks(options: UseTasksOptions = {}) {
     transform: transformTasks,
     refreshInterval,
     label: 'tasks',
+    enabled,
   });
 
   const toggleTask = useCallback(

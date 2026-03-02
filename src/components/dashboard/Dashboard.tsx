@@ -2,6 +2,8 @@
 
 import * as React from 'react';
 import { Suspense, useState, useCallback, useEffect, useMemo, useRef } from 'react';
+
+const VISIBLE_WIDGETS_KEY = 'prism-visible-widgets';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
 import { DashboardGrid, DashboardLayout, DashboardHeader } from '@/components/layout/DashboardGrid';
@@ -60,7 +62,24 @@ export function Dashboard({
 
   const { activeUser, requireAuth, clearActiveUser } = useAuth();
   const { confirm: confirmAction, dialogProps: confirmDialogProps } = useConfirmDialog();
-  const data = useDashboardData();
+
+  // Read cached visible widget IDs from localStorage for prioritized loading
+  const [initialVisibleWidgets] = useState<Set<string> | undefined>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(VISIBLE_WIDGETS_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return new Set(parsed);
+          }
+        }
+      } catch { /* ignore */ }
+    }
+    return undefined; // No cache → enable all hooks immediately
+  });
+
+  const data = useDashboardData(initialVisibleWidgets);
 
   const [showAddMessage, setShowAddMessage] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
@@ -68,6 +87,16 @@ export function Dashboard({
   const [showAddShopping, setShowAddShopping] = useState(false);
 
   const layout = useDashboardLayout(data.layouts, slug);
+
+  // Persist visible widget IDs to localStorage for next load's prioritized fetching
+  useEffect(() => {
+    const ids = layout.activeWidgets
+      .filter(w => w.visible !== false)
+      .map(w => w.i);
+    if (ids.length > 0) {
+      localStorage.setItem(VISIBLE_WIDGETS_KEY, JSON.stringify(ids));
+    }
+  }, [layout.activeWidgets]);
 
   // Redirect to / if slug doesn't resolve to a layout (after layouts have loaded)
   useEffect(() => {

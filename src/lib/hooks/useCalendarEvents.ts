@@ -19,6 +19,8 @@ interface UseCalendarEventsOptions {
   useDemoFallback?: boolean;
   /** Auto-sync interval in minutes (0 = disabled, default = 10) */
   autoSyncMinutes?: number;
+  /** When false, skip initial fetch and polling. Fetch triggers when enabled transitions to true. */
+  enabled?: boolean;
 }
 
 interface UseCalendarEventsResult {
@@ -35,7 +37,7 @@ interface UseCalendarEventsResult {
 export function useCalendarEvents(
   options: UseCalendarEventsOptions = {}
 ): UseCalendarEventsResult {
-  const { daysToShow = 7, refreshInterval = 5 * 60 * 1000, useDemoFallback = true, autoSyncMinutes = 10 } = options;
+  const { daysToShow = 7, refreshInterval = 5 * 60 * 1000, useDemoFallback = true, autoSyncMinutes = 10, enabled = true } = options;
 
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -138,22 +140,22 @@ export function useCalendarEvents(
     }
   }, [fetchEvents]);
 
-  // Initial fetch
+  // Initial fetch (skipped when disabled)
   useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
+    if (enabled) fetchEvents();
+  }, [fetchEvents, enabled]);
 
-  // Set up refresh interval
+  // Set up refresh interval (disabled when not enabled)
   useEffect(() => {
-    if (refreshInterval <= 0) return;
+    if (!enabled || refreshInterval <= 0) return;
 
     const interval = setInterval(fetchEvents, refreshInterval);
     return () => clearInterval(interval);
-  }, [refreshInterval, fetchEvents]);
+  }, [refreshInterval, fetchEvents, enabled]);
 
   // Auto-sync: Check if calendars need syncing and trigger if stale
   useEffect(() => {
-    if (autoSyncMinutes <= 0) return;
+    if (!enabled || autoSyncMinutes <= 0) return;
 
     const checkAndSync = async () => {
       try {

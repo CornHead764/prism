@@ -6,6 +6,7 @@ import type { WeatherData } from '@/components/widgets/WeatherWidget';
 interface UseWeatherOptions {
   location?: string;
   refreshInterval?: number;
+  enabled?: boolean;
 }
 
 function transformWeather(json: unknown): WeatherData {
@@ -25,7 +26,7 @@ function transformWeather(json: unknown): WeatherData {
 }
 
 export function useWeather(options: UseWeatherOptions = {}) {
-  const { location, refreshInterval = 5 * 60 * 1000 } = options;
+  const { location, refreshInterval = 5 * 60 * 1000, enabled } = options;
 
   const url = location
     ? `/api/weather?location=${encodeURIComponent(location)}`
@@ -37,6 +38,7 @@ export function useWeather(options: UseWeatherOptions = {}) {
     transform: transformWeather,
     refreshInterval,
     label: 'weather',
+    enabled,
   });
 
   return { data, loading, error, refresh };

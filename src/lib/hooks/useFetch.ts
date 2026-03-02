@@ -9,6 +9,8 @@ interface UseFetchOptions<T> {
   transform?: (json: unknown) => T;
   refreshInterval?: number;
   label?: string;
+  /** When false, skip initial fetch and polling. Fetch triggers when enabled transitions to true. */
+  enabled?: boolean;
 }
 
 interface UseFetchResult<T> {
@@ -20,7 +22,7 @@ interface UseFetchResult<T> {
 }
 
 export function useFetch<T>(options: UseFetchOptions<T>): UseFetchResult<T> {
-  const { url, initialData, transform, refreshInterval = 0, label = 'data' } = options;
+  const { url, initialData, transform, refreshInterval = 0, label = 'data', enabled = true } = options;
 
   const [data, setData] = useState<T>(initialData);
   const [loading, setLoading] = useState(true);
@@ -47,10 +49,10 @@ export function useFetch<T>(options: UseFetchOptions<T>): UseFetchResult<T> {
   }, [url]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (enabled) fetchData();
+  }, [fetchData, enabled]);
 
-  useVisibilityPolling(fetchData, refreshInterval);
+  useVisibilityPolling(fetchData, enabled ? refreshInterval : 0);
 
   return { data, setData, loading, error, refresh: fetchData };
 }

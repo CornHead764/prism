@@ -65,7 +65,8 @@ interface UseGoalsResult {
   resetGoal: (goalId: string) => Promise<void>;
 }
 
-export function useGoals(refreshInterval = 2 * 60 * 1000): UseGoalsResult {
+export function useGoals(options: { refreshInterval?: number; enabled?: boolean } = {}): UseGoalsResult {
+  const { refreshInterval = 2 * 60 * 1000, enabled = true } = options;
   const [goals, setGoals] = useState<Goal[]>([]);
   const [progress, setProgress] = useState<Record<string, Record<string, ChildProgress>>>({});
   const [goalChildren, setGoalChildren] = useState<GoalChild[]>([]);
@@ -157,9 +158,9 @@ export function useGoals(refreshInterval = 2 * 60 * 1000): UseGoalsResult {
     await fetchGoals();
   }, [fetchGoals]);
 
-  useEffect(() => { fetchGoals(); }, [fetchGoals]);
+  useEffect(() => { if (enabled) fetchGoals(); }, [fetchGoals, enabled]);
 
-  useVisibilityPolling(fetchGoals, refreshInterval);
+  useVisibilityPolling(fetchGoals, enabled ? refreshInterval : 0);
 
   return {
     goals, progress, goalChildren, loading, error,

@@ -7,6 +7,7 @@ import type { FamilyMessage } from '@/components/widgets/MessagesWidget';
 interface UseMessagesOptions {
   limit?: number;
   refreshInterval?: number;
+  enabled?: boolean;
 }
 
 function transformMessages(json: unknown): FamilyMessage[] {
@@ -43,7 +44,7 @@ function transformMessages(json: unknown): FamilyMessage[] {
 }
 
 export function useMessages(options: UseMessagesOptions = {}) {
-  const { limit = 20, refreshInterval = 2 * 60 * 1000 } = options;
+  const { limit = 20, refreshInterval = 2 * 60 * 1000, enabled } = options;
 
   const { data: messages, setData: setMessages, loading, error, refresh } = useFetch<FamilyMessage[]>({
     url: `/api/messages?limit=${limit}`,
@@ -51,6 +52,7 @@ export function useMessages(options: UseMessagesOptions = {}) {
     transform: transformMessages,
     refreshInterval,
     label: 'messages',
+    enabled,
   });
 
   const deleteMessage = useCallback(

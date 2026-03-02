@@ -16,6 +16,8 @@ import type { ShoppingItem, ShoppingList } from '@/types';
 interface UseShoppingListsOptions {
   /** Auto-refresh interval in milliseconds (0 = disabled) */
   refreshInterval?: number;
+  /** When false, skip initial fetch and polling. Fetch triggers when enabled transitions to true. */
+  enabled?: boolean;
 }
 
 interface UseShoppingListsResult {
@@ -41,6 +43,7 @@ interface UseShoppingListsResult {
 export function useShoppingLists(options: UseShoppingListsOptions = {}): UseShoppingListsResult {
   const {
     refreshInterval = 5 * 60 * 1000,
+    enabled = true,
   } = options;
 
   const [lists, setLists] = useState<ShoppingList[]>([]);
@@ -249,13 +252,13 @@ export function useShoppingLists(options: UseShoppingListsOptions = {}): UseShop
     [fetchLists]
   );
 
-  // Initial fetch
+  // Initial fetch (skipped when disabled)
   useEffect(() => {
-    fetchLists();
-  }, [fetchLists]);
+    if (enabled) fetchLists();
+  }, [fetchLists, enabled]);
 
-  // Set up refresh interval with visibility-based pause
-  useVisibilityPolling(fetchLists, refreshInterval);
+  // Set up refresh interval with visibility-based pause (disabled when not enabled)
+  useVisibilityPolling(fetchLists, enabled ? refreshInterval : 0);
 
   return {
     lists,

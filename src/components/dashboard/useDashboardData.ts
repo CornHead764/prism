@@ -1,21 +1,61 @@
-import { useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useCalendarEvents, useWeather, useMessages, useTasks, useChores, useShoppingLists, useMeals, useBirthdays, useLayouts, useGoals, usePoints } from '@/lib/hooks';
 
 const AUTO_SYNC_STALE_MINUTES = 5;
 const AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 
-export function useDashboardData() {
+/** Delay (ms) before enabling non-visible widget data loading */
+const DEFERRED_LOAD_DELAY_MS = 2000;
+
+/** Maps widget IDs to the data domains they require */
+const WIDGET_DOMAIN_MAP: Record<string, string[]> = {
+  calendar: ['calendar'],
+  weather: ['weather'],
+  messages: ['messages'],
+  tasks: ['tasks'],
+  chores: ['chores'],
+  shopping: ['shopping'],
+  meals: ['meals'],
+  birthdays: ['birthdays'],
+  points: ['goals', 'points'],
+};
+
+export function useDashboardData(visibleWidgets?: Set<string>) {
+  // After a short delay, enable ALL domains (background loading for non-visible widgets)
+  const [deferredEnabled, setDeferredEnabled] = useState(false);
+
+  useEffect(() => {
+    if (!visibleWidgets) return; // No visibility info → all enabled already
+    const timer = setTimeout(() => setDeferredEnabled(true), DEFERRED_LOAD_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, []); // Only on mount
+
+  // Compute which domains should be enabled right now
+  const enabledDomains = useMemo(() => {
+    // No visibility info or deferred timer elapsed → enable everything
+    if (!visibleWidgets || deferredEnabled) return null;
+    const enabled = new Set<string>();
+    for (const [widget, domains] of Object.entries(WIDGET_DOMAIN_MAP)) {
+      if (visibleWidgets.has(widget)) {
+        for (const d of domains) enabled.add(d);
+      }
+    }
+    return enabled;
+  }, [visibleWidgets, deferredEnabled]);
+
+  const isEnabled = (domain: string) => enabledDomains === null || enabledDomains.has(domain);
+
   const {
     events: calendarEvents,
     loading: calendarLoading,
     error: calendarError,
-  } = useCalendarEvents({ daysToShow: 30 });
+  } = useCalendarEvents({ daysToShow: 30, enabled: isEnabled('calendar') });
 
   const {
     data: weatherData,
     loading: weatherLoading,
     error: weatherError,
-  } = useWeather({});
+  } = useWeather({ enabled: isEnabled('weather') });
 
   const {
     messages,
@@ -23,7 +63,7 @@ export function useDashboardData() {
     error: messagesError,
     refresh: refreshMessages,
     deleteMessage,
-  } = useMessages({ limit: 10 });
+  } = useMessages({ limit: 10, enabled: isEnabled('messages') });
 
   const {
     tasks,
@@ -31,7 +71,7 @@ export function useDashboardData() {
     error: tasksError,
     refresh: refreshTasks,
     toggleTask,
-  } = useTasks({ showCompleted: true, limit: 20 });
+  } = useTasks({ showCompleted: true, limit: 20, enabled: isEnabled('tasks') });
 
   const {
     chores,
@@ -40,7 +80,7 @@ export function useDashboardData() {
     refresh: refreshChores,
     completeChore,
     approveChore,
-  } = useChores({ showDisabled: false });
+  } = useChores({ showDisabled: false, enabled: isEnabled('chores') });
 
   const {
     lists: shoppingLists,
@@ -48,7 +88,7 @@ export function useDashboardData() {
     error: shoppingError,
     refresh: refreshShopping,
     toggleItem: toggleShoppingItem,
-  } = useShoppingLists({});
+  } = useShoppingLists({ enabled: isEnabled('shopping') });
 
   const {
     meals,
@@ -56,14 +96,14 @@ export function useDashboardData() {
     error: mealsError,
     refresh: refreshMeals,
     markCooked,
-  } = useMeals({});
+  } = useMeals({ enabled: isEnabled('meals') });
 
   const {
     birthdays: birthdaysList,
     loading: birthdaysLoading,
     error: birthdaysError,
     syncFromGoogle: syncBirthdays,
-  } = useBirthdays({ limit: 8 });
+  } = useBirthdays({ limit: 8, enabled: isEnabled('birthdays') });
 
   const {
     goals: goalsList,
@@ -71,14 +111,15 @@ export function useDashboardData() {
     goalChildren,
     loading: goalsLoading,
     error: goalsError,
-  } = useGoals();
+  } = useGoals({ enabled: isEnabled('goals') });
 
   const {
     points: pointsList,
     loading: pointsLoading,
     error: pointsError,
-  } = usePoints();
+  } = usePoints({ enabled: isEnabled('points') });
 
+  // Layouts always load — needed for dashboard structure
   const {
     layouts: allLayouts,
     activeLayout: savedLayout,
