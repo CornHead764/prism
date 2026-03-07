@@ -16,12 +16,13 @@ import {
   Merge,
   Plus,
   Loader2,
+  Grid3X3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { AddEventModal } from '@/components/modals';
 import { PageWrapper, SubpageHeader, FilterBar } from '@/components/layout';
-import { MonthView, WeekView, TwoWeekView, ThreeMonthView, DayViewSideBySide, WeekVerticalView } from '@/components/calendar';
+import { MonthView, WeekView, MultiWeekView, ThreeMonthView, DayViewSideBySide, WeekVerticalView } from '@/components/calendar';
 import { useCalendarViewData } from './useCalendarViewData';
 import { useIsMobile, useSwipeNavigation } from '@/lib/hooks';
 import { useAuth } from '@/components/providers';
@@ -31,6 +32,8 @@ export function CalendarView() {
   const {
     currentDate, setCurrentDate,
     viewType, setViewType,
+    weekCount, setWeekCount,
+    weeksBordered, setWeeksBordered,
     selectedEvent, setSelectedEvent,
     showAddEvent, setShowAddEvent,
     editingEvent, setEditingEvent,
@@ -91,9 +94,34 @@ export function CalendarView() {
               <Button variant={viewType === 'weekVertical' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('weekVertical')} className="rounded-none border-r">
                 <List className="h-4 w-4 mr-1" />List
               </Button>
-              <Button variant={viewType === 'twoWeek' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('twoWeek')} className="rounded-none border-r">
-                <CalendarRange className="h-4 w-4 mr-1" />2 Weeks
-              </Button>
+              <div className="flex items-center border-r">
+                <Button variant={viewType === 'multiWeek' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('multiWeek')} className="rounded-none border-r-0">
+                  <CalendarRange className="h-4 w-4 mr-1" />{weekCount}W
+                </Button>
+                {viewType === 'multiWeek' && (
+                  <>
+                    <select
+                      value={weekCount}
+                      onChange={(e) => setWeekCount(Number(e.target.value) as 1 | 2 | 3 | 4)}
+                      className="h-8 w-10 text-xs bg-secondary border-0 rounded-none cursor-pointer focus:outline-none"
+                      aria-label="Number of weeks"
+                    >
+                      {[1, 2, 3, 4].map(n => (
+                        <option key={n} value={n}>{n}</option>
+                      ))}
+                    </select>
+                    <Button
+                      variant={weeksBordered ? 'secondary' : 'ghost'}
+                      size="sm"
+                      onClick={() => setWeeksBordered(!weeksBordered)}
+                      className="rounded-none px-2"
+                      title={weeksBordered ? 'Hide cell borders' : 'Show cell borders'}
+                    >
+                      <Grid3X3 className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
+              </div>
               <Button variant={viewType === 'month' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewType('month')} className="rounded-none border-r">
                 <LayoutGrid className="h-4 w-4 mr-1" />Month
               </Button>
@@ -173,8 +201,8 @@ export function CalendarView() {
           {!loading && !error && viewType === 'weekVertical' && (
             <WeekVerticalView currentDate={currentDate} events={events} calendarGroups={calendarGroups} selectedCalendarIds={selectedCalendarIds} mergedView={mergedView} onEventClick={setSelectedEvent} />
           )}
-          {!loading && !error && viewType === 'twoWeek' && (
-            <TwoWeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} />
+          {!loading && !error && viewType === 'multiWeek' && (
+            <MultiWeekView currentDate={currentDate} events={events} onEventClick={setSelectedEvent} weekCount={weekCount} bordered={weeksBordered} />
           )}
           {!loading && !error && viewType === 'threeMonth' && (
             <ThreeMonthView currentDate={currentDate} events={events} onEventClick={setSelectedEvent}

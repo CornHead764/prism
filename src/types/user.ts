@@ -15,7 +15,7 @@ export interface User {
 
 export interface UserPreferences {
   theme?: 'light' | 'dark' | 'system';
-  defaultCalendarView?: 'day' | 'week' | 'twoWeek' | 'month';
+  defaultCalendarView?: 'day' | 'week' | 'multiWeek' | 'month';
   showCompletedTasks?: boolean;
   showCompletedChores?: boolean;
   reminderNotifications?: boolean;

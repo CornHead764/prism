@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   format,
   startOfWeek,
@@ -16,17 +16,29 @@ import { useCalendarEvents, useCalendarFilter } from '@/lib/hooks';
 import { deduplicateEvents } from '@/lib/utils/calendarDedup';
 import type { CalendarEvent } from '@/types/calendar';
 
-export type CalendarViewType = 'day' | 'week' | 'weekVertical' | 'twoWeek' | 'month' | 'threeMonth';
+export type CalendarViewType = 'day' | 'week' | 'weekVertical' | 'multiWeek' | 'month' | 'threeMonth';
+export type MultiWeekCount = 1 | 2 | 3 | 4;
 
 export type { CalendarGroup } from '@/lib/hooks';
 
 export function useCalendarViewData() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewType, setViewType] = useState<CalendarViewType>('month');
+  const [weekCount, setWeekCount] = useState<MultiWeekCount>(2);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [showAddEvent, setShowAddEvent] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [mergedView, setMergedView] = useState(false);
+  const [weeksBordered, setWeeksBordered] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('prism-calendar-bordered') === 'true';
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('prism-calendar-bordered', String(weeksBordered));
+  }, [weeksBordered]);
 
   const { selectedCalendarIds, toggleCalendar, filterEvents, calendarGroups } = useCalendarFilter();
   const { events: apiEvents, loading, error, refresh: refreshEvents } = useCalendarEvents({ daysToShow: 60 });
@@ -54,12 +66,12 @@ export function useCalendarViewData() {
         case 'day': return subDays(prev, 1);
         case 'week': return subWeeks(prev, 1);
         case 'weekVertical': return subWeeks(prev, 1);
-        case 'twoWeek': return subWeeks(prev, 2);
+        case 'multiWeek': return subWeeks(prev, weekCount);
         case 'month': return subMonths(prev, 1);
         case 'threeMonth': return subMonths(prev, 1);
       }
     });
-  }, [viewType]);
+  }, [viewType, weekCount]);
 
   const goToNext = useCallback(() => {
     setCurrentDate(prev => {
@@ -67,12 +79,12 @@ export function useCalendarViewData() {
         case 'day': return addDays(prev, 1);
         case 'week': return addWeeks(prev, 1);
         case 'weekVertical': return addWeeks(prev, 1);
-        case 'twoWeek': return addWeeks(prev, 2);
+        case 'multiWeek': return addWeeks(prev, weekCount);
         case 'month': return addMonths(prev, 1);
         case 'threeMonth': return addMonths(prev, 1);
       }
     });
-  }, [viewType]);
+  }, [viewType, weekCount]);
 
   const getDateRangeTitle = useCallback((): string => {
     switch (viewType) {
@@ -84,20 +96,21 @@ export function useCalendarViewData() {
         const we = endOfWeek(currentDate);
         return `${format(ws, 'MMM d')} - ${format(we, 'MMM d, yyyy')}`;
       }
-      case 'twoWeek': {
+      case 'multiWeek': {
         const tws = startOfWeek(currentDate);
-        const twe = endOfWeek(addWeeks(currentDate, 1));
+        const twe = endOfWeek(addWeeks(currentDate, weekCount - 1));
         return `${format(tws, 'MMM d')} - ${format(twe, 'MMM d, yyyy')}`;
       }
       case 'month':
       case 'threeMonth':
         return format(currentDate, 'MMMM yyyy');
     }
-  }, [viewType, currentDate]);
+  }, [viewType, weekCount, currentDate]);
 
   return {
     currentDate, setCurrentDate,
     viewType, setViewType,
+    weekCount, setWeekCount,
     selectedEvent, setSelectedEvent,
     showAddEvent, setShowAddEvent,
     editingEvent, setEditingEvent,
@@ -105,6 +118,7 @@ export function useCalendarViewData() {
     calendarGroups,
     toggleCalendar,
     mergedView, setMergedView,
+    weeksBordered, setWeeksBordered,
     events, loading, error, refreshEvents,
     goToToday, goToPrevious, goToNext, getDateRangeTitle,
   };

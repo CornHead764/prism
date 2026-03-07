@@ -111,7 +111,7 @@ Located in Settings → Display → Calendar Hours:
 - `src/app/calendar/useCalendarViewData.ts` - Data hook
 - `src/components/calendar/WeekView.tsx`
 - `src/components/calendar/DayViewSideBySide.tsx`
-- `src/components/calendar/TwoWeekView.tsx`
+- `src/components/calendar/MultiWeekView.tsx`
 - `src/components/calendar/MonthView.tsx`
 - `src/components/calendar/ThreeMonthView.tsx`
 - `src/lib/hooks/useHiddenHours.ts` - Hidden hours state

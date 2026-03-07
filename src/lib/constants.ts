@@ -33,9 +33,9 @@ export const ANIMATION_DURATION = {
   SLOW: 300,
 } as const;
 
-export const CALENDAR_VIEWS = ['day', 'week', 'twoWeek', 'month'] as const;
+export const CALENDAR_VIEWS = ['day', 'week', 'multiWeek', 'month'] as const;
 export type CalendarView = typeof CALENDAR_VIEWS[number];
-export const DEFAULT_CALENDAR_VIEW: CalendarView = 'twoWeek';
+export const DEFAULT_CALENDAR_VIEW: CalendarView = 'multiWeek';
 export const CALENDAR_SYNC_INTERVAL = 10 * 60 * 1000;
 export const CALENDAR_PAST_MONTHS = 6;
 export const CALENDAR_FUTURE_MONTHS = 12;

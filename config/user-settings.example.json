@@ -32,7 +32,7 @@
   },
 
   "display": {
-    "defaultView": "twoWeek",
+    "defaultView": "multiWeek",
     "theme": "auto",
     "seasonalThemes": true,
     "idleTimeout": 120,
