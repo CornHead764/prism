@@ -9,7 +9,7 @@ import {
   getScreensaverPresets,
   saveScreensaverPreset,
   deleteScreensaverPreset,
-} from '@/components/screensaver/Screensaver';
+} from '@/components/screensaver/screensaverStorage';
 import type { WidgetConfig, Layout } from '@/lib/hooks/useLayouts';
 
 interface LayoutsData {
