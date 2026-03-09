@@ -190,6 +190,34 @@ export async function syncBusEmails(): Promise<SyncResult> {
         continue;
       }
 
+      // Auto-add new checkpoints/stops/schools to the route config
+      if (match.isNewCheckpoint) {
+        const route = routeData.find(r => r.id === match.routeId);
+        if (route) {
+          if (parsed.type === 'distance_based') {
+            const newCp = { name: match.checkpointName, sortOrder: route.checkpoints.length };
+            route.checkpoints.push(newCp);
+            match.checkpointIndex = newCp.sortOrder;
+            await db.update(busRoutes).set({
+              checkpoints: route.checkpoints,
+            }).where(eq(busRoutes.id, route.id));
+            console.log(`Bus sync: auto-added checkpoint "${match.checkpointName}" to route ${route.id}`);
+          } else if (parsed.type === 'arrived_at_stop' && !route.stopName) {
+            route.stopName = match.checkpointName;
+            await db.update(busRoutes).set({
+              stopName: match.checkpointName,
+            }).where(eq(busRoutes.id, route.id));
+            console.log(`Bus sync: auto-set stop name "${match.checkpointName}" for route ${route.id}`);
+          } else if (parsed.type === 'arrived_at_school' && !route.schoolName) {
+            route.schoolName = match.checkpointName;
+            await db.update(busRoutes).set({
+              schoolName: match.checkpointName,
+            }).where(eq(busRoutes.id, route.id));
+            console.log(`Bus sync: auto-set school name "${match.checkpointName}" for route ${route.id}`);
+          }
+        }
+      }
+
       // Insert into geofence log
       const eventTime = parsed.eventTime;
       await db.insert(busGeofenceLog).values({

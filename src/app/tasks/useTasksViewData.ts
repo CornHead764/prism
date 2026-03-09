@@ -1,10 +1,12 @@
 'use client';
 
+import React from 'react';
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useAuth, useFamily } from '@/components/providers';
 import { useTasks } from '@/lib/hooks';
 import { useTaskLists } from '@/lib/hooks/useTaskLists';
 import { toast } from '@/components/ui/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import type { Task } from '@/types';
 
@@ -157,7 +159,18 @@ export function useTasksViewData() {
       return false;
     }
     try {
-      await apiToggleTask(taskId, !task.completed);
+      const newCompleted = !task.completed;
+      await apiToggleTask(taskId, newCompleted);
+      if (newCompleted) {
+        toast({
+          title: `"${task.title}" completed`,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          action: React.createElement(ToastAction, {
+            altText: 'Undo',
+            onClick: () => { apiToggleTask(taskId, false); },
+          }, 'Undo') as any,
+        });
+      }
       return true;
     } catch (err) {
       console.error('Error toggling task:', err);

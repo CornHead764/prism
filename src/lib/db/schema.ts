@@ -36,6 +36,9 @@ export const users = pgTable('users', {
   // Flexible schema for future additions
   preferences: jsonb('preferences').default({}).notNull(),
 
+  // Display order in PinPad and profile lists (lower = first)
+  sortOrder: integer('sort_order').default(0).notNull(),
+
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => ({

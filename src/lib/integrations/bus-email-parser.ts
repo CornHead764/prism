@@ -43,6 +43,8 @@ export interface RouteMatch {
   routeId: string;
   checkpointIndex: number;
   checkpointName: string;
+  /** True if checkpoint was not found in route config (needs to be auto-added) */
+  isNewCheckpoint?: boolean;
 }
 
 // Subject patterns
@@ -339,18 +341,31 @@ export function matchEmailToRoute(
       if (cpIdx >= 0) {
         checkpointIndex = cpIdx;
         checkpointName = route.checkpoints[cpIdx]!.name;
+      } else {
+        // Unknown checkpoint for a matching route — flag as new so sync can auto-add it
+        checkpointIndex = route.checkpoints.length;
+        checkpointName = parsed.checkpointName;
+        return { routeId: route.id, checkpointIndex, checkpointName, isNewCheckpoint: true };
       }
     } else if (parsed.type === 'arrived_at_stop') {
       // Stop is after all checkpoints
+      checkpointIndex = route.checkpoints.length;
       if (route.stopName && fuzzyLocationMatch(route.stopName, parsed.checkpointName)) {
-        checkpointIndex = route.checkpoints.length;
         checkpointName = route.stopName;
+      } else {
+        // Auto-match: student+tripId match but stop name differs or is unset
+        checkpointName = parsed.checkpointName;
+        return { routeId: route.id, checkpointIndex, checkpointName, isNewCheckpoint: true };
       }
     } else if (parsed.type === 'arrived_at_school') {
       // School is the final checkpoint (after stop)
+      checkpointIndex = route.checkpoints.length + 1;
       if (route.schoolName && fuzzyLocationMatch(route.schoolName, parsed.checkpointName)) {
-        checkpointIndex = route.checkpoints.length + 1;
         checkpointName = route.schoolName;
+      } else {
+        // Auto-match: student+tripId match but school name differs or is unset
+        checkpointName = parsed.checkpointName;
+        return { routeId: route.id, checkpointIndex, checkpointName, isNewCheckpoint: true };
       }
     }
 

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { toast } from '@/components/ui/use-toast';
-import { Plus, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +32,25 @@ export function FamilySection() {
   const { members: familyMembers, refresh: refreshFamily } = useFamily();
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
   const [showAddMember, setShowAddMember] = useState(false);
+
+  const moveMember = useCallback(async (index: number, direction: -1 | 1) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= familyMembers.length) return;
+    const newOrder = [...familyMembers];
+    const [moved] = newOrder.splice(index, 1);
+    newOrder.splice(newIndex, 0, moved!);
+    const order = newOrder.map((m, i) => ({ id: m.id, sortOrder: i }));
+    try {
+      const res = await fetch('/api/family/reorder', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order }),
+      });
+      if (res.ok) await refreshFamily();
+    } catch (err) {
+      console.error('Failed to reorder:', err);
+    }
+  }, [familyMembers, refreshFamily]);
 
   const deleteMember = async (id: string) => {
     const member = familyMembers.find((m) => m.id === id);
@@ -132,10 +151,32 @@ export function FamilySection() {
       </div>
 
       <div className="space-y-3">
-        {familyMembers.map((member) => (
+        {familyMembers.map((member, index) => (
           <Card key={member.id}>
             <CardContent className="flex items-center justify-between p-4">
               <div className="flex items-center gap-3">
+                <div className="flex flex-col gap-0.5">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5"
+                    disabled={index === 0}
+                    onClick={() => moveMember(index, -1)}
+                    aria-label="Move up"
+                  >
+                    <ChevronUp className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5"
+                    disabled={index === familyMembers.length - 1}
+                    onClick={() => moveMember(index, 1)}
+                    aria-label="Move down"
+                  >
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </div>
                 <UserAvatar
                   name={member.name}
                   color={member.color}

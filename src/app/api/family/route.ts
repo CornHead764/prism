@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
           createdAt: users.createdAt,
         })
         .from(users)
-        .orderBy(users.createdAt);
+        .orderBy(users.sortOrder, users.createdAt);
 
       let filteredResults = results;
       if (role && ['parent', 'child', 'guest'].includes(role)) {

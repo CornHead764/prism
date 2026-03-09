@@ -151,23 +151,34 @@ export async function fetchEmails(
   if (unreadOnly) fullQuery += ' is:unread';
   if (labelName) fullQuery += ` label:${labelName}`;
   if (afterDate) fullQuery += ` after:${afterDate}`;
-  const params = new URLSearchParams({
-    q: fullQuery,
-    maxResults: maxResults.toString(),
-  });
 
-  const response = await fetch(
-    `${GMAIL_API}/users/me/messages?${params}`,
-    { headers: { Authorization: `Bearer ${accessToken}` } }
-  );
+  const allMessages: { id: string; threadId: string }[] = [];
+  let pageToken: string | undefined;
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Failed to fetch Gmail messages: ${error}`);
-  }
+  do {
+    const params = new URLSearchParams({
+      q: fullQuery,
+      maxResults: Math.min(maxResults - allMessages.length, 100).toString(),
+    });
+    if (pageToken) params.set('pageToken', pageToken);
 
-  const data = await response.json();
-  return data.messages || [];
+    const response = await fetch(
+      `${GMAIL_API}/users/me/messages?${params}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Failed to fetch Gmail messages: ${error}`);
+    }
+
+    const data = await response.json();
+    const messages = data.messages || [];
+    allMessages.push(...messages);
+    pageToken = data.nextPageToken;
+  } while (pageToken && allMessages.length < maxResults);
+
+  return allMessages;
 }
 
 /**
