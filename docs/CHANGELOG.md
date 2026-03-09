@@ -5,12 +5,6 @@ All notable changes to Prism are documented in this file.
 ## [Unreleased]
 
 ### Added
-- **Drag Reorder**: Tasks, chores, goals, and family profile cards can now be reordered by drag-and-drop (touch + mouse supported)
-- **Drag Reorder**: Family profile sort order persists to database via `/api/family/reorder`; task/chore group order persists to localStorage
-- **Undo**: Tasks, chores, shopping items, and wish claims now show an "Undo" toast button when completed/checked off
-- **Wishes**: Self-purchase — cross off items on your own wish list; if someone else already secretly bought it, shows "Someone already got this for you!"
-- **Wishes**: Quick-add input moved to top of list (consistent with tasks/chores pattern)
-- **Messages**: "Group by Person" toggle groups messages into person-colored cards
 - **Calendar**: Multi-week view replaces the fixed 2-week view — configurable from 1 to 4 weeks on both the calendar page and dashboard widget
 - **Calendar**: Bordered/borderless toggle for multi-week cell outlines; rows auto-size to content
 - **Dashboard Editor**: Frosted glass background option with variable blur intensity (Light/Med/Heavy/Max)
@@ -20,6 +14,12 @@ All notable changes to Prism are documented in this file.
 - **Auto-Hide UI**: Staggered animation — header hides first, then nav; nav reappears first, then header
 - **Settings**: Location card wired to weather API — supports zip code or city/state, stored in database
 - **CONTRIBUTING.md**: Quality standards requiring 95% minimum Lighthouse score across all categories
+- **Drag Reorder**: Tasks, chores, goals, and family profile cards can now be reordered by drag-and-drop (touch + mouse supported)
+- **Drag Reorder**: Family profile sort order persists to database via `/api/family/reorder`; task/chore group order persists to localStorage
+- **Undo**: Tasks, chores, shopping items, and wish claims now show an "Undo" toast button when completed/checked off
+- **Wishes**: Self-purchase — cross off items on your own wish list; if someone else already secretly bought it, shows "Someone already got this for you!"
+- **Wishes**: Quick-add input moved to top of list (consistent with tasks/chores pattern)
+- **Messages**: "Group by Person" toggle groups messages into person-colored cards
 
 ### Improved
 - **Settings**: Consolidated Screensaver Timeout, Auto-Hide Navigation, and Away Mode Auto-Activation into single "Timers & Auto-Activation" card
@@ -34,10 +34,10 @@ All notable changes to Prism are documented in this file.
 - **Navigation**: Fixed auto-hide SSR hydration mismatch — localStorage read deferred to useEffect
 - **Google Calendar**: Fixed events beyond 250-event page being silently dropped — added pagination loop following `nextPageToken`
 - **Google Calendar**: Cancelled recurring event instances now filtered out during sync instead of appearing as active events
-- **Calendar**: Multi-day all-day events now span all their days instead of only appearing on the start date (affected all calendar views + widget)
 - **Bus Tracking**: Fixed token mismatch between discover and sync — stale Gmail credentials now deleted on `TokenRevokedError`
 - **Layout Editor**: Added `busTracking` to widget validation constraints (fixes "unknown widget ID" error)
 - **Safe Zones**: Shortened default label from "Example safe zone (edit me)" to "1080p" to prevent preview cutoff
+- **Calendar**: Multi-day all-day events now span all their days instead of only appearing on the start date (affected all calendar views + widget)
 
 ### Improved
 - **Performance**: Split RecipesView into RecipeCard, RecipeDetailModal, RecipeFormModal, ImportUrlModal, and ImportPaprikaModal sub-components
