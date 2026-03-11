@@ -196,15 +196,19 @@ export function DashboardHeader({
   onScreensaverClick,
 }: DashboardHeaderProps) {
   const { uiHidden } = useAutoHideUI();
-  const [measureMode, setMeasureMode] = React.useState(false);
+  const [measureHideChrome, setMeasureHideChrome] = React.useState(false);
 
   React.useEffect(() => {
-    const handler = (e: Event) => setMeasureMode((e as CustomEvent).detail);
+    const handler = (e: Event) => {
+      const d = (e as CustomEvent).detail;
+      // Hide header when measure mode has hideNav on (showing "clean" view)
+      setMeasureHideChrome(typeof d === 'boolean' ? d : d.active && d.hideNav);
+    };
     window.addEventListener('prism:measure-mode', handler);
     return () => window.removeEventListener('prism:measure-mode', handler);
   }, []);
 
-  const hidden = uiHidden || measureMode;
+  const hidden = uiHidden || measureHideChrome;
   return (
     <header className={cn(
       'flex-shrink-0 border-b border-border bg-card/85 backdrop-blur-sm px-4 py-2 transition-all duration-500 ease-in-out',

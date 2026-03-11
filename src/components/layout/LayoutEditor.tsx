@@ -150,17 +150,34 @@ export function LayoutEditor({
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [focusedWidget, setFocusedWidget] = useState<string | null>(null);
   const [measureMode, setMeasureMode] = useState(false);
+  const [measureHideNav, setMeasureHideNav] = useState(true);
   const toolbarRef = useRef<HTMLDivElement>(null);
 
-  // Toggle measure mode — hides toolbar + nav, shows only grid
+  // Dispatch measure mode state to AppShell/DashboardHeader/LayoutGridEditor
+  const dispatchMeasure = useCallback((active: boolean, hideNav: boolean) => {
+    window.dispatchEvent(new CustomEvent('prism:measure-mode', {
+      detail: { active, hideNav },
+    }));
+  }, []);
+
+  // Toggle measure mode — hides toolbar, optionally hides nav
   const toggleMeasureMode = useCallback(() => {
     setMeasureMode(prev => {
       const next = !prev;
-      window.dispatchEvent(new CustomEvent('prism:measure-mode', { detail: next }));
+      dispatchMeasure(next, measureHideNav);
       if (next) setActivePopover(null);
       return next;
     });
-  }, []);
+  }, [dispatchMeasure, measureHideNav]);
+
+  // Toggle nav visibility within measure mode
+  const toggleMeasureNav = useCallback(() => {
+    setMeasureHideNav(prev => {
+      const next = !prev;
+      dispatchMeasure(true, next);
+      return next;
+    });
+  }, [dispatchMeasure]);
 
   // Keyboard shortcut: Ctrl+Shift+M
   useEffect(() => {
@@ -177,9 +194,9 @@ export function LayoutEditor({
   // Clean up measure mode on unmount (editor closing)
   useEffect(() => {
     return () => {
-      window.dispatchEvent(new CustomEvent('prism:measure-mode', { detail: false }));
+      dispatchMeasure(false, false);
     };
-  }, []);
+  }, [dispatchMeasure]);
 
   const currentWidgets = useMemo(() =>
     editingScreensaver ? (screensaverWidgets || []) : widgets,
@@ -378,12 +395,23 @@ export function LayoutEditor({
     return (
       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-2 bg-card/90 backdrop-blur-sm border border-border rounded-full px-4 py-2 shadow-lg">
         <button
+          onClick={toggleMeasureNav}
+          className={`px-3 py-1.5 text-xs rounded-full transition-colors whitespace-nowrap ${
+            measureHideNav
+              ? 'bg-muted text-muted-foreground hover:bg-accent'
+              : 'bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30'
+          }`}
+        >
+          {measureHideNav ? 'Show Nav' : 'Hide Nav'}
+        </button>
+        <div className="w-px h-4 bg-border" />
+        <button
           onClick={toggleMeasureMode}
           className="px-3 py-1.5 text-xs rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap"
         >
-          Exit Measure Mode
+          Exit
         </button>
-        <span className="text-[10px] text-muted-foreground">Ctrl+Shift+M</span>
+        <span className="text-[10px] text-muted-foreground hidden sm:inline">Ctrl+Shift+M</span>
       </div>
     );
   }

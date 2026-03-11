@@ -51,9 +51,19 @@ export function LayoutGridEditor({
   const colorPickerRef = useRef<HTMLInputElement | null>(null);
   const [colorTarget, setColorTarget] = useState<'fill' | 'outline' | 'text'>('fill');
   const [measureMode, setMeasureMode] = useState(false);
+  const [measureHideNav, setMeasureHideNav] = useState(true);
 
   useEffect(() => {
-    const handler = (e: Event) => setMeasureMode((e as CustomEvent).detail);
+    const handler = (e: Event) => {
+      const d = (e as CustomEvent).detail;
+      if (typeof d === 'boolean') {
+        setMeasureMode(d);
+        setMeasureHideNav(d);
+      } else {
+        setMeasureMode(d.active);
+        setMeasureHideNav(d.active && d.hideNav);
+      }
+    };
     window.addEventListener('prism:measure-mode', handler);
     return () => window.removeEventListener('prism:measure-mode', handler);
   }, []);
@@ -69,11 +79,18 @@ export function LayoutGridEditor({
 
   const visibleRows = useMemo(() => {
     if (typeof window === 'undefined') return 24;
-    // In measure mode, use full viewport (no toolbar/header/nav offsets)
-    const offset = measureMode ? 0 : headerOffset + bottomOffset;
+    // Measure mode: toolbar always hidden; header + nav depend on hideNav toggle
+    // measureHideNav=true: all chrome hidden (0 offset)
+    // measureHideNav=false: header (~50px) + nav visible (bottomOffset)
+    // Not in measure mode: full headerOffset (toolbar+header) + bottomOffset
+    const effectiveHeaderOffset = measureMode
+      ? (measureHideNav ? 0 : 50)
+      : headerOffset;
+    const effectiveBottomOffset = measureHideNav ? 0 : bottomOffset;
+    const offset = effectiveHeaderOffset + effectiveBottomOffset;
     const availableHeight = window.innerHeight - offset;
     return Math.max(minVisibleRows, Math.floor((availableHeight + margin) / (cellSize + margin)));
-  }, [cellSize, margin, headerOffset, bottomOffset, minVisibleRows, measureMode]);
+  }, [cellSize, margin, headerOffset, bottomOffset, minVisibleRows, measureMode, measureHideNav]);
 
   const visibleCols = useMemo(() => {
     if (width <= 0) return cols;
@@ -605,10 +622,7 @@ export function LayoutGridEditor({
           ref={combinedRef}
           onScroll={handleScroll}
           className={`overflow-auto ${theme.gridBg}`}
-          style={{ maxHeight: measureMode
-            ? window.innerHeight
-            : visibleRows * (cellSize + margin) + 2 * containerPadding
-          }}
+          style={{ maxHeight: visibleRows * (cellSize + margin) + 2 * containerPadding }}
         >
           <div
             className="relative editing-mode"

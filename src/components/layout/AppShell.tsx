@@ -93,11 +93,19 @@ export function AppShell({
   const orientation = useOrientation();
   const isMobile = useIsMobile();
   const { uiHidden } = useAutoHideUI();
-  const [measureMode, setMeasureMode] = React.useState(false);
+  const [measureHideNav, setMeasureHideNav] = React.useState(false);
 
   // Listen for measure mode toggle from LayoutEditor
   React.useEffect(() => {
-    const handler = (e: Event) => setMeasureMode((e as CustomEvent).detail);
+    const handler = (e: Event) => {
+      const d = (e as CustomEvent).detail;
+      // Support both old boolean format and new {active, hideNav} format
+      if (typeof d === 'boolean') {
+        setMeasureHideNav(d);
+      } else {
+        setMeasureHideNav(d.active && d.hideNav);
+      }
+    };
     window.addEventListener('prism:measure-mode', handler);
     return () => window.removeEventListener('prism:measure-mode', handler);
   }, []);
@@ -117,7 +125,7 @@ export function AppShell({
 
       {/* SIDE NAVIGATION - landscape mode on larger screens */}
       {!hideNav && showSideNav && (
-        <SideNav user={user} onLogout={onLogout} onLogin={onLogin} uiHidden={uiHidden || measureMode} />
+        <SideNav user={user} onLogout={onLogout} onLogin={onLogin} uiHidden={uiHidden || measureHideNav} />
       )}
 
       {/* MAIN CONTENT AREA */}
@@ -125,10 +133,10 @@ export function AppShell({
         className={cn(
           'min-h-screen transition-[margin,padding] duration-500 ease-in-out',
           // Left margin only when SideNav is visible and not hidden
-          !hideNav && showSideNav && !uiHidden && !measureMode && 'ml-16',
+          !hideNav && showSideNav && !uiHidden && !measureHideNav && 'ml-16',
           // Bottom padding when bottom nav is visible (portrait or mobile)
-          !hideNav && showPortraitNav && !uiHidden && !measureMode && 'pb-24',
-          !hideNav && showMobileNav && !uiHidden && !measureMode && 'pb-16',
+          !hideNav && showPortraitNav && !uiHidden && !measureHideNav && 'pb-24',
+          !hideNav && showMobileNav && !uiHidden && !measureHideNav && 'pb-16',
           className
         )}
       >
@@ -137,12 +145,12 @@ export function AppShell({
 
       {/* PORTRAIT BOTTOM NAVIGATION - portrait mode on larger screens */}
       {!hideNav && showPortraitNav && (
-        <PortraitNav user={user} onLogin={onLogin} onLogout={onLogout} uiHidden={uiHidden || measureMode} />
+        <PortraitNav user={user} onLogin={onLogin} onLogout={onLogout} uiHidden={uiHidden || measureHideNav} />
       )}
 
       {/* MOBILE BOTTOM NAVIGATION - small screens only */}
       {!hideNav && showMobileNav && (
-        <MobileNav user={user} onLogin={onLogin} onLogout={onLogout} uiHidden={uiHidden || measureMode} />
+        <MobileNav user={user} onLogin={onLogin} onLogout={onLogout} uiHidden={uiHidden || measureHideNav} />
       )}
     </div>
   );
