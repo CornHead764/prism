@@ -50,6 +50,13 @@ export function LayoutGridEditor({
   const [selectedWidget, setSelectedWidget] = useState<string | null>(null);
   const colorPickerRef = useRef<HTMLInputElement | null>(null);
   const [colorTarget, setColorTarget] = useState<'fill' | 'outline' | 'text'>('fill');
+  const [measureMode, setMeasureMode] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: Event) => setMeasureMode((e as CustomEvent).detail);
+    window.addEventListener('prism:measure-mode', handler);
+    return () => window.removeEventListener('prism:measure-mode', handler);
+  }, []);
   const [paletteId, setPaletteId] = useState<PaletteId>('seasonal');
   const [scrollY, setScrollY] = useState(0);
   const [scrollX, setScrollX] = useState(0);
@@ -591,12 +598,15 @@ export function LayoutGridEditor({
   if (isEditable) {
     return (
       <div className={className || ''}>
-        {renderPropertiesBar()}
+        {!measureMode && renderPropertiesBar()}
         <div
           ref={combinedRef}
           onScroll={handleScroll}
           className={`overflow-auto ${theme.gridBg}`}
-          style={{ maxHeight: visibleRows * (cellSize + margin) + 2 * containerPadding }}
+          style={{ maxHeight: measureMode
+            ? window.innerHeight
+            : visibleRows * (cellSize + margin) + 2 * containerPadding
+          }}
         >
           <div
             className="relative editing-mode"
