@@ -1,6 +1,11 @@
 'use client';
 
 import {
+  useRef,
+  useCallback,
+  useEffect,
+} from 'react';
+import {
   format,
   startOfWeek,
   addDays,
@@ -13,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { useWidgetBgOverride } from '@/components/widgets/WidgetContainer';
 import { hexToRgba } from '@/lib/utils/color';
 import type { CalendarEvent } from '@/types/calendar';
+import type { CalendarNote } from '@/lib/hooks/useCalendarNotes';
 
 export interface WeekVerticalViewProps {
   currentDate: Date;
@@ -22,6 +28,9 @@ export interface WeekVerticalViewProps {
   mergedView?: boolean;
   bordered?: boolean;
   onEventClick: (event: CalendarEvent) => void;
+  showNotes?: boolean;
+  notesByDate?: Map<string, CalendarNote>;
+  onNoteChange?: (date: string, content: string) => void;
 }
 
 export function WeekVerticalView({
@@ -32,6 +41,9 @@ export function WeekVerticalView({
   mergedView = false,
   bordered = true,
   onEventClick,
+  showNotes = false,
+  notesByDate,
+  onNoteChange,
 }: WeekVerticalViewProps) {
   const bgOverride = useWidgetBgOverride();
   const cellBg = bgOverride?.cellBackgroundColor;
@@ -66,7 +78,7 @@ export function WeekVerticalView({
   return (
     <div className="h-full overflow-y-auto">
       {/* Group column headers (no background bar to match day view) */}
-      {calendarGroups.length > 0 && (
+      {(calendarGroups.length > 0 || showNotes) && (
         <div className="sticky top-0 z-10 flex">
           <div className="w-20 md:w-28 shrink-0" />
           {displayGroups.map((group) => (
@@ -79,6 +91,16 @@ export function WeekVerticalView({
               </div>
             </div>
           ))}
+          {showNotes && (
+            <div className="w-2/5 min-w-[180px] border-l border-border px-1 py-1.5">
+              <div
+                className="text-xs font-medium text-center py-0.5 rounded text-white"
+                style={{ backgroundColor: '#6366f1' }}
+              >
+                Notes
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -170,6 +192,17 @@ export function WeekVerticalView({
                 />
               </div>
             )}
+
+            {/* Notes cell */}
+            {showNotes && (
+              <div className="w-2/5 min-w-[180px] border-l border-border">
+                <NoteCell
+                  dateKey={format(day, 'yyyy-MM-dd')}
+                  content={notesByDate?.get(format(day, 'yyyy-MM-dd'))?.content || ''}
+                  onNoteChange={onNoteChange}
+                />
+              </div>
+            )}
           </div>
         );
       })}
@@ -224,5 +257,120 @@ function DayEventList({
         );
       })}
     </div>
+  );
+}
+
+/** Inline note editor for a single day row */
+function NoteCell({
+  dateKey,
+  content,
+  onNoteChange,
+}: {
+  dateKey: string;
+  content: string;
+  onNoteChange?: (date: string, content: string) => void;
+}) {
+  const editable = !!onNoteChange;
+  const editorRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedRef = useRef(content);
+
+  // Set initial content on mount
+  useEffect(() => {
+    if (editorRef.current && content) {
+      editorRef.current.innerHTML = content;
+      lastSavedRef.current = content;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sync external changes (only when not focused)
+  useEffect(() => {
+    if (editorRef.current && content !== lastSavedRef.current) {
+      if (document.activeElement !== editorRef.current) {
+        editorRef.current.innerHTML = content;
+        lastSavedRef.current = content;
+      }
+    }
+  }, [content]);
+
+  const save = useCallback(() => {
+    if (!editorRef.current) return;
+    const html = editorRef.current.innerHTML;
+    const isEmpty = !html || html === '<br>' || html.replace(/<br\s*\/?>/g, '').trim() === '';
+    const value = isEmpty ? '' : html;
+    if (value !== lastSavedRef.current) {
+      lastSavedRef.current = value;
+      onNoteChange?.(dateKey, value);
+    }
+  }, [dateKey, onNoteChange]);
+
+  const handleInput = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(save, 2000);
+  }, [save]);
+
+  const handleBlur = useCallback(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    save();
+  }, [save]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+      e.preventDefault();
+      document.execCommand('bold');
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
+      e.preventDefault();
+      document.execCommand('italic');
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
+      e.preventDefault();
+      document.execCommand('underline');
+    }
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'S') {
+      e.preventDefault();
+      document.execCommand('strikeThrough');
+    }
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'L') {
+      e.preventDefault();
+      document.execCommand('insertUnorderedList');
+    }
+  }, []);
+
+  // Auto-convert "- " at line start to bullet list
+  const handleBeforeInput = useCallback((e: React.FormEvent<HTMLDivElement>) => {
+    const inputEvent = e.nativeEvent as InputEvent;
+    if (inputEvent.inputType !== 'insertText' || inputEvent.data !== ' ') return;
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    const node = range.startContainer;
+    if (node.nodeType === Node.TEXT_NODE && range.startOffset === 1 && node.textContent === '-') {
+      e.preventDefault();
+      // Clear the "- " and convert to list
+      node.textContent = '';
+      document.execCommand('insertUnorderedList');
+    }
+  }, []);
+
+  return (
+    <div
+      ref={editorRef}
+      contentEditable={editable}
+      suppressContentEditableWarning
+      onInput={editable ? handleInput : undefined}
+      onBlur={editable ? handleBlur : undefined}
+      onKeyDown={editable ? handleKeyDown : undefined}
+      onBeforeInput={editable ? handleBeforeInput : undefined}
+      className={cn(
+        'px-3 py-2 min-h-[48px] text-sm outline-none h-full',
+        editable && 'empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/40 empty:before:pointer-events-none',
+      )}
+      data-placeholder={editable ? 'Add notes...' : undefined}
+    />
   );
 }

@@ -1275,6 +1275,26 @@ export const busGeofenceLog = pgTable('bus_geofence_log', {
 }));
 
 
+// ─── CALENDAR NOTES ────────────────────────────────────────────────
+export const calendarNotes = pgTable('calendar_notes', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  date: date('date').notNull(),
+  content: text('content').notNull().default(''),
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  dateIdx: uniqueIndex('calendar_notes_date_idx').on(table.date),
+}));
+
+export const calendarNotesRelations = relations(calendarNotes, ({ one }) => ({
+  creator: one(users, {
+    fields: [calendarNotes.createdBy],
+    references: [users.id],
+  }),
+}));
+
+
 export const busRoutesRelations = relations(busRoutes, ({ one, many }) => ({
   user: one(users, {
     fields: [busRoutes.userId],

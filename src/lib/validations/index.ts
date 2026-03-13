@@ -252,6 +252,18 @@ export const createBusRouteSchema = z.object({
 
 export const updateBusRouteSchema = createBusRouteSchema.partial();
 
+// CALENDAR NOTE SCHEMAS
+
+export const upsertCalendarNoteSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
+  content: z.string().max(10000),
+});
+
+export const calendarNotesQuerySchema = z.object({
+  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
+  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
+});
+
 // API TOKEN SCHEMAS
 
 export const createApiTokenSchema = z.object({

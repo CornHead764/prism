@@ -6,6 +6,7 @@ import {
   format,
   isToday,
   isTomorrow,
+  startOfWeek,
   addDays,
   addWeeks,
   addMonths,
@@ -13,7 +14,7 @@ import {
   subWeeks,
   subMonths,
 } from 'date-fns';
-import { Calendar, ChevronLeft, ChevronRight, Grid3X3, Merge, Loader2 } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Grid3X3, Merge, StickyNote, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isLightColor } from '@/lib/utils/color';
 import { deduplicateEvents } from '@/lib/utils/calendarDedup';
@@ -26,13 +27,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui';
-import { useCalendarEvents, useCalendarFilter } from '@/lib/hooks';
+import { useCalendarEvents, useCalendarFilter, useCalendarNotes } from '@/lib/hooks';
+import { useAuth } from '@/components/providers';
 const MonthView = lazy(() => import('@/components/calendar/MonthView').then(m => ({ default: m.MonthView })));
 const WeekView = lazy(() => import('@/components/calendar/WeekView').then(m => ({ default: m.WeekView })));
 const MultiWeekView = lazy(() => import('@/components/calendar/MultiWeekView').then(m => ({ default: m.MultiWeekView })));
 const DayViewSideBySide = lazy(() => import('@/components/calendar/DayViewSideBySide').then(m => ({ default: m.DayViewSideBySide })));
 const WeekVerticalView = lazy(() => import('@/components/calendar/WeekVerticalView').then(m => ({ default: m.WeekVerticalView })));
 const AgendaView = lazy(() => import('@/components/calendar/AgendaView').then(m => ({ default: m.AgendaView })));
+const CalendarNotesColumn = lazy(() => import('@/components/calendar/CalendarNotesColumn').then(m => ({ default: m.CalendarNotesColumn })));
 import type { CalendarEvent } from '@/types/calendar';
 export type { CalendarEvent };
 
@@ -93,6 +96,7 @@ export const CalendarWidget = React.memo(function CalendarWidget({
   gridW = 2,
   gridH = 2,
 }: CalendarWidgetProps) {
+  const { activeUser } = useAuth();
   const bgOverride = useWidgetBgOverride();
   const transparentMode = bgOverride?.hasCustomBg === true;
 
@@ -104,6 +108,12 @@ export const CalendarWidget = React.memo(function CalendarWidget({
     return false;
   });
   const [mergedView, setMergedView] = useState(false);
+  const [showNotes, setShowNotes] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('prism-calendar-notes-visible') === 'true';
+    }
+    return false;
+  });
   const [viewType, setViewType] = useState<WidgetViewType>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('prism-calendar-view');
@@ -133,6 +143,9 @@ export const CalendarWidget = React.memo(function CalendarWidget({
   useEffect(() => {
     localStorage.setItem('prism-calendar-bordered', String(widgetBordered));
   }, [widgetBordered]);
+  useEffect(() => {
+    localStorage.setItem('prism-calendar-notes-visible', String(showNotes));
+  }, [showNotes]);
 
   // Fetch own events if none provided
   const { events: apiEvents, loading: apiLoading, error: apiError } = useCalendarEvents({ daysToShow: 60 });
@@ -150,6 +163,24 @@ export const CalendarWidget = React.memo(function CalendarWidget({
   const effectiveView = availableViews.includes(viewType) ? viewType : 'agenda';
   const viewUnavailable = viewType !== effectiveView;
   const { baseView: resolvedView, weekCount: resolvedWeekCount } = resolveMultiWeek(effectiveView);
+
+  // Notes: compute date range for visible days and fetch
+  const notesSupported = resolvedView === 'list' || resolvedView === 'day';
+  const notesDays = useMemo(() => {
+    if (!notesSupported) return [];
+    if (resolvedView === 'day') return [currentDate];
+    // list view = 7 days starting from week start
+    const ws = startOfWeek(currentDate);
+    return Array.from({ length: 7 }, (_, i) => addDays(ws, i));
+  }, [notesSupported, resolvedView, currentDate]);
+
+  const notesFrom = notesDays.length > 0 ? format(notesDays[0]!, 'yyyy-MM-dd') : '';
+  const notesTo = notesDays.length > 0 ? format(notesDays[notesDays.length - 1]!, 'yyyy-MM-dd') : '';
+  const { notesByDate, upsertNote } = useCalendarNotes({
+    from: notesFrom,
+    to: notesTo,
+    enabled: showNotes && notesSupported,
+  });
 
   // Navigation
   const goToToday = useCallback(() => setCurrentDate(new Date()), []);
@@ -210,6 +241,18 @@ export const CalendarWidget = React.memo(function CalendarWidget({
           aria-label={mergedView ? 'Split by calendar' : 'Merge calendars'}
         >
           <Merge className="h-3.5 w-3.5" />
+        </button>
+      )}
+
+      {/* Notes toggle for day and list views */}
+      {notesSupported && (
+        <button
+          onClick={() => setShowNotes(!showNotes)}
+          className={cn('p-0.5 rounded hover:opacity-70', showNotes && 'bg-current/20')}
+          title={showNotes ? 'Hide notes' : 'Show notes'}
+          aria-label={showNotes ? 'Hide notes' : 'Show notes'}
+        >
+          <StickyNote className="h-3.5 w-3.5" />
         </button>
       )}
 
@@ -328,6 +371,9 @@ export const CalendarWidget = React.memo(function CalendarWidget({
             mergedView={mergedView}
             bordered={widgetBordered}
             onEventClick={handleEventClick}
+            showNotes={showNotes}
+            notesByDate={notesByDate}
+            onNoteChange={activeUser ? upsertNote : undefined}
           />
         )}
 
@@ -368,15 +414,38 @@ export const CalendarWidget = React.memo(function CalendarWidget({
             <div className="text-center text-sm font-medium text-foreground mb-2">
               {formatDayHeader(currentDate)}
             </div>
-            <DayViewSideBySide
-              currentDate={currentDate}
-              events={events}
-              calendarGroups={calendarGroups}
-              selectedCalendarIds={selectedCalendarIds}
-              mergedView={mergedView}
-              bordered={widgetBordered}
-              onEventClick={handleEventClick}
-            />
+            <div className={cn('h-full', showNotes && 'flex')}>
+              <div className={cn('h-full', showNotes ? 'flex-1 min-w-0' : 'w-full')}>
+                <DayViewSideBySide
+                  currentDate={currentDate}
+                  events={events}
+                  calendarGroups={calendarGroups}
+                  selectedCalendarIds={selectedCalendarIds}
+                  mergedView={mergedView}
+                  bordered={widgetBordered}
+                  onEventClick={handleEventClick}
+                />
+              </div>
+              {showNotes && (
+                <div className="w-2/5 min-w-[180px] border-l border-border flex flex-col">
+                  <div className="shrink-0 border-b border-border p-1">
+                    <div
+                      className="text-sm font-medium text-center py-1 rounded text-white"
+                      style={{ backgroundColor: '#6366f1' }}
+                    >
+                      Notes
+                    </div>
+                  </div>
+                  <Suspense fallback={null}>
+                    <CalendarNotesColumn
+                      days={notesDays}
+                      notesByDate={notesByDate}
+                      onNoteChange={activeUser ? upsertNote : undefined}
+                    />
+                  </Suspense>
+                </div>
+              )}
+            </div>
           </>
         )}
       </Suspense>

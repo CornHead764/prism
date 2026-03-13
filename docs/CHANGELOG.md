@@ -5,6 +5,11 @@ All notable changes to Prism are documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Calendar Notes**: Day-tied notes panel on calendar widget list and day views — click the sticky note icon to toggle
+- **Calendar Notes**: Inline contentEditable editing with auto-save (2s debounce + save on blur)
+- **Calendar Notes**: Formatting shortcuts: Ctrl+B bold, Ctrl+I italic, Ctrl+U underline, Ctrl+Shift+S strikethrough, Ctrl+Shift+L bullet list, `- ` auto-converts to list
+- **Calendar Notes**: Notes column aligns row-by-row with calendar day grid in list view
+- **Calendar Notes**: Read-only when not logged in; shared across all family members
 - **Calendar Widget**: Agenda view available on dashboard widget; List (vertical week) view also available on widget
 - **Calendar Widget**: Merge/Split toggle for day and list views when multiple calendar groups exist
 - **Calendar Widget**: Month view grid toggle (bordered/borderless cells)

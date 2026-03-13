@@ -28,3 +28,5 @@ export type { ScreenOrientation } from './useScreenOrientation';
 export { useIsMobile } from './useIsMobile';
 export { useSwipeNavigation } from './useSwipeNavigation';
 export { useHiddenPages } from './useHiddenPages';
+export { useCalendarNotes } from './useCalendarNotes';
+export type { CalendarNote } from './useCalendarNotes';
