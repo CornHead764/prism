@@ -17,6 +17,9 @@ All notable changes to Prism are documented in this file.
 - **Dashboard Editor**: Single-row properties toolbar (widget name + Fill/Outline/Text/Grid + close)
 - **Dashboard Editor**: Text size (S/M/L/XL) moved inside the Text color popover alongside swatches
 
+### Changed
+- **Auto-Hide UI**: Only wakes on mouse click, keyboard press, or touch — mouse movement/drag no longer triggers reappear
+
 ### Improved
 - **Calendar**: Multi-week 3W/4W event text size increased to match month view
 - **Calendar**: Today cell border in multi-week view uses standard grid line instead of separate white line
