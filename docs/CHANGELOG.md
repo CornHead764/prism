@@ -11,6 +11,7 @@ All notable changes to Prism are documented in this file.
 - **Mobile PWA**: Compact subpage headers on mobile (reduced height, smaller text, hidden icons)
 - **Mobile PWA**: Collapsible filter bars on mobile — tap "Filters" to expand/collapse
 - **Mobile PWA**: Mobile dashboard — summary card layout with weather, calendar, chores, tasks, shopping, meals, messages, birthdays
+- **Settings**: "Week Starts On" toggle (Sunday/Monday) in Settings → Display — controls calendar week boundaries, weekly goal resets, point counters, and meal planning weeks
 - **Chores**: Reset Day picker in Add/Edit Chore modals — set which day weekly chores reset (Sun-Sat), day-of-month for monthly, or MM-DD for annual
 - **Goals**: Seasonal celebration animations when a goal is fully achieved — week-based holidays: Valentine's, St. Patrick's, Easter, Spring, Memorial Day, July 4th, Halloween, Thanksgiving, Christmas, New Year's (plus default trophy)
 - **Messages**: Inline edit support — pencil icon on hover, click to edit in place, Ctrl+Enter to save

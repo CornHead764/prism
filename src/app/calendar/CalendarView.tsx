@@ -35,9 +35,11 @@ import { useCalendarViewData } from './useCalendarViewData';
 import { useCalendarNotes } from '@/lib/hooks/useCalendarNotes';
 import { useIsMobile, useSwipeNavigation } from '@/lib/hooks';
 import { useAuth } from '@/components/providers';
+import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 
 export function CalendarView() {
   const { activeUser, requireAuth } = useAuth();
+  const { weekStartsOn } = useWeekStartsOn();
   const {
     currentDate, setCurrentDate,
     viewType, setViewType,
@@ -62,9 +64,9 @@ export function CalendarView() {
   const notesDays = useMemo(() => {
     if (!notesSupported || !showNotes) return [];
     if (viewType === 'day') return [currentDate];
-    const ws = startOfWeek(currentDate);
+    const ws = startOfWeek(currentDate, { weekStartsOn });
     return Array.from({ length: 7 }, (_, i) => addDays(ws, i));
-  }, [notesSupported, showNotes, viewType, currentDate]);
+  }, [notesSupported, showNotes, viewType, currentDate, weekStartsOn]);
 
   const notesFrom = notesDays.length > 0 ? format(notesDays[0]!, 'yyyy-MM-dd') : '';
   const notesTo = notesDays.length > 0 ? format(notesDays[notesDays.length - 1]!, 'yyyy-MM-dd') : '';

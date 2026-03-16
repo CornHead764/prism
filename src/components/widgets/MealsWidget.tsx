@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { format, startOfWeek, addDays, parseISO } from 'date-fns';
 import { UtensilsCrossed, Plus, ChevronLeft, ChevronRight, Clock, CheckCircle2, Undo2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import { WidgetContainer, WidgetEmpty } from './WidgetContainer';
 import { Button, Badge, UserAvatar } from '@/components/ui';
 import { Input } from '@/components/ui/input';
@@ -40,10 +41,11 @@ export function MealsWidget({
   titleHref,
   className,
 }: MealsWidgetProps) {
+  const { weekStartsOn } = useWeekStartsOn();
   const today = new Date();
-  const defaultWeekStart = startOfWeek(today, { weekStartsOn: 1 });
+  const defaultWeekStart = startOfWeek(today, { weekStartsOn });
   const [currentWeek, setCurrentWeek] = useState<Date>(
-    weekOf ? startOfWeek(parseISO(weekOf), { weekStartsOn: 1 }) : defaultWeekStart
+    weekOf ? startOfWeek(parseISO(weekOf), { weekStartsOn }) : defaultWeekStart
   );
   const [showAddModal, setShowAddModal] = useState(false);
 

@@ -29,6 +29,7 @@ import {
 } from '@/components/ui';
 import { useCalendarEvents, useCalendarFilter, useCalendarNotes } from '@/lib/hooks';
 import { useAuth } from '@/components/providers';
+import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 const MonthView = lazy(() => import('@/components/calendar/MonthView').then(m => ({ default: m.MonthView })));
 const WeekView = lazy(() => import('@/components/calendar/WeekView').then(m => ({ default: m.WeekView })));
 const MultiWeekView = lazy(() => import('@/components/calendar/MultiWeekView').then(m => ({ default: m.MultiWeekView })));
@@ -96,6 +97,7 @@ export const CalendarWidget = React.memo(function CalendarWidget({
   gridH = 2,
 }: CalendarWidgetProps) {
   const { activeUser } = useAuth();
+  const { weekStartsOn } = useWeekStartsOn();
   const bgOverride = useWidgetBgOverride();
   const transparentMode = bgOverride?.hasCustomBg === true;
 
@@ -169,7 +171,7 @@ export const CalendarWidget = React.memo(function CalendarWidget({
     if (!notesSupported) return [];
     if (resolvedView === 'day') return [currentDate];
     // list view = 7 days starting from week start
-    const ws = startOfWeek(currentDate);
+    const ws = startOfWeek(currentDate, { weekStartsOn });
     return Array.from({ length: 7 }, (_, i) => addDays(ws, i));
   }, [notesSupported, resolvedView, currentDate]);
 

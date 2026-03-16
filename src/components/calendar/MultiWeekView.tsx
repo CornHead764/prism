@@ -12,6 +12,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useWidgetBgOverride } from '@/components/widgets/WidgetContainer';
 import { hexToRgba } from '@/lib/utils/color';
+import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import type { CalendarEvent } from '@/types/calendar';
 
 export interface MultiWeekViewProps {
@@ -29,11 +30,12 @@ export function MultiWeekView({
   weekCount = 2,
   bordered = false,
 }: MultiWeekViewProps) {
+  const { weekStartsOn } = useWeekStartsOn();
   const bgOverride = useWidgetBgOverride();
   const cellBg = bgOverride?.cellBackgroundColor;
   const cellBgOpacity = bgOverride?.cellBackgroundOpacity ?? 1;
   const cellBgStyle = cellBg ? { backgroundColor: hexToRgba(cellBg, cellBgOpacity) } : undefined;
-  const weekStart = startOfWeek(currentDate);
+  const weekStart = startOfWeek(currentDate, { weekStartsOn });
 
   const totalDays = weekCount * 7;
   const days: Date[] = [];

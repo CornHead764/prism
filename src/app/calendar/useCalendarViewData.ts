@@ -13,6 +13,7 @@ import {
   subDays,
 } from 'date-fns';
 import { useCalendarEvents, useCalendarFilter } from '@/lib/hooks';
+import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import { deduplicateEvents } from '@/lib/utils/calendarDedup';
 import type { CalendarEvent } from '@/types/calendar';
 
@@ -22,6 +23,7 @@ export type MultiWeekCount = 1 | 2 | 3 | 4;
 export type { CalendarGroup } from '@/lib/hooks';
 
 export function useCalendarViewData() {
+  const { weekStartsOn } = useWeekStartsOn();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewType, setViewType] = useState<CalendarViewType>('month');
   const [weekCount, setWeekCount] = useState<MultiWeekCount>(2);
@@ -96,20 +98,20 @@ export function useCalendarViewData() {
         return format(currentDate, 'EEEE, MMMM d, yyyy');
       case 'week':
       case 'weekVertical': {
-        const ws = startOfWeek(currentDate);
-        const we = endOfWeek(currentDate);
+        const ws = startOfWeek(currentDate, { weekStartsOn });
+        const we = endOfWeek(currentDate, { weekStartsOn });
         return `${format(ws, 'MMM d')} - ${format(we, 'MMM d, yyyy')}`;
       }
       case 'multiWeek': {
-        const tws = startOfWeek(currentDate);
-        const twe = endOfWeek(addWeeks(currentDate, weekCount - 1));
+        const tws = startOfWeek(currentDate, { weekStartsOn });
+        const twe = endOfWeek(addWeeks(currentDate, weekCount - 1), { weekStartsOn });
         return `${format(tws, 'MMM d')} - ${format(twe, 'MMM d, yyyy')}`;
       }
       case 'month':
       case 'threeMonth':
         return format(currentDate, 'MMMM yyyy');
     }
-  }, [viewType, weekCount, currentDate]);
+  }, [viewType, weekCount, currentDate, weekStartsOn]);
 
   return {
     currentDate, setCurrentDate,

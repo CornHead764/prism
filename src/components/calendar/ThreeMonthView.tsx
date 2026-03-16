@@ -18,6 +18,7 @@ import {
 } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useOrientation } from '@/lib/hooks/useOrientation';
+import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import type { CalendarEvent } from '@/types/calendar';
 import { seasonalPalettes } from '@/lib/themes/seasonalThemes';
 
@@ -53,10 +54,11 @@ function MiniMonth({
   isCenter: boolean;
   bordered?: boolean;
 }) {
+  const { weekStartsOn } = useWeekStartsOn();
   const monthStart = startOfMonth(month);
   const monthEnd = endOfMonth(month);
-  const calendarStart = startOfWeek(monthStart);
-  const calendarEnd = endOfWeek(monthEnd);
+  const calendarStart = startOfWeek(monthStart, { weekStartsOn });
+  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn });
   const monthColor = getMonthColor(month);
 
   const days: Date[] = [];

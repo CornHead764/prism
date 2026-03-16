@@ -27,9 +27,9 @@ export interface WaterfallResult {
   yearlyEarned: number;
 }
 
-function getPeriodStart(date: Date, period: 'weekly' | 'monthly' | 'yearly'): Date {
+function getPeriodStart(date: Date, period: 'weekly' | 'monthly' | 'yearly', weekStartsOn: 0 | 1 = 0): Date {
   switch (period) {
-    case 'weekly': return startOfWeek(date, { weekStartsOn: 1 });
+    case 'weekly': return startOfWeek(date, { weekStartsOn });
     case 'monthly': return startOfMonth(date);
     case 'yearly': return startOfYear(date);
   }
@@ -54,11 +54,12 @@ export function computeWaterfall(
   goals: GoalDef[],
   completions: Completion[],
   now: Date = new Date(),
+  weekStartsOn: 0 | 1 = 0,
 ): WaterfallResult {
   const sorted = [...goals].sort((a, b) => a.priority - b.priority);
 
   // Compute counters
-  const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+  const weekStart = startOfWeek(now, { weekStartsOn });
   const monthStart = startOfMonth(now);
   const yearStart = startOfYear(now);
 
@@ -78,7 +79,7 @@ export function computeWaterfall(
   for (const c of completions) {
     const pts = c.pointsAwarded ?? 0;
     if (pts <= 0) continue;
-    const wk = format(startOfWeek(c.completedAt, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+    const wk = format(startOfWeek(c.completedAt, { weekStartsOn }), 'yyyy-MM-dd');
     weekBuckets.set(wk, (weekBuckets.get(wk) || 0) + pts);
   }
 
@@ -149,9 +150,9 @@ export function computeWaterfall(
 /**
  * Get the period start string for a goal (used for achievement records).
  */
-export function getGoalPeriodKey(goal: GoalDef, now: Date = new Date()): string {
+export function getGoalPeriodKey(goal: GoalDef, now: Date = new Date(), weekStartsOn: 0 | 1 = 0): string {
   if (goal.recurring && goal.recurrencePeriod) {
-    return format(getPeriodStart(now, goal.recurrencePeriod), 'yyyy-MM-dd');
+    return format(getPeriodStart(now, goal.recurrencePeriod, weekStartsOn), 'yyyy-MM-dd');
   }
   return format(goal.lastResetAt, 'yyyy-MM-dd');
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, requireRole, getDisplayAuth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
-import { goals, users, choreCompletions, goalAchievements } from '@/lib/db/schema';
+import { goals, users, choreCompletions, goalAchievements, settings } from '@/lib/db/schema';
 import { eq, and, isNotNull, desc, asc, max } from 'drizzle-orm';
 import { createGoalSchema, validateRequest } from '@/lib/validations';
 import { getCached, invalidateCache } from '@/lib/cache/redis';
@@ -17,6 +17,9 @@ export async function GET(request: NextRequest) {
 
   try {
     const data = await getCached('goals:progress', async () => {
+      const [wso] = await db.select().from(settings).where(eq(settings.key, 'weekStartsOn'));
+      const weekStartsOn: 0 | 1 = wso?.value === '1' ? 1 : 0;
+
       // Fetch active goals sorted by priority
       const goalRows = await db
         .select()
@@ -68,14 +71,15 @@ export async function GET(request: NextRequest) {
             completedAt: c.completedAt,
           }));
 
-        const result = computeWaterfall(goalDefs, childCompletions, now);
+        const result = computeWaterfall(goalDefs, childCompletions, now, weekStartsOn);
 
         const childProgress: Record<string, { allocated: number; achieved: boolean }> = {};
         for (const gp of result.goals) {
           // Check if already achieved (from achievements table)
           const periodKey = getGoalPeriodKey(
             goalDefs.find((g) => g.id === gp.goalId)!,
-            now
+            now,
+            weekStartsOn
           );
           const hasAchievement = achievements.some(
             (a) => a.goalId === gp.goalId && a.userId === child.id && a.periodStart === periodKey

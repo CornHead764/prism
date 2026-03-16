@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { useWidgetBgOverride } from '@/components/widgets/WidgetContainer';
 import { hexToRgba } from '@/lib/utils/color';
 import type { CalendarEvent } from '@/types/calendar';
+import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import type { CalendarNote } from '@/lib/hooks/useCalendarNotes';
 
 export interface WeekVerticalViewProps {
@@ -45,11 +46,12 @@ export function WeekVerticalView({
   notesByDate,
   onNoteChange,
 }: WeekVerticalViewProps) {
+  const { weekStartsOn } = useWeekStartsOn();
   const bgOverride = useWidgetBgOverride();
   const cellBg = bgOverride?.cellBackgroundColor;
   const cellBgOpacity = bgOverride?.cellBackgroundOpacity ?? 1;
   const cellBgStyle = cellBg ? { backgroundColor: hexToRgba(cellBg, cellBgOpacity) } : undefined;
-  const weekStart = startOfWeek(currentDate);
+  const weekStart = startOfWeek(currentDate, { weekStartsOn });
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const now = new Date();
   const today = startOfDay(now);

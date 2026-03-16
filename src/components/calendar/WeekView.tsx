@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { useWidgetBgOverride } from '@/components/widgets/WidgetContainer';
 import { useOrientation } from '@/lib/hooks/useOrientation';
 import { useHiddenHours } from '@/lib/hooks/useHiddenHours';
+import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import { calculateEventPositions, positionToCSS } from '@/lib/utils/eventLayout';
 import { hexToRgba } from '@/lib/utils/color';
 import type { CalendarEvent } from '@/types/calendar';
@@ -31,12 +32,13 @@ export function WeekView({
   onEventClick,
   bordered = true,
 }: WeekViewProps) {
+  const { weekStartsOn } = useWeekStartsOn();
   const bgOverride = useWidgetBgOverride();
   const transparentMode = bgOverride?.hasCustomBg === true;
   const cellBg = bgOverride?.cellBackgroundColor;
   const cellBgOpacity = bgOverride?.cellBackgroundOpacity ?? 1;
   const cellBgStyle = cellBg ? { backgroundColor: hexToRgba(cellBg, cellBgOpacity) } : undefined;
-  const weekStart = startOfWeek(currentDate);
+  const weekStart = startOfWeek(currentDate, { weekStartsOn });
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const orientation = useOrientation();
   const isPortrait = orientation === 'portrait';

@@ -20,6 +20,7 @@ import { useAwayModeTimeout } from '@/lib/hooks/useAwayModeTimeout';
 import { useHiddenHours } from '@/lib/hooks/useHiddenHours';
 import { useScreenSafeZones, DEFAULT_SCREENS, RESOLUTION_PRESETS, computeZones } from '@/lib/hooks/useScreenSafeZones';
 import type { ScreenZoneConfig } from '@/lib/hooks/useScreenSafeZones';
+import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 
 function getCurrentMonthNum(): number {
   return new Date().getMonth() + 1;
@@ -168,6 +169,8 @@ export function DisplaySection() {
       <TimersCard />
 
       <CalendarHoursCard />
+
+      <WeekStartCard />
 
       <LocationCard />
 
@@ -508,6 +511,48 @@ function CalendarHoursCard() {
               ? settings.endHour - settings.startHour
               : 24 - settings.startHour + settings.endHour
           } hours)
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+
+function WeekStartCard() {
+  const { weekStartsOn, setWeekStartsOn } = useWeekStartsOn();
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Week Starts On</CardTitle>
+        <CardDescription>
+          Controls when weekly goals reset, calendar week boundaries, and meal planning weeks.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setWeekStartsOn(0)}
+            className={cn(
+              'px-4 py-2 rounded-l-md text-sm font-medium border transition-colors',
+              weekStartsOn === 0
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'border-border hover:bg-accent'
+            )}
+          >
+            Sunday
+          </button>
+          <button
+            onClick={() => setWeekStartsOn(1)}
+            className={cn(
+              'px-4 py-2 rounded-r-md text-sm font-medium border border-l-0 transition-colors',
+              weekStartsOn === 1
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'border-border hover:bg-accent'
+            )}
+          >
+            Monday
+          </button>
         </div>
       </CardContent>
     </Card>

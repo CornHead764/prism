@@ -5,13 +5,15 @@ import { format, startOfWeek, addDays } from 'date-fns';
 import { toast } from '@/components/ui/use-toast';
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import { useAuth } from '@/components/providers/AuthProvider';
+import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import type { Meal } from '@/types';
 
 const mealTypeOrder: Record<string, number> = { breakfast: 0, lunch: 1, dinner: 2, snack: 3 };
 
 export function useMealsViewData() {
+  const { weekStartsOn } = useWeekStartsOn();
   const today = new Date();
-  const defaultWeekStart = startOfWeek(today, { weekStartsOn: 1 });
+  const defaultWeekStart = startOfWeek(today, { weekStartsOn });
   const { requireAuth } = useAuth();
   const { confirm, dialogProps: confirmDialogProps } = useConfirmDialog();
 
