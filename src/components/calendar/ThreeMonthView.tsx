@@ -37,7 +37,7 @@ export interface ThreeMonthViewProps {
   bordered?: boolean;
 }
 
-const DAY_NAMES = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const ALL_DAY_NAMES = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 function MiniMonth({
   month,
@@ -55,6 +55,7 @@ function MiniMonth({
   bordered?: boolean;
 }) {
   const { weekStartsOn } = useWeekStartsOn();
+  const dayNames = [...ALL_DAY_NAMES.slice(weekStartsOn), ...ALL_DAY_NAMES.slice(0, weekStartsOn)];
   const monthStart = startOfMonth(month);
   const monthEnd = endOfMonth(month);
   const calendarStart = startOfWeek(monthStart, { weekStartsOn });
@@ -88,7 +89,7 @@ function MiniMonth({
 
       {/* Day name headers */}
       <div className="grid grid-cols-7 gap-px px-1 flex-shrink-0">
-        {DAY_NAMES.map((name, i) => (
+        {dayNames.map((name, i) => (
           <div key={i} className="text-center text-[10px] font-medium text-muted-foreground py-1">
             {name}
           </div>

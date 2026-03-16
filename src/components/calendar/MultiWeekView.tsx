@@ -43,7 +43,8 @@ export function MultiWeekView({
     days.push(addDays(weekStart, i));
   }
 
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const allDayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dayNames = [...allDayNames.slice(weekStartsOn), ...allDayNames.slice(0, weekStartsOn)];
   const compact = weekCount > 2;
 
   // Group days into week rows

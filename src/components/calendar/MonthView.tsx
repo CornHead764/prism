@@ -63,7 +63,8 @@ export function MonthView({
   }
 
   const numWeeks = Math.ceil(days.length / 7);
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const allDayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dayNames = [...allDayNames.slice(weekStartsOn), ...allDayNames.slice(0, weekStartsOn)];
 
   return (
     <div className="h-full flex flex-col overflow-auto">
