@@ -131,7 +131,8 @@ export function AppShell({
       {/* MAIN CONTENT AREA */}
       <main
         className={cn(
-          'min-h-screen transition-[margin,padding] duration-500 ease-in-out',
+          'min-h-screen',
+          !isMobile && 'transition-[margin,padding] duration-500 ease-in-out',
           // Left margin only when SideNav is visible and not hidden
           !hideNav && showSideNav && !uiHidden && !measureHideNav && 'ml-16',
           // Bottom padding when bottom nav is visible (portrait or mobile)
