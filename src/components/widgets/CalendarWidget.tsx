@@ -427,24 +427,14 @@ export const CalendarWidget = React.memo(function CalendarWidget({
                 />
               </div>
               {showNotes && (
-                <div className="w-2/5 min-w-[180px] border-l border-border flex flex-col">
-                  <div className="shrink-0 border-b border-border bg-card/85 backdrop-blur-sm p-1">
-                    <div
-                      className="text-sm font-medium text-center py-1 mb-1 rounded text-white"
-                      style={{ backgroundColor: '#6366f1' }}
-                    >
-                      Notes
-                    </div>
-                  </div>
+                <div className="w-2/5 min-w-[180px] border-l border-border overflow-auto">
                   <Suspense fallback={null}>
-                    <div className="flex-1 overflow-auto">
-                      <CalendarNotesColumn
-                        days={notesDays}
-                        notesByDate={notesByDate}
-                        onNoteChange={activeUser ? upsertNote : undefined}
-                        hideDateHeaders={notesDays.length <= 1}
-                      />
-                    </div>
+                    <CalendarNotesColumn
+                      days={notesDays}
+                      notesByDate={notesByDate}
+                      onNoteChange={activeUser ? upsertNote : undefined}
+                      hideDateHeaders={notesDays.length <= 1}
+                    />
                   </Suspense>
                 </div>
               )}

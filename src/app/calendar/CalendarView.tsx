@@ -232,7 +232,7 @@ export function CalendarView() {
           </FilterBar>
         )}
 
-        <div ref={swipeRef} className="flex-1 overflow-hidden p-4">
+        <div ref={swipeRef} className="flex-1 overflow-hidden p-4 min-h-0">
           {loading && (
             <div className="h-full flex items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -244,6 +244,7 @@ export function CalendarView() {
             </div>
           )}
           {!loading && !error && (
+            <div className="h-full">
             <Suspense fallback={<div className="h-full flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>}>
               {viewType === 'agenda' && (
                 <AgendaView events={events} days={30} onEventClick={setSelectedEvent} />
@@ -282,30 +283,21 @@ export function CalendarView() {
                     <DayViewSideBySide currentDate={currentDate} events={events} calendarGroups={calendarGroups} selectedCalendarIds={selectedCalendarIds} mergedView={mergedView} bordered={weeksBordered} onEventClick={setSelectedEvent} />
                   </div>
                   {showNotes && (
-                    <div className="w-2/5 min-w-[180px] border-l border-border flex flex-col">
-                      <div className="shrink-0 border-b border-border bg-card/85 backdrop-blur-sm p-1">
-                        <div
-                          className="text-sm font-medium text-center py-1 mb-1 rounded text-white"
-                          style={{ backgroundColor: '#6366f1' }}
-                        >
-                          Notes
-                        </div>
-                      </div>
-                      <div className="flex-1 overflow-auto">
-                        <Suspense fallback={null}>
-                          <CalendarNotesColumn
-                            days={notesDays}
-                            notesByDate={notesByDate}
-                            onNoteChange={activeUser ? upsertNote : undefined}
-                            hideDateHeaders
-                          />
-                        </Suspense>
-                      </div>
+                    <div className="w-2/5 min-w-[180px] border-l border-border overflow-auto">
+                      <Suspense fallback={null}>
+                        <CalendarNotesColumn
+                          days={notesDays}
+                          notesByDate={notesByDate}
+                          onNoteChange={activeUser ? upsertNote : undefined}
+                          hideDateHeaders
+                        />
+                      </Suspense>
                     </div>
                   )}
                 </div>
               )}
             </Suspense>
+            </div>
           )}
         </div>
 
