@@ -39,11 +39,20 @@ All notable changes to Prism are documented in this file.
 - **SideNav**: Logo background made transparent to match nav toolbar color in both themes
 
 ### Fixed
+- **Calendar**: Events from shared calendars (e.g. Family) no longer duplicate across person columns — matching by groupId instead of color
 - **Calendar**: Day widget notes column no longer shows redundant date header when viewing a single day
+- **Calendar**: Notes column integrated into DayViewSideBySide with matching header bar and grid line alignment
+- **Calendar**: Week view fills available height on calendar subpage
 - **Calendar**: Events now span their full duration in week and day views (previously showed as ~30min blocks)
 - **Calendar**: Event text top-aligned with start–end time byline below title
 - **Calendar**: All-day events fully opaque (no transparency)
 - **Calendar**: Event backgrounds fully opaque in week/day views
+- **Chores**: Grouped view now shows pending approval state (amber bg, hourglass icon, "Pending" badge)
+- **Chores**: Recently completed chores remain visible for 24h after parent auto-approval
+- **Chores**: Points input max raised from 100 to 1000
+- **Gift Ideas**: Data refreshes immediately on user switch (no stale cache from previous user)
+- **Navigation**: Removed border lines from nav, header, and editor toolbars for cleaner appearance
+- **Tasks**: Scrolling works correctly on mobile PWA
 
 ## [1.1.0] - 2026-03-09
 
