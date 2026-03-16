@@ -6,6 +6,7 @@ import { toast } from '@/components/ui/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import {
   Gift,
+  Lightbulb,
   Plus,
   ExternalLink,
   Pencil,
@@ -25,6 +26,7 @@ import { useFamily } from '@/components/providers/FamilyProvider';
 import { useAuth } from '@/components/providers';
 import { useWishItems } from '@/lib/hooks/useWishItems';
 import { WishItemModal } from './WishItemModal';
+import { GiftIdeasView } from './GiftIdeasView';
 import { cn } from '@/lib/utils';
 import { useOrientation } from '@/lib/hooks/useOrientation';
 import type { WishItem, FamilyMember } from '@/types';
@@ -32,6 +34,8 @@ import type { WishItem, FamilyMember } from '@/types';
 export function WishesView() {
   const { members, loading: familyLoading } = useFamily();
   const { activeUser, requireAuth } = useAuth();
+
+  const [activeTab, setActiveTab] = useState<'wishes' | 'ideas'>('wishes');
 
   // null = "All" (grouped by person), string = single person's list
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
@@ -218,27 +222,52 @@ export function WishesView() {
       <SubpageHeader
         title="Wishes"
         icon={<Gift className="h-6 w-6" />}
-        actions={
+        actions={activeTab === 'wishes' ? (
           <Button variant="ghost" size="icon" onClick={() => handleOpenAddModal()} aria-label="Add wish">
             <Plus className="h-5 w-5" />
           </Button>
-        }
+        ) : undefined}
       />
 
-      {/* Member tabs */}
-      {!familyLoading && members.length > 0 && (
-        <div className="px-4 pb-3">
+      {/* Tab toggle + Member tabs */}
+      <div className="px-4 pb-3 flex items-center gap-3 flex-wrap">
+        <div className="flex items-center border rounded-md">
+          <button
+            onClick={() => setActiveTab('wishes')}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-l-md transition-colors',
+              activeTab === 'wishes' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'
+            )}
+          >
+            <Gift className="h-3.5 w-3.5" />
+            Wishes
+          </button>
+          <button
+            onClick={() => setActiveTab('ideas')}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-r-md transition-colors border-l',
+              activeTab === 'ideas' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'
+            )}
+          >
+            <Lightbulb className="h-3.5 w-3.5" />
+            Gift Ideas
+          </button>
+        </div>
+
+        {activeTab === 'wishes' && !familyLoading && members.length > 0 && (
           <PersonFilter
             members={members}
             selected={selectedMemberId}
             onSelect={(id) => setSelectedMemberId(id)}
           />
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Content */}
       <div className="flex-1 overflow-auto px-4 pb-4">
-        {loading || familyLoading ? (
+        {activeTab === 'ideas' ? (
+          <GiftIdeasView />
+        ) : loading || familyLoading ? (
           <div className="text-muted-foreground text-center py-8">Loading...</div>
         ) : error ? (
           <div className="text-destructive text-center py-8">{error}</div>

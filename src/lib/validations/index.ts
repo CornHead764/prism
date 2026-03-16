@@ -196,6 +196,18 @@ export const createWishItemSchema = z.object({
 
 export const updateWishItemSchema = createWishItemSchema.partial();
 
+// GIFT IDEA SCHEMAS
+
+export const createGiftIdeaSchema = z.object({
+  forUserId: uuidSchema,
+  name: z.string().min(1, 'Name is required').max(255),
+  url: z.string().url().or(z.literal('')).optional(),
+  notes: z.string().max(1000).optional(),
+  price: z.string().max(20).optional(),
+});
+
+export const updateGiftIdeaSchema = createGiftIdeaSchema.partial();
+
 // WISH ITEM SOURCE SCHEMAS
 
 export const createWishItemSourceSchema = z.object({

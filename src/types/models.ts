@@ -110,6 +110,21 @@ export interface WishItem {
   createdAt: string;
 }
 
+export interface GiftIdea {
+  id: string;
+  createdBy: { id: string; name: string; color: string };
+  forUserId: string;
+  forUser: { id: string; name: string; color: string };
+  name: string;
+  url?: string | null;
+  notes?: string | null;
+  price?: string | null;
+  purchased: boolean;
+  purchasedAt?: string | null;
+  sortOrder: number;
+  createdAt: string;
+}
+
 export interface Meal {
   id: string;
   name: string;

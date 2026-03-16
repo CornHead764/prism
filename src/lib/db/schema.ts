@@ -1163,6 +1163,50 @@ export const wishItemsRelations = relations(wishItems, ({ one }) => ({
 }));
 
 
+export const giftIdeas = pgTable('gift_ideas', {
+  id: uuid('id').defaultRandom().primaryKey(),
+
+  // Who created this gift idea
+  createdBy: uuid('created_by')
+    .references(() => users.id, { onDelete: 'cascade' })
+    .notNull(),
+
+  // Who this gift idea is for
+  forUserId: uuid('for_user_id')
+    .references(() => users.id, { onDelete: 'cascade' })
+    .notNull(),
+
+  name: varchar('name', { length: 255 }).notNull(),
+  url: text('url'),
+  notes: text('notes'),
+  price: decimal('price', { precision: 10, scale: 2 }),
+
+  purchased: boolean('purchased').default(false).notNull(),
+  purchasedAt: timestamp('purchased_at'),
+
+  sortOrder: integer('sort_order').default(0).notNull(),
+
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  createdByIdx: index('gift_ideas_created_by_idx').on(table.createdBy),
+  forUserIdx: index('gift_ideas_for_user_idx').on(table.forUserId),
+}));
+
+export const giftIdeasRelations = relations(giftIdeas, ({ one }) => ({
+  creator: one(users, {
+    fields: [giftIdeas.createdBy],
+    references: [users.id],
+    relationName: 'giftIdeasCreator',
+  }),
+  forUser: one(users, {
+    fields: [giftIdeas.forUserId],
+    references: [users.id],
+    relationName: 'giftIdeasForUser',
+  }),
+}));
+
+
 export const wishItemSources = pgTable('wish_item_sources', {
   id: uuid('id').defaultRandom().primaryKey(),
 
