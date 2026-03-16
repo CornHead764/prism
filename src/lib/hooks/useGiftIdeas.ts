@@ -4,9 +4,11 @@ import { useCallback } from 'react';
 import { useFetch } from './useFetch';
 import type { GiftIdea } from '@/types';
 
-export function useGiftIdeas() {
+export function useGiftIdeas(userId?: string) {
+  // Include userId in URL as cache key so data refreshes on user switch
+  const url = userId ? `/api/gift-ideas?_u=${userId}` : '/api/gift-ideas';
   const { data: ideas, setData: setIdeas, loading, error, refresh } = useFetch<GiftIdea[]>({
-    url: '/api/gift-ideas',
+    url,
     initialData: [],
     transform: (json: unknown) => {
       const data = json as { ideas: GiftIdea[] };

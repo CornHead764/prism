@@ -27,7 +27,7 @@ import type { GiftIdea, FamilyMember } from '@/types';
 export function GiftIdeasView() {
   const { members } = useFamily();
   const { activeUser, requireAuth } = useAuth();
-  const { ideas, loading, error, addIdea, updateIdea, deleteIdea, togglePurchased } = useGiftIdeas();
+  const { ideas, loading, error, addIdea, updateIdea, deleteIdea, togglePurchased } = useGiftIdeas(activeUser?.id);
   const { confirm, dialogProps } = useConfirmDialog();
   const orientation = useOrientation();
   const isPortrait = orientation === 'portrait';

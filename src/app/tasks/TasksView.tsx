@@ -421,7 +421,7 @@ export function TasksView() {
 
   return (
     <PageWrapper>
-      <div className="h-screen flex flex-col">
+      <div className="h-full flex flex-col">
         <SubpageHeader
           icon={<CheckSquare className="h-5 w-5 text-primary" />}
           title="Tasks"
