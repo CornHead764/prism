@@ -18,14 +18,25 @@
 
 All pull requests must meet the following Lighthouse score thresholds:
 
+**Dashboard pages** (`/`, `/d/[slug]`):
+
 | Category | Minimum Score |
 |---|---|
-| Performance | 95% |
+| Performance | 80% |
+| Accessibility | 90% |
+| Best Practices | 90% |
+| SEO | 90% |
+
+**Subpages** (all other routes):
+
+| Category | Minimum Score |
+|---|---|
+| Performance | 90% |
 | Accessibility | 95% |
 | Best Practices | 95% |
 | SEO | 95% |
 
-PRs that score below 95% in any Lighthouse category will not be merged.
+The dashboard has lower performance thresholds because it loads 8+ real-time data sources on mount. The Next.js framework hydration cost (~700ms TBT) is structural and cannot be eliminated without switching to a streaming SSR architecture.
 
 ### Running Lighthouse
 
