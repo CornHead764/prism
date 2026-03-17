@@ -215,9 +215,9 @@ export function WeekView({
   // Landscape: 7-column hourly grid
   // Single scroll container with sticky header eliminates scrollbar width mismatch
   return (
-    <div className={cn('h-full rounded-md overflow-auto', !transparentMode && 'bg-card/85 backdrop-blur-sm')}>
+    <div className={cn('h-full rounded-md overflow-hidden flex flex-col', !transparentMode && 'bg-card/85 backdrop-blur-sm')}>
       {/* Day headers row - sticky so it stays visible while scrolling hours */}
-      <div className={cn('flex sticky top-0 z-20', !transparentMode && 'bg-card')}>
+      <div className={cn('flex shrink-0 z-20', !transparentMode && 'bg-card')}>
         {/* Time column spacer with toggle button */}
         <div className="w-14 shrink-0 flex items-center justify-center">
           <button
@@ -271,7 +271,7 @@ export function WeekView({
       </div>
 
       {/* Hourly grid */}
-      <div className="flex" style={{ minHeight: `${hours.length * 28}px` }}>
+      <div className="flex flex-1 overflow-auto">
         {/* Time column */}
         <div className="w-14 shrink-0 grid" style={{ gridTemplateRows: `repeat(${hours.length}, minmax(28px, 1fr))` }}>
           {hours.map((hour) => (
