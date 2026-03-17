@@ -1,17 +1,4 @@
-
-\restrict PM3muPXLhPDY6s8Uya47MnskecBytAjEy7ywyBKYJzxa6amGd1mfOVPkhmNFi3r
-CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
-
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
-
-CREATE FUNCTION public.update_updated_at_column() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$;
+-- Tables for Prism (extensions and functions are in 01-init.sql)
 
 CREATE TABLE IF NOT EXISTS public.api_credentials (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -1000,6 +987,4 @@ ALTER TABLE ONLY public.wish_items
 
 ALTER TABLE ONLY public.wish_items
     ADD CONSTRAINT wish_items_wish_item_source_id_fkey FOREIGN KEY (wish_item_source_id) REFERENCES public.wish_item_sources(id) ON DELETE SET NULL;
-
-\unrestrict PM3muPXLhPDY6s8Uya47MnskecBytAjEy7ywyBKYJzxa6amGd1mfOVPkhmNFi3r
 
