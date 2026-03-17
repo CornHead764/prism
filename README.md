@@ -4,6 +4,8 @@
 
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 [![Test Install](https://github.com/sandydargoport/prism/actions/workflows/test-install.yml/badge.svg)](https://github.com/sandydargoport/prism/actions/workflows/test-install.yml)
+[![Docker](https://img.shields.io/badge/docker-ghcr.io-blue?logo=docker)](https://github.com/sandydargoport/prism/pkgs/container/prism)
+![Platforms](https://img.shields.io/badge/platforms-amd64%20%7C%20arm64-green)
 
 Prism is a configurable family dashboard designed for large wall-mounted screens and handheld tablets. It connects to existing services you already use - Google Calendar, Microsoft To Do, OneDrive, and more - and displays the information your family actually needs. Built for people who value privacy, hate subscriptions, and are comfortable with Docker.
 
@@ -48,19 +50,28 @@ If Prism is useful to you, a star helps others find it.
 
 ## Getting Started
 
+### Option 1: Clone and build (any platform)
+
 ```bash
-# Clone the repository
 git clone https://github.com/sandydargoport/prism.git
 cd prism
-
-# One-line install (generates secrets, starts containers, seeds demo data)
 ./scripts/install.sh
+```
 
-# Or manual setup
+### Option 2: Pull pre-built image (includes Raspberry Pi / ARM64)
+
+```bash
+# Download docker-compose.yml and .env.example
+curl -O https://raw.githubusercontent.com/sandydargoport/prism/master/docker-compose.yml
+curl -O https://raw.githubusercontent.com/sandydargoport/prism/master/.env.example
 cp .env.example .env
-# Edit .env with your API keys and preferences
+# Edit .env with your secrets
+
+# Pull and start (auto-selects amd64 or arm64)
 docker-compose up -d
 ```
+
+> **Raspberry Pi**: Tested on Pi 4 (4GB+). Works with the pre-built ARM64 image — no compilation needed.
 
 Open **http://localhost:3000** and log in with PIN `1234` (parent) or `0000` (child).
 

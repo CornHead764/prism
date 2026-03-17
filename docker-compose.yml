@@ -1,5 +1,7 @@
 services:
   app:
+    # To use pre-built image (including ARM64/Raspberry Pi), replace 'build' with:
+    # image: ghcr.io/sandydargoport/prism:latest
     build:
       context: .
       dockerfile: Dockerfile
