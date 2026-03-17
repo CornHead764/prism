@@ -244,14 +244,14 @@ export function validateCommunityLayout(
       errors.push(`Widget "${widget.i}": extends beyond y=120 (unreasonable scrolling).`);
     }
 
-    // Minimum size per widget type
+    // Minimum size per widget type (warn, don't error — undersized widgets still render)
     const constraints = WIDGET_CONSTRAINTS[widget.i];
     if (constraints) {
       if (widget.w < constraints.minW) {
-        errors.push(`Widget "${widget.i}": w must be >= minW of ${constraints.minW} (got ${widget.w}).`);
+        warnings.push(`Widget "${widget.i}": w (${widget.w}) is below recommended minW of ${constraints.minW}.`);
       }
       if (widget.h < constraints.minH) {
-        errors.push(`Widget "${widget.i}": h must be >= minH of ${constraints.minH} (got ${widget.h}).`);
+        warnings.push(`Widget "${widget.i}": h (${widget.h}) is below recommended minH of ${constraints.minH}.`);
       }
     }
 
