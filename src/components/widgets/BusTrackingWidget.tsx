@@ -7,6 +7,13 @@ import { WidgetContainer, WidgetEmpty } from './WidgetContainer';
 import { useBusTracking } from '@/lib/hooks/useBusTracking';
 import type { BusRouteStatus, BusPrediction } from '@/lib/hooks/useBusTracking';
 
+function formatMinutes(m: number): string {
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  const rem = m % 60;
+  return rem > 0 ? `${h}h ${rem}m` : `${h}h`;
+}
+
 export interface BusTrackingWidgetProps {
   className?: string;
   gridW?: number;
@@ -105,7 +112,7 @@ function RouteStatusCard({ route, compact }: { route: BusRouteStatus; compact: b
       {/* Last update info */}
       {p.lastCheckpointName && p.minutesSinceLastCheckpoint !== null && (
         <div className="text-[11px] text-muted-foreground">
-          Last: {p.lastCheckpointName} ({p.minutesSinceLastCheckpoint}m ago)
+          Last: {p.lastCheckpointName} ({formatMinutes(p.minutesSinceLastCheckpoint)} ago)
         </div>
       )}
     </div>
@@ -185,7 +192,7 @@ function getStatusText(p: BusPrediction): string {
       return 'In transit';
     case 'cold_start':
       if (p.lastCheckpointName && p.minutesSinceLastCheckpoint !== null) {
-        return `${p.minutesSinceLastCheckpoint}m ago at ${p.lastCheckpointName}`;
+        return `${formatMinutes(p.minutesSinceLastCheckpoint)} ago at ${p.lastCheckpointName}`;
       }
       return 'In transit (building history)';
     case 'overdue':
