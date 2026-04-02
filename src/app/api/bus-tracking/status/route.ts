@@ -57,6 +57,7 @@ export async function GET() {
             studentName: route.studentName,
             direction: route.direction,
             scheduledTime: route.scheduledTime,
+            activeDays: route.activeDays,
             checkpoints: route.checkpoints,
             stopName: route.stopName,
             schoolName: route.schoolName,
