@@ -268,36 +268,31 @@ export async function DELETE(
   try {
     const { id: choreId } = await params;
 
-    const undoResult = await db.transaction(async (tx) => {
-      // Fetch chore schedule inside transaction so all reads/writes are atomic
+    // Find the most recent completion
+    const [latest] = await db
+      .select({ id: choreCompletions.id })
+      .from(choreCompletions)
+      .where(eq(choreCompletions.choreId, choreId))
+      .orderBy(desc(choreCompletions.completedAt))
+      .limit(1);
+
+    if (!latest) {
+      return NextResponse.json({ error: 'No completion to undo' }, { status: 404 });
+    }
+
+    // Delete completion and recalculate chore state (lastCompleted + nextDue)
+    await db.transaction(async (tx) => {
+      await tx.delete(choreCompletions).where(eq(choreCompletions.id, latest.id));
+
+      // Fetch chore schedule info for nextDue recalculation
       const [chore] = await tx
         .select({
-          id: chores.id,
           frequency: chores.frequency,
           customIntervalDays: chores.customIntervalDays,
           startDay: chores.startDay,
         })
         .from(chores)
-        .where(eq(chores.id, choreId))
-        .limit(1);
-
-      if (!chore) {
-        return { status: 'chore_not_found' as const };
-      }
-
-      // Find the most recent completion to undo
-      const [latest] = await tx
-        .select({ id: choreCompletions.id })
-        .from(choreCompletions)
-        .where(eq(choreCompletions.choreId, choreId))
-        .orderBy(desc(choreCompletions.completedAt))
-        .limit(1);
-
-      if (!latest) {
-        return { status: 'no_completion' as const };
-      }
-
-      await tx.delete(choreCompletions).where(eq(choreCompletions.id, latest.id));
+        .where(eq(chores.id, choreId));
 
       // Find the new most recent completion (if any)
       const [prevCompletion] = await tx
@@ -307,34 +302,20 @@ export async function DELETE(
         .orderBy(desc(choreCompletions.completedAt))
         .limit(1);
 
-      const restoredNextDue = prevCompletion
-        ? calculateNextDue(
-          chore.frequency,
-          chore.customIntervalDays,
-          chore.startDay,
-          prevCompletion.completedAt
-        )
+      // Recalculate nextDue based on previous completion (or null if none)
+      const nextDue = prevCompletion && chore
+        ? calculateNextDue(chore.frequency, chore.customIntervalDays, chore.startDay)
         : null;
 
       await tx
         .update(chores)
         .set({
           lastCompleted: prevCompletion?.completedAt || null,
-          nextDue: restoredNextDue,
+          nextDue,
           updatedAt: new Date(),
         })
         .where(eq(chores.id, choreId));
-
-      return { status: 'ok' as const };
     });
-
-    if (undoResult.status === 'chore_not_found') {
-      return NextResponse.json({ error: 'Chore not found' }, { status: 404 });
-    }
-
-    if (undoResult.status === 'no_completion') {
-      return NextResponse.json({ error: 'No completion to undo' }, { status: 404 });
-    }
 
     await invalidateCache('chores:*');
     await invalidateCache('goals:*');

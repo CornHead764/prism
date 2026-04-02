@@ -43,3 +43,5 @@ export type { FilterDropdownProps, FilterOption } from './FilterDropdown';
 
 export { PersonFilter } from './PersonFilter';
 export type { PersonFilterProps } from './PersonFilter';
+
+export { UndoButton } from './UndoButton';

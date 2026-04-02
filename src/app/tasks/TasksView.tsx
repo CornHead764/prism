@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { PageWrapper, SubpageHeader, FilterBar, SortSelect, FilterDropdown, PersonFilter } from '@/components/layout';
+import { PageWrapper, SubpageHeader, FilterBar, SortSelect, FilterDropdown, PersonFilter, UndoButton } from '@/components/layout';
 import type { OverflowItem } from '@/components/layout';
 import { TaskModal } from '@/app/tasks/TaskModal';
 import { useTasksViewData } from './useTasksViewData';
@@ -438,12 +438,13 @@ export function TasksView() {
               <RefreshCw className="h-4 w-4 text-muted-foreground animate-spin" />
             )}
           </>}
-          actions={
+          actions={<>
+            <UndoButton />
             <Button onClick={handleAddWithAuth} size="sm">
               <Plus className="h-4 w-4 mr-1" />
               Add Task
             </Button>
-          }
+          </>}
           overflow={overflowItems}
         />
 

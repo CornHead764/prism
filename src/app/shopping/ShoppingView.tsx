@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { PageWrapper, SubpageHeader } from '@/components/layout';
+import { PageWrapper, SubpageHeader, UndoButton } from '@/components/layout';
 import type { OverflowItem } from '@/components/layout';
 import { ShoppingItemRow } from '@/app/shopping/ShoppingItemRow';
 import { ShoppingCategoryCard } from '@/app/shopping/ShoppingCategoryCard';
@@ -216,6 +216,7 @@ export function ShoppingView() {
               title="Shopping"
               badge={activeList ? <Badge variant="secondary">{checkedItems}/{totalItems}</Badge> : undefined}
               actions={<>
+                <UndoButton />
                 <Button variant="ghost" size="icon" onClick={() => setShoppingMode(true)} title="Enter shopping mode">
                   <Maximize2 className="h-4 w-4" />
                 </Button>

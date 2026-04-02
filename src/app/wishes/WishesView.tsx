@@ -1,9 +1,8 @@
 'use client';
 
-import React from 'react';
 import { useState, useMemo, useCallback } from 'react';
 import { toast } from '@/components/ui/use-toast';
-import { ToastAction } from '@/components/ui/toast';
+import { pushUndo } from '@/lib/hooks/useUndoStack';
 import {
   Gift,
   Lightbulb,
@@ -11,14 +10,11 @@ import {
   ExternalLink,
   Pencil,
   Trash2,
-  ShoppingBag,
-  CheckCircle2,
-  Circle,
   GripVertical,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PageWrapper, SubpageHeader, PersonFilter } from '@/components/layout';
+import { PageWrapper, SubpageHeader, PersonFilter, UndoButton } from '@/components/layout';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import { useDragReorder } from '@/lib/hooks/useDragReorder';
@@ -198,15 +194,7 @@ export function WishesView() {
         toast({ title: `Uncrossed "${item.name}"` });
       } else {
         await claimItem(item.id, user.id);
-        const isSelf = item.memberId === user.id;
-        toast({
-          title: isSelf ? `Crossed off "${item.name}"` : `Marked "${item.name}" as purchased`,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          action: React.createElement(ToastAction, {
-            altText: 'Undo',
-            onClick: () => { unclaimItem(item.id).catch(() => {}); },
-          }, 'Undo') as any,
-        });
+        pushUndo(item.name, () => unclaimItem(item.id));
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update';
@@ -224,11 +212,14 @@ export function WishesView() {
       <SubpageHeader
         title="Wishes"
         icon={<Gift className="h-6 w-6" />}
-        actions={activeTab === 'wishes' ? (
-          <Button variant="ghost" size="icon" onClick={() => handleOpenAddModal()} aria-label="Add wish">
-            <Plus className="h-5 w-5" />
-          </Button>
-        ) : undefined}
+        actions={<>
+          <UndoButton />
+          {activeTab === 'wishes' && (
+            <Button variant="ghost" size="icon" onClick={() => handleOpenAddModal()} aria-label="Add wish">
+              <Plus className="h-5 w-5" />
+            </Button>
+          )}
+        </>}
       />
 
       {/* Tab toggle + Member tabs */}
@@ -522,61 +513,20 @@ function WishItemRow({
 }) {
   const isClaimedByMe = item.claimedBy?.id === viewerId;
 
+  // On other people's lists, don't allow toggling if claimed by someone else
+  const canToggle = isOwnList || !item.claimed || isClaimedByMe;
+
   return (
     <div
       className={cn(
         'flex items-center gap-2 rounded-lg border border-border',
         'hover:bg-muted/50 transition-colors',
         compact ? 'p-2 gap-2' : 'p-3 gap-3',
-        item.claimed && 'opacity-60 bg-green-50/50 dark:bg-green-950/20 border-green-500/30',
+        canToggle && 'cursor-pointer',
+        item.claimed && 'opacity-60',
       )}
+      onClick={canToggle ? onClaim : undefined}
     >
-      {/* Cross-off / claim toggle */}
-      {isOwnList ? (
-        <button
-          onClick={onClaim}
-          className={cn(
-            'shrink-0 p-1 rounded transition-colors',
-            item.claimed
-              ? 'text-green-600 hover:text-green-700'
-              : 'text-muted-foreground/40 hover:text-green-600'
-          )}
-          title={item.claimed ? 'Uncross' : 'Cross off (got it myself)'}
-        >
-          {item.claimed ? (
-            <CheckCircle2 className={compact ? 'h-4 w-4' : 'h-5 w-5'} />
-          ) : (
-            <Circle className={compact ? 'h-4 w-4' : 'h-5 w-5'} />
-          )}
-        </button>
-      ) : (
-        <button
-          onClick={onClaim}
-          className={cn(
-            'shrink-0 p-1 rounded transition-colors',
-            item.claimed
-              ? isClaimedByMe
-                ? 'text-green-600 hover:text-green-700'
-                : 'text-green-500 cursor-default'
-              : 'text-muted-foreground/40 hover:text-green-600'
-          )}
-          title={
-            item.claimed
-              ? isClaimedByMe
-                ? 'Click to unmark'
-                : `Purchased by ${item.claimedBy?.name}`
-              : 'Mark as purchased'
-          }
-          disabled={item.claimed && !isClaimedByMe}
-        >
-          {item.claimed ? (
-            <ShoppingBag className={compact ? 'h-4 w-4' : 'h-5 w-5'} />
-          ) : (
-            <Circle className={compact ? 'h-4 w-4' : 'h-5 w-5'} />
-          )}
-        </button>
-      )}
-
       {/* Item content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
@@ -623,7 +573,7 @@ function WishItemRow({
             variant="ghost"
             size="icon"
             className="h-7 w-7"
-            onClick={onEdit}
+            onClick={(e) => { e.stopPropagation(); onEdit(); }}
             title="Edit"
           >
             <Pencil className="h-3.5 w-3.5" />
@@ -632,7 +582,7 @@ function WishItemRow({
             variant="ghost"
             size="icon"
             className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-            onClick={onDelete}
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
             title="Delete"
           >
             <Trash2 className="h-3.5 w-3.5" />

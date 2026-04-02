@@ -1,12 +1,11 @@
 'use client';
 
-import React from 'react';
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { isPast, parseISO } from 'date-fns';
 import { useAuth, useFamily } from '@/components/providers';
 import { useChores } from '@/lib/hooks';
 import { toast } from '@/components/ui/use-toast';
-import { ToastAction } from '@/components/ui/toast';
+
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import type { Chore } from '@/types';
 
@@ -170,19 +169,7 @@ export function useChoresViewData() {
         const completerName = familyMembers.find(m => m.id === completedById)?.name || 'They';
         toast({ title: `Great job! "${chore.title}" is now pending parental approval for ${completerName}.`, variant: 'success' });
       } else {
-        toast({
-          title: `Chore completed! ${chore.pointValue} points awarded.`,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          action: React.createElement(ToastAction, {
-            altText: 'Undo',
-            onClick: async () => {
-              try {
-                await fetch(`/api/chores/${choreId}/complete`, { method: 'DELETE' });
-                refreshChores();
-              } catch { /* silently fail */ }
-            },
-          }, 'Undo') as any,
-        });
+        toast({ title: `Chore completed! ${chore.pointValue} points awarded.` });
       }
       refreshChores();
       return true;
@@ -265,6 +252,24 @@ export function useChoresViewData() {
     }
   };
 
+  const undoCompletion = async (completionId: string, choreId: string) => {
+    const user = await requireAuth();
+    if (!user) return;
+    if (user.role !== 'parent') {
+      toast({ title: 'Only parents can undo completions', variant: 'warning' });
+      return;
+    }
+    try {
+      const res = await fetch(`/api/chores/${choreId}/complete`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to undo completion');
+      toast({ title: 'Completion removed and points reversed' });
+      refreshChores();
+      fetchCompletions();
+    } catch {
+      toast({ title: 'Failed to undo completion', variant: 'destructive' });
+    }
+  };
+
   const enabledCount = chores.filter((c) => c.enabled).length;
   const dueCount = chores.filter(
     (c) => c.enabled && c.nextDue && isPast(parseISO(c.nextDue))
@@ -287,7 +292,7 @@ export function useChoresViewData() {
     showAddModal, setShowAddModal,
     editingChore, setEditingChore,
     filteredChores,
-    completeChore, toggleEnabled, deleteChore, editChore,
+    completeChore, toggleEnabled, deleteChore, editChore, undoCompletion,
     inlineAddChore,
     enabledCount, dueCount,
     confirmDialogProps,

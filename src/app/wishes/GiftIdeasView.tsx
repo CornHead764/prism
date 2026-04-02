@@ -8,8 +8,6 @@ import {
   ExternalLink,
   Pencil,
   Trash2,
-  CheckCircle2,
-  Circle,
   GripVertical,
   DollarSign,
 } from 'lucide-react';
@@ -206,22 +204,12 @@ function GiftIdeaRow({
   return (
     <div
       className={cn(
-        'flex items-center gap-2 p-2 rounded-lg border border-border',
+        'flex items-center gap-2 p-2 rounded-lg border border-border cursor-pointer',
         'hover:bg-muted/50 transition-colors group',
-        idea.purchased && 'opacity-60 bg-green-50/50 dark:bg-green-950/20 border-green-500/30',
+        idea.purchased && 'opacity-60',
       )}
+      onClick={onTogglePurchased}
     >
-      <button
-        onClick={onTogglePurchased}
-        className={cn(
-          'shrink-0 p-1 rounded transition-colors',
-          idea.purchased ? 'text-green-600 hover:text-green-700' : 'text-muted-foreground/40 hover:text-green-600'
-        )}
-        title={idea.purchased ? 'Mark as not purchased' : 'Mark as purchased'}
-      >
-        {idea.purchased ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
-      </button>
-
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className={cn('font-medium text-sm truncate', idea.purchased && 'line-through text-muted-foreground')}>
@@ -255,7 +243,7 @@ function GiftIdeaRow({
           variant="ghost"
           size="icon"
           className="h-7 w-7 opacity-0 group-hover:opacity-100"
-          onClick={onEdit}
+          onClick={(e) => { e.stopPropagation(); onEdit(); }}
           title="Edit"
         >
           <Pencil className="h-3.5 w-3.5" />
@@ -264,7 +252,7 @@ function GiftIdeaRow({
           variant="ghost"
           size="icon"
           className="h-7 w-7 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive hover:bg-destructive/10"
-          onClick={onDelete}
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
           title="Delete"
         >
           <Trash2 className="h-3.5 w-3.5" />

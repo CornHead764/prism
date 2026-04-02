@@ -19,6 +19,7 @@ import {
   GripVertical,
   Trash2,
   X,
+  Undo2,
 } from 'lucide-react';
 import { useOrientation } from '@/lib/hooks/useOrientation';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
@@ -287,7 +288,7 @@ export function ChoresView() {
     showAddModal, setShowAddModal,
     editingChore, setEditingChore,
     filteredChores,
-    completeChore, toggleEnabled, deleteChore, editChore,
+    completeChore, toggleEnabled, deleteChore, editChore, undoCompletion,
     inlineAddChore,
     enabledCount, dueCount,
     confirmDialogProps,
@@ -489,6 +490,15 @@ export function ChoresView() {
                           </span>
                         </div>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => undoCompletion(c.id, c.choreId)}
+                        title="Undo completion and reverse points"
+                      >
+                        <Undo2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   ))}
                 </div>
