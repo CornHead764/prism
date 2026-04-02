@@ -33,6 +33,9 @@ All notable changes to Prism are documented in this file.
 - **Calendar**: Family calendar group always sorts first before person columns
 
 ### Improved
+- **Bus Tracker**: Train map switches to 2-row snake layout when 6+ nodes — top row left→right, bottom row right→left, connected by a right-side vertical segment
+- **Bus Tracker**: PM route at-school status now shows "Bus at school — en route" instead of a bogus 0-minute ETA
+- **Bus Tracker**: Route dialog "Scheduled" field renamed to "Home ETA" with helper text clarifying it is the expected arrival time at your stop
 - **Bus Tracker**: Large minute values now display as hours and minutes (e.g., "15h 25m" instead of "925m")
 - **README**: Replaced GIF demos with static screenshots for faster loading
 
