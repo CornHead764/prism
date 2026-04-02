@@ -52,18 +52,46 @@ export function BusTrackingWidget({ className, gridW }: BusTrackingWidgetProps) 
   );
 }
 
+// Build a flat ordered node list from a route for the train map
+interface TrainNode {
+  name: string;
+  index: number;
+  isStop: boolean;    // square shape — the ETA target
+  isSchool: boolean;  // diamond shape — school terminal (AM only)
+}
+
+function buildNodes(route: BusRouteStatus): TrainNode[] {
+  const checkpoints = route.checkpoints || [];
+  const stopIsInCheckpoints = route.stopName
+    ? checkpoints.some(cp => cp.name === route.stopName)
+    : false;
+
+  const nodes: TrainNode[] = checkpoints.map((cp, i) => ({
+    name: cp.name,
+    index: i,
+    isStop: cp.name === route.stopName,
+    isSchool: false,
+  }));
+
+  // Legacy: stopName is an implicit terminal after the named list
+  if (route.stopName && !stopIsInCheckpoints) {
+    nodes.push({ name: route.stopName, index: checkpoints.length, isStop: true, isSchool: false });
+  }
+
+  // School is the AM terminal (diamond), not shown as destination for PM
+  if (route.direction === 'AM' && route.schoolName) {
+    const schoolIdx = checkpoints.length + (route.stopName && !stopIsInCheckpoints ? 1 : 0);
+    nodes.push({ name: route.schoolName, index: schoolIdx, isStop: false, isSchool: true });
+  }
+
+  return nodes;
+}
+
 function RouteStatusCard({ route, compact }: { route: BusRouteStatus; compact: boolean }) {
   const p = route.prediction;
   const statusColor = getStatusColor(p);
   const statusText = getStatusText(p);
-  const checkpoints = route.checkpoints || [];
-  // stopName may reference a checkpoint by name (new behavior) or be an implicit terminal (legacy)
-  const stopIsInCheckpoints = route.stopName
-    ? checkpoints.some(cp => cp.name === route.stopName)
-    : false;
-  // PM routes: school is origin, not destination — don't count it as a progress dot
-  const totalDots = checkpoints.length + (route.stopName && !stopIsInCheckpoints ? 1 : 0)
-    + (route.direction === 'AM' && route.schoolName ? 1 : 0);
+  const nodes = buildNodes(route);
 
   return (
     <div className="space-y-1.5">
@@ -81,72 +109,9 @@ function RouteStatusCard({ route, compact }: { route: BusRouteStatus; compact: b
         <span className="text-xs text-muted-foreground">{statusText}</span>
       </div>
 
-      {/* Progress dots */}
-      {totalDots > 0 && (
-        <div className={cn('flex items-center py-1', compact ? 'gap-1' : 'gap-1.5')}>
-          {route.direction === 'AM' ? (
-            <>
-              {checkpoints.map((cp, i) => (
-                <CheckpointDot
-                  key={cp.name}
-                  index={i}
-                  name={cp.name}
-                  prediction={p}
-                  isStop={cp.name === route.stopName}
-                  isSchool={false}
-                  compact={compact}
-                />
-              ))}
-              {/* Legacy: stopName not in checkpoints list — show as implicit terminal dot */}
-              {route.stopName && !stopIsInCheckpoints && (
-                <CheckpointDot
-                  index={checkpoints.length}
-                  name={route.stopName}
-                  prediction={p}
-                  isStop={true}
-                  isSchool={false}
-                  compact={compact}
-                />
-              )}
-              {route.schoolName && (
-                <CheckpointDot
-                  index={checkpoints.length + (route.stopName && !stopIsInCheckpoints ? 1 : 0)}
-                  name={route.schoolName}
-                  prediction={p}
-                  isStop={false}
-                  isSchool={true}
-                  compact={compact}
-                />
-              )}
-            </>
-          ) : (
-            <>
-              {/* PM: checkpoints → stop (school is origin, not shown as destination) */}
-              {checkpoints.map((cp, i) => (
-                <CheckpointDot
-                  key={cp.name}
-                  index={i}
-                  name={cp.name}
-                  prediction={p}
-                  isStop={cp.name === route.stopName}
-                  isSchool={false}
-                  compact={compact}
-                />
-              ))}
-              {/* Legacy: stopName not in checkpoints list */}
-              {route.stopName && !stopIsInCheckpoints && (
-                <CheckpointDot
-                  index={checkpoints.length}
-                  name={route.stopName}
-                  prediction={p}
-                  isStop={true}
-                  isSchool={false}
-                  compact={compact}
-                />
-              )}
-            </>
-          )}
-        </div>
+      {/* Train map */}
+      {nodes.length > 0 && (
+        <TrainMap nodes={nodes} prediction={p} compact={compact} statusColor={statusColor} />
       )}
 
       {/* Last update info */}
@@ -159,47 +124,143 @@ function RouteStatusCard({ route, compact }: { route: BusRouteStatus; compact: b
   );
 }
 
-function CheckpointDot({
-  index,
-  name,
+function TrainMap({
+  nodes,
   prediction,
-  isStop,
-  isSchool,
   compact,
+  statusColor,
 }: {
-  index: number;
-  name: string;
+  nodes: TrainNode[];
   prediction: BusPrediction;
-  isStop: boolean;
-  isSchool: boolean;
-  compact?: boolean;
+  compact: boolean;
+  statusColor: string;
 }) {
-  const isReached = index <= prediction.lastCheckpointIndex;
-  const isCurrent = index === prediction.lastCheckpointIndex;
-  const statusColor = getStatusColor(prediction);
-
-  // Shape: square for stop, diamond for school, circle for regular
-  const shapeClass = isSchool
-    ? 'rotate-45'
-    : isStop
-      ? 'rounded-sm'
-      : 'rounded-full';
+  const lastIdx = prediction.lastCheckpointIndex;
+  // Extra height for diagonal labels below the track
+  const labelRowHeight = compact ? 0 : 40;
+  const nodeSize = compact ? 10 : 14;
+  const trackTop = Math.floor(nodeSize / 2) - 1; // center the track on the nodes
 
   return (
-    <div className="group relative flex flex-col items-center">
-      <div
-        data-keep-bg
-        className={cn(
-          compact ? 'h-2.5 w-2.5 border-2' : 'h-3 w-3 border-2',
-          'transition-all',
-          shapeClass,
-          isReached
-            ? cn('border-current', statusColor.replace('bg-', 'text-'), 'bg-current')
-            : 'border-muted-foreground/30 bg-transparent',
-          isCurrent && 'animate-pulse scale-125',
-        )}
-        title={name}
-      />
+    <div
+      className="relative w-full select-none"
+      style={{ height: nodeSize + labelRowHeight + 2 }}
+    >
+      {/* Track segments between nodes */}
+      {nodes.map((node, i) => {
+        if (i === nodes.length - 1) return null;
+        const segPassed = node.index < lastIdx ||
+          (node.index === lastIdx && nodes[i + 1]!.index <= lastIdx);
+        return (
+          <div
+            key={`seg-${i}`}
+            data-keep-bg
+            className={cn(
+              'absolute',
+              segPassed ? statusColor : 'bg-muted-foreground/25',
+            )}
+            style={{
+              top: trackTop,
+              height: 2,
+              // Position: from this node's center to next node's center
+              // Using percentage for even spacing
+              left: `calc(${(i / (nodes.length - 1)) * 100}% + ${nodeSize / 2}px)`,
+              right: `calc(${(1 - (i + 1) / (nodes.length - 1)) * 100}% + ${nodeSize / 2}px)`,
+            }}
+          />
+        );
+      })}
+
+      {/* Nodes */}
+      {nodes.map((node, i) => {
+        const isReached = node.index <= lastIdx;
+        const isCurrent = node.index === lastIdx && prediction.status !== 'no_data';
+
+        // Shape: circle for regular, rounded-sm for stop, rotate-45 wrapper for school (diamond)
+        const leftPct = nodes.length === 1
+          ? 50
+          : (i / (nodes.length - 1)) * 100;
+
+        return (
+          <div
+            key={node.name}
+            className="absolute flex flex-col items-center"
+            style={{
+              left: `${leftPct}%`,
+              transform: 'translateX(-50%)',
+              top: 0,
+            }}
+          >
+            {/* Node shape */}
+            {node.isSchool ? (
+              // Diamond via rotated square
+              <div
+                data-keep-bg
+                className={cn(
+                  'border-2 transition-all',
+                  isReached
+                    ? cn(statusColor, statusColor.replace('bg-', 'border-'))
+                    : 'border-muted-foreground/40 bg-background',
+                  isCurrent && 'animate-pulse',
+                )}
+                style={{
+                  width: nodeSize,
+                  height: nodeSize,
+                  transform: 'rotate(45deg)',
+                  flexShrink: 0,
+                }}
+                title={node.name}
+              />
+            ) : node.isStop ? (
+              // Square
+              <div
+                data-keep-bg
+                className={cn(
+                  'border-2 transition-all rounded-sm',
+                  isReached
+                    ? cn(statusColor, statusColor.replace('bg-', 'border-'))
+                    : 'border-muted-foreground/40 bg-background',
+                  isCurrent && 'animate-pulse',
+                )}
+                style={{ width: nodeSize, height: nodeSize, flexShrink: 0 }}
+                title={node.name}
+              />
+            ) : (
+              // Circle
+              <div
+                data-keep-bg
+                className={cn(
+                  'border-2 rounded-full transition-all',
+                  isReached
+                    ? cn(statusColor, statusColor.replace('bg-', 'border-'))
+                    : 'border-muted-foreground/40 bg-background',
+                  isCurrent && 'animate-pulse',
+                )}
+                style={{ width: nodeSize, height: nodeSize, flexShrink: 0 }}
+                title={node.name}
+              />
+            )}
+
+            {/* Diagonal label — only in full (non-compact) mode */}
+            {!compact && (
+              <div
+                className="absolute text-[9px] leading-none text-muted-foreground whitespace-nowrap pointer-events-none"
+                style={{
+                  top: nodeSize + 3,
+                  left: '50%',
+                  transformOrigin: 'top left',
+                  transform: 'rotate(45deg)',
+                  maxWidth: 64,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {node.name.length > 12 ? node.name.slice(0, 11) + '…' : node.name}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -252,7 +313,6 @@ function getBestRoute(routes: BusRouteStatus[]): BusRouteStatus[] {
 
   const now = new Date();
 
-  // Find routes within bus window, sorted by closest scheduled time
   const scored = routes.map(route => {
     const parts = route.scheduledTime.split(':').map(Number);
     const h = parts[0] ?? 0;
