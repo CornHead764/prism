@@ -736,12 +736,15 @@ function RouteDialog({
               </Select>
             </div>
             <div>
-              <Label>Scheduled</Label>
+              <Label>Home ETA</Label>
               <Input
                 type="time"
                 value={form.scheduledTime}
                 onChange={e => setForm(p => ({ ...p, scheduledTime: e.target.value }))}
               />
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Expected arrival at your stop.
+              </p>
             </div>
           </div>
 

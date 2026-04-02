@@ -141,131 +141,127 @@ function TrainMap({
   statusColor: string;
 }) {
   const lastIdx = prediction.lastCheckpointIndex;
-  // Extra height for diagonal labels below the track
-  const labelRowHeight = compact ? 0 : 40;
+  const labelHeight = compact ? 0 : 40;
   const nodeSize = compact ? 10 : 14;
-  const trackTop = Math.floor(nodeSize / 2) - 1; // center the track on the nodes
+  const trackY = Math.floor(nodeSize / 2) - 1;
 
-  return (
-    <div
-      className="relative w-full select-none"
-      style={{ height: nodeSize + labelRowHeight + 2 }}
-    >
-      {/* Track segments between nodes */}
-      {nodes.map((node, i) => {
-        if (i === nodes.length - 1) return null;
-        const segPassed = node.index < lastIdx ||
-          (node.index === lastIdx && nodes[i + 1]!.index <= lastIdx);
-        return (
+  const isSegPassed = (from: TrainNode, to: TrainNode) =>
+    from.index < lastIdx || (from.index === lastIdx && to.index <= lastIdx);
+
+  const renderNodeAt = (node: TrainNode, leftPct: number, topOffset: number) => {
+    const reached = node.index <= lastIdx;
+    const current = node.index === lastIdx && prediction.status !== 'no_data';
+    const shapeBase = cn(
+      'border-2 transition-all',
+      reached
+        ? cn(statusColor, statusColor.replace('bg-', 'border-'))
+        : 'border-muted-foreground/40 bg-background',
+      current && 'animate-pulse',
+    );
+    return (
+      <div
+        key={`node-${node.index}`}
+        className="absolute flex flex-col items-center"
+        style={{ left: `${leftPct}%`, transform: 'translateX(-50%)', top: topOffset }}
+      >
+        {node.isSchool ? (
+          <div data-keep-bg className={shapeBase}
+            style={{ width: nodeSize, height: nodeSize, transform: 'rotate(45deg)', flexShrink: 0 }}
+            title={node.name} />
+        ) : node.isStop ? (
+          <div data-keep-bg className={cn(shapeBase, 'rounded-sm')}
+            style={{ width: nodeSize, height: nodeSize, flexShrink: 0 }}
+            title={node.name} />
+        ) : (
+          <div data-keep-bg className={cn(shapeBase, 'rounded-full')}
+            style={{ width: nodeSize, height: nodeSize, flexShrink: 0 }}
+            title={node.name} />
+        )}
+        {!compact && (
           <div
-            key={`seg-${i}`}
-            data-keep-bg
-            className={cn(
-              'absolute',
-              segPassed ? statusColor : 'bg-muted-foreground/25',
-            )}
+            className="absolute text-[9px] leading-none text-muted-foreground whitespace-nowrap pointer-events-none"
             style={{
-              top: trackTop,
-              height: 2,
-              // Position: from this node's center to next node's center
-              // Using percentage for even spacing
-              left: `calc(${(i / (nodes.length - 1)) * 100}% + ${nodeSize / 2}px)`,
-              right: `calc(${(1 - (i + 1) / (nodes.length - 1)) * 100}% + ${nodeSize / 2}px)`,
-            }}
-          />
-        );
-      })}
-
-      {/* Nodes */}
-      {nodes.map((node, i) => {
-        const isReached = node.index <= lastIdx;
-        const isCurrent = node.index === lastIdx && prediction.status !== 'no_data';
-
-        // Shape: circle for regular, rounded-sm for stop, rotate-45 wrapper for school (diamond)
-        const leftPct = nodes.length === 1
-          ? 50
-          : (i / (nodes.length - 1)) * 100;
-
-        return (
-          <div
-            key={node.name}
-            className="absolute flex flex-col items-center"
-            style={{
-              left: `${leftPct}%`,
-              transform: 'translateX(-50%)',
-              top: 0,
+              top: nodeSize + 3,
+              left: '50%',
+              transformOrigin: 'top left',
+              transform: 'rotate(45deg)',
+              maxWidth: 64,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
             }}
           >
-            {/* Node shape */}
-            {node.isSchool ? (
-              // Diamond via rotated square
-              <div
-                data-keep-bg
-                className={cn(
-                  'border-2 transition-all',
-                  isReached
-                    ? cn(statusColor, statusColor.replace('bg-', 'border-'))
-                    : 'border-muted-foreground/40 bg-background',
-                  isCurrent && 'animate-pulse',
-                )}
-                style={{
-                  width: nodeSize,
-                  height: nodeSize,
-                  transform: 'rotate(45deg)',
-                  flexShrink: 0,
-                }}
-                title={node.name}
-              />
-            ) : node.isStop ? (
-              // Square
-              <div
-                data-keep-bg
-                className={cn(
-                  'border-2 transition-all rounded-sm',
-                  isReached
-                    ? cn(statusColor, statusColor.replace('bg-', 'border-'))
-                    : 'border-muted-foreground/40 bg-background',
-                  isCurrent && 'animate-pulse',
-                )}
-                style={{ width: nodeSize, height: nodeSize, flexShrink: 0 }}
-                title={node.name}
-              />
-            ) : (
-              // Circle
-              <div
-                data-keep-bg
-                className={cn(
-                  'border-2 rounded-full transition-all',
-                  isReached
-                    ? cn(statusColor, statusColor.replace('bg-', 'border-'))
-                    : 'border-muted-foreground/40 bg-background',
-                  isCurrent && 'animate-pulse',
-                )}
-                style={{ width: nodeSize, height: nodeSize, flexShrink: 0 }}
-                title={node.name}
-              />
-            )}
-
-            {/* Diagonal label — only in full (non-compact) mode */}
-            {!compact && (
-              <div
-                className="absolute text-[9px] leading-none text-muted-foreground whitespace-nowrap pointer-events-none"
-                style={{
-                  top: nodeSize + 3,
-                  left: '50%',
-                  transformOrigin: 'top left',
-                  transform: 'rotate(45deg)',
-                  maxWidth: 64,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {node.name.length > 12 ? node.name.slice(0, 11) + '…' : node.name}
-              </div>
-            )}
+            {node.name.length > 12 ? node.name.slice(0, 11) + '…' : node.name}
           </div>
-        );
-      })}
+        )}
+      </div>
+    );
+  };
+
+  // Snake (2-row) layout for full mode with 6+ nodes
+  if (!compact && nodes.length >= 6) {
+    const half = Math.ceil(nodes.length / 2);
+    const topNodes = nodes.slice(0, half);
+    const botNodes = nodes.slice(half);
+    const rowH = nodeSize + labelHeight;
+    const connGap = 8;
+    const totalH = rowH * 2 + connGap;
+
+    // Top row: left→right. Bottom row: right→left (botNodes[0] at right).
+    const topPct = (i: number) =>
+      topNodes.length <= 1 ? 50 : (i / (topNodes.length - 1)) * 100;
+    const botPct = (i: number) =>
+      botNodes.length <= 1 ? 50 : ((botNodes.length - 1 - i) / (botNodes.length - 1)) * 100;
+
+    const connPassed = botNodes[0]!.index <= lastIdx;
+
+    return (
+      <div className="relative w-full select-none" style={{ height: totalH }}>
+        {/* Top row segments */}
+        {topNodes.map((node, i) => i < topNodes.length - 1 && (
+          <div key={`ts-${i}`} data-keep-bg
+            className={cn('absolute', isSegPassed(node, topNodes[i + 1]!) ? statusColor : 'bg-muted-foreground/25')}
+            style={{ top: trackY, height: 2,
+              left: `calc(${topPct(i)}% + ${nodeSize / 2}px)`,
+              right: `calc(${100 - topPct(i + 1)}% + ${nodeSize / 2}px)` }}
+          />
+        ))}
+
+        {/* Bottom row segments (right→left: botNodes[i] is right of botNodes[i+1]) */}
+        {botNodes.map((node, i) => i < botNodes.length - 1 && (
+          <div key={`bs-${i}`} data-keep-bg
+            className={cn('absolute', isSegPassed(node, botNodes[i + 1]!) ? statusColor : 'bg-muted-foreground/25')}
+            style={{ top: rowH + connGap + trackY, height: 2,
+              left: `calc(${botPct(i + 1)}% + ${nodeSize / 2}px)`,
+              right: `calc(${100 - botPct(i)}% + ${nodeSize / 2}px)` }}
+          />
+        ))}
+
+        {/* Right-side connector joining the two rows */}
+        <div data-keep-bg
+          className={cn('absolute', connPassed ? statusColor : 'bg-muted-foreground/25')}
+          style={{ top: nodeSize / 2, right: 0, width: 2, height: rowH + connGap }}
+        />
+
+        {topNodes.map((node, i) => renderNodeAt(node, topPct(i), 0))}
+        {botNodes.map((node, i) => renderNodeAt(node, botPct(i), rowH + connGap))}
+      </div>
+    );
+  }
+
+  // Single-row layout (compact mode or ≤5 nodes)
+  return (
+    <div className="relative w-full select-none" style={{ height: nodeSize + labelHeight + 2 }}>
+      {nodes.map((node, i) => i < nodes.length - 1 && (
+        <div key={`seg-${i}`} data-keep-bg
+          className={cn('absolute', isSegPassed(node, nodes[i + 1]!) ? statusColor : 'bg-muted-foreground/25')}
+          style={{ top: trackY, height: 2,
+            left: `calc(${(i / (nodes.length - 1)) * 100}% + ${nodeSize / 2}px)`,
+            right: `calc(${(1 - (i + 1) / (nodes.length - 1)) * 100}% + ${nodeSize / 2}px)` }}
+        />
+      ))}
+      {nodes.map((node, i) =>
+        renderNodeAt(node, nodes.length === 1 ? 50 : (i / (nodes.length - 1)) * 100, 0)
+      )}
     </div>
   );
 }
@@ -301,6 +297,9 @@ function getStatusText(p: BusPrediction): string {
       }
       return 'In transit';
     case 'cold_start':
+      if (p.lastCheckpointIndex === -1) {
+        return 'Bus at school — en route';
+      }
       if (p.lastCheckpointName && p.minutesSinceLastCheckpoint !== null) {
         return `${formatMinutes(p.minutesSinceLastCheckpoint)} ago at ${p.lastCheckpointName}`;
       }

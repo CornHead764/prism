@@ -134,7 +134,22 @@ export async function predictArrival(routeId: string): Promise<ArrivalPrediction
         minutesSinceLastCheckpoint: Math.round(minutesSince),
       };
     }
-    // PM: school is the origin — bus is starting its route, treat as in-transit
+    // PM: school is the origin — bus is loading at school, hasn't hit any route
+    // checkpoints yet. The stored checkpointIndex may be an implicit terminal index
+    // (beyond etaTargetCount) which causes getSegmentStats to return nothing.
+    // Return cold_start with lastCheckpointIndex = -1 so the train map shows all
+    // nodes as unvisited. Once the bus hits its first geofence, normal prediction kicks in.
+    return {
+      status: 'cold_start',
+      etaMinutes: null,
+      etaRangeLow: null,
+      etaRangeHigh: null,
+      lastCheckpointName,
+      lastCheckpointTime,
+      lastCheckpointIndex: -1,
+      totalCheckpoints,
+      minutesSinceLastCheckpoint: Math.round(minutesSince),
+    };
   }
 
   // Bus is in transit — try to predict remaining time up to the ETA target
