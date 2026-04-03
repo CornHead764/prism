@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import {
   ShoppingCart,
@@ -9,6 +9,7 @@ import {
   Maximize2,
   Minimize2,
   Tags,
+  Camera,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +31,7 @@ import { useOrientation } from '@/lib/hooks/useOrientation';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { cn } from '@/lib/utils';
 import type { ShoppingItem } from '@/types';
+import { CameraScannerOverlay } from '@/components/input/CameraScannerOverlay';
 
 export function getCategoryEmoji(category: string): string {
   // Fallback function — components should prefer the hook's getCategoryEmoji
@@ -41,6 +43,30 @@ export function getCategoryEmoji(category: string): string {
 }
 
 export function ShoppingView() {
+  const [showCameraScanner, setShowCameraScanner] = useState(false);
+
+  const handleCameraScan = useCallback((barcode: string) => {
+    fetch('/api/shopping/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ barcode }),
+    })
+      .then(r => r.json())
+      .then((data: { found: boolean; item?: { name: string }; action?: string; itemId?: string }) => {
+        if (!data.found) {
+          toast({ title: 'Unknown barcode', description: `No product found` });
+          return;
+        }
+        window.dispatchEvent(new CustomEvent('prism:scan-result', { detail: data }));
+        toast({
+          title: data.action === 'updated_existing'
+            ? `${data.item!.name} already on list`
+            : `${data.item!.name} added`,
+        });
+      })
+      .catch(() => toast({ title: 'Scan failed', variant: 'destructive' }));
+  }, []);
+
   const {
     lists, loading, error, refreshLists, familyMembers,
     requireAuth, apiAddItem,
@@ -236,6 +262,9 @@ export function ShoppingView() {
               badge={activeList ? <Badge variant="secondary">{checkedItems}/{totalItems}</Badge> : undefined}
               actions={<>
                 <UndoButton />
+                <Button variant="ghost" size="icon" onClick={() => setShowCameraScanner(true)} title="Scan barcode with camera">
+                  <Camera className="h-4 w-4" />
+                </Button>
                 <Button variant="ghost" size="icon" onClick={() => setShoppingMode(true)} title="Enter shopping mode">
                   <Maximize2 className="h-4 w-4" />
                 </Button>
@@ -416,6 +445,13 @@ export function ShoppingView() {
         )}
 
         <ManageCategoriesModal open={showCategoriesModal} onOpenChange={setShowCategoriesModal} />
+
+        {showCameraScanner && (
+          <CameraScannerOverlay
+            onClose={() => setShowCameraScanner(false)}
+            onScan={handleCameraScan}
+          />
+        )}
 
         <ShoppingCelebration
           show={showCelebration}
