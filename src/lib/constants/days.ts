@@ -1,7 +1,6 @@
 /**
  * Shared day-of-week constants.
  * Single source of truth — use these everywhere instead of inline arrays.
- * Consolidation suggested by ricky-davis in sandydargoport/prism#10.
  */
 
 export const DAYS_OF_WEEK = [
