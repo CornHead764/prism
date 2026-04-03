@@ -75,7 +75,7 @@ Desktop.ini
 docker-data/
 data/
 uploads/
-backups/
+/backups/
 config/rclone.conf
 
 # Misc
