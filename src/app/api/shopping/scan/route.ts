@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getDisplayAuth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { shoppingItems, shoppingLists } from '@/lib/db/schema';
 import { eq, and, ilike, isNull, or, asc } from 'drizzle-orm';
@@ -29,6 +30,9 @@ async function resolveTargetList(defaultListId: string | null): Promise<string |
 }
 
 export async function POST(req: Request) {
+  const auth = await getDisplayAuth();
+  if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
     const body = await req.json() as { barcode?: string };
     const barcode = body.barcode?.trim();

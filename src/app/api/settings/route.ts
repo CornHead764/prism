@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth, requireRole } from '@/lib/auth';
+import { requireAuth, requireRole, getDisplayAuth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { settings } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -8,6 +8,9 @@ import { invalidateCache } from '@/lib/cache/redis';
 import type { AuthResult } from '@/lib/auth';
 
 export async function GET() {
+  const auth = await getDisplayAuth();
+  if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
     const rows = await db.select().from(settings);
     const result: Record<string, unknown> = {};

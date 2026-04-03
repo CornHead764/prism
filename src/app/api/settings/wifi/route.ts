@@ -8,9 +8,12 @@ import { logActivity } from '@/lib/services/auditLog';
 const WIFI_SETTINGS_KEY = 'wifiConfig';
 
 /**
- * GET /api/settings/wifi - Get WiFi configuration (public for babysitter page)
+ * GET /api/settings/wifi - Get WiFi configuration (requires auth; shown on babysitter page after PIN unlock)
  */
 export async function GET() {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const result = await db
       .select()
