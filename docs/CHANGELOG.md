@@ -28,6 +28,7 @@ All notable changes to Prism are documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Camera Scanner**: Scan product barcodes with phone/tablet camera on the Shopping page — camera icon in header opens full-screen scanner overlay; automatically looks up product on Open Food Facts and adds it to the active list
 - **Docker**: Multi-arch builds (amd64 + arm64) — Raspberry Pi support via pre-built GHCR image
 - **Health check**: `GET /api/health` now probes PostgreSQL and Redis — returns 503 with `status: "degraded"` if either is down (previously always returned 200)
 - **Calendar**: Profile columns now follow family member sort order from Settings
@@ -48,6 +49,7 @@ All notable changes to Prism are documented in this file.
 - **API**: `POST /api/shopping/scan` now requires display auth — previously allowed unauthenticated writes to shopping list
 
 ### Fixed
+- **Docker**: `VirtualKeyboard` (simple-keyboard) and `CameraScannerOverlay` (@zxing/browser) now loaded via `next/dynamic` with `ssr: false` — prevents `HTMLInputElement is not defined` crash during Next.js prerender on fresh builds
 - **Virtual Keyboard**: Toggle button now appears correctly on touchscreen laptops where Windows converts touch events to mouse events (uses `navigator.maxTouchPoints` instead of pointer type tracking)
 - **Virtual Keyboard**: Reduced height from 38vh to 32vh — less intrusive on 1080p displays
 - **Virtual Keyboard**: Scroll position no longer jumps after voice input adds a new list item — scroll restore is skipped when text was injected while the keyboard was open
