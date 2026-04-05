@@ -46,29 +46,46 @@ export function getCategoryEmoji(category: string): string {
   return defaults[category] || '🛒';
 }
 
+function vibrate(pattern: number | number[]) {
+  try { navigator.vibrate?.(pattern); } catch { /* unsupported */ }
+}
+
 export function ShoppingView() {
   const [showCameraScanner, setShowCameraScanner] = useState(false);
+  // List picker state: pending barcode waiting for user to choose a list
+  const [pendingScan, setPendingScan] = useState<string | null>(null);
+
+  const doScan = useCallback(async (barcode: string, listId?: string) => {
+    try {
+      const r = await fetch('/api/shopping/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ barcode, ...(listId ? { listId } : {}) }),
+      });
+      const data = await r.json() as { found: boolean; item?: { name: string }; action?: string; itemId?: string };
+
+      if (!data.found) {
+        vibrate([100, 80, 100]); // no-match pattern
+        toast({ title: 'Product not found', description: 'Barcode not in database. Add it manually.', variant: 'destructive' });
+        return;
+      }
+
+      vibrate(200); // success
+      window.dispatchEvent(new CustomEvent('prism:scan-result', { detail: data }));
+      toast({
+        title: data.action === 'updated_existing'
+          ? `Already on list — ${data.item!.name}`
+          : `Added — ${data.item!.name}`,
+      });
+    } catch {
+      vibrate([100, 80, 100]);
+      toast({ title: 'Scan failed', variant: 'destructive' });
+    }
+  }, []);
 
   const handleCameraScan = useCallback((barcode: string) => {
-    fetch('/api/shopping/scan', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ barcode }),
-    })
-      .then(r => r.json())
-      .then((data: { found: boolean; item?: { name: string }; action?: string; itemId?: string }) => {
-        if (!data.found) {
-          toast({ title: 'Unknown barcode', description: `No product found` });
-          return;
-        }
-        window.dispatchEvent(new CustomEvent('prism:scan-result', { detail: data }));
-        toast({
-          title: data.action === 'updated_existing'
-            ? `${data.item!.name} already on list`
-            : `${data.item!.name} added`,
-        });
-      })
-      .catch(() => toast({ title: 'Scan failed', variant: 'destructive' }));
+    // Will be called after lists are available below — see where lists is defined
+    setPendingScan(barcode);
   }, []);
 
   const {
@@ -84,6 +101,16 @@ export function ShoppingView() {
     toggleItem, deleteItem,
     totalItems, checkedItems, progress,
   } = useShoppingViewData();
+
+  // When a scan comes in: if only one list, submit immediately; otherwise show picker
+  useEffect(() => {
+    if (!pendingScan || lists.length === 0) return;
+    if (lists.length === 1) {
+      doScan(pendingScan, lists[0]!.id);
+      setPendingScan(null);
+    }
+    // If multiple lists, leave pendingScan set — the picker UI below will show
+  }, [pendingScan, lists, doScan]);
 
   // Listen for barcode scan results — scroll to and highlight the added/updated item
   useEffect(() => {
@@ -455,6 +482,34 @@ export function ShoppingView() {
             onClose={() => setShowCameraScanner(false)}
             onScan={handleCameraScan}
           />
+        )}
+
+        {/* List picker — shown after scan when multiple lists exist */}
+        {pendingScan && lists.length > 1 && (
+          <div className="fixed inset-0 z-[9100] flex items-end justify-center bg-black/60" onClick={() => setPendingScan(null)}>
+            <div className="w-full max-w-lg bg-card rounded-t-2xl p-4 pb-8 shadow-xl" onClick={e => e.stopPropagation()}>
+              <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-4" />
+              <p className="text-sm text-muted-foreground text-center mb-3">Add scanned item to which list?</p>
+              <div className="flex flex-col gap-2">
+                {lists.map(list => (
+                  <Button
+                    key={list.id}
+                    variant={list.id === activeListId ? 'default' : 'outline'}
+                    className="w-full justify-start text-base py-3"
+                    onClick={() => {
+                      doScan(pendingScan, list.id);
+                      setPendingScan(null);
+                    }}
+                  >
+                    {list.name}
+                  </Button>
+                ))}
+              </div>
+              <Button variant="ghost" className="w-full mt-2 text-muted-foreground" onClick={() => setPendingScan(null)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
         )}
 
         <ShoppingCelebration

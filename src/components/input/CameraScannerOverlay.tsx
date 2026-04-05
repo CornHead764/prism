@@ -18,9 +18,13 @@ function hasBarcodeDetector() {
   return typeof window !== 'undefined' && 'BarcodeDetector' in window;
 }
 
-// Decode a photo file by drawing it to a canvas first.
+function vibrate(pattern: number | number[]) {
+  try { navigator.vibrate?.(pattern); } catch { /* unsupported */ }
+}
+
+// Decode a photo by drawing to canvas first.
 // Static image → canvas works on iOS; the restriction only applies to live video streams.
-// We also downscale to max 1280px wide so ZXing doesn't choke on 12MP+ iPhone photos.
+// Downscale to max 1280px so ZXing doesn't choke on 12MP+ iPhone photos.
 async function decodeImageFile(file: File): Promise<string | null> {
   try {
     const url = URL.createObjectURL(file);
@@ -36,7 +40,6 @@ async function decodeImageFile(file: File): Promise<string | null> {
       URL.revokeObjectURL(url);
     }
 
-    // Downscale to max 1280px wide — ZXing handles this resolution well
     const MAX_W = 1280;
     const scale = img.naturalWidth > MAX_W ? MAX_W / img.naturalWidth : 1;
     const w = Math.round(img.naturalWidth * scale);
@@ -64,26 +67,41 @@ export function CameraScannerOverlay({ onClose, onScan }: CameraScannerOverlayPr
   const [photoDecoding, setPhotoDecoding] = useState(false);
   const lastScanned = useRef<string | null>(null);
   const cooldownRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scannedRef = useRef(false);
 
-  const handleScan = useCallback((barcode: string) => {
-    if (lastScanned.current === barcode) return;
+  const handleScanSuccess = useCallback((barcode: string) => {
+    // Debounce repeated scans of the same barcode
+    if (lastScanned.current === barcode) {
+      vibrate([50, 80, 50]); // double-tap pattern for duplicate
+      toast({ title: 'Already scanned', description: 'That barcode was just scanned.' });
+      return;
+    }
+    if (scannedRef.current) return; // prevent double-fire
+    scannedRef.current = true;
     lastScanned.current = barcode;
-    cooldownRef.current = setTimeout(() => { lastScanned.current = null; }, 2000);
+    cooldownRef.current = setTimeout(() => { lastScanned.current = null; }, 3000);
+
+    vibrate(200); // success pulse
+    stop();
     onScan(barcode);
-  }, [onScan]);
+    onClose();
+  }, [onScan, onClose]); // stop added below after declaration
 
   const handleError = useCallback((msg: string) => {
     toast({ title: 'Camera error', description: msg, variant: 'destructive' });
   }, []);
 
   const { state, errorMessage, start, stop } = useCameraScanner({
-    onScan: handleScan,
+    onScan: handleScanSuccess,
     onError: handleError,
   });
 
+  // Patch stop into handleScanSuccess closure via ref
+  const stopRef = useRef(stop);
+  useEffect(() => { stopRef.current = stop; }, [stop]);
+
   useEffect(() => {
     setMounted(true);
-    // iOS Safari: BarcodeDetector not available + canvas-from-video blocked → use photo mode
     setUsePhotoMode(!hasBarcodeDetector());
     return () => {
       if (cooldownRef.current) clearTimeout(cooldownRef.current);
@@ -108,14 +126,19 @@ export function CameraScannerOverlay({ onClose, onScan }: CameraScannerOverlayPr
     setPhotoDecoding(true);
     const barcode = await decodeImageFile(file);
     setPhotoDecoding(false);
-    // Reset input so the same photo can be retried
     if (fileInputRef.current) fileInputRef.current.value = '';
+
     if (barcode) {
-      handleScan(barcode);
+      handleScanSuccess(barcode);
     } else {
-      toast({ title: 'No barcode found', description: 'Try again with better lighting or a clearer angle.', variant: 'destructive' });
+      vibrate([100, 80, 100]); // no-match pattern
+      toast({
+        title: 'No barcode found',
+        description: 'Try again — hold steady and make sure the barcode fills the frame.',
+        variant: 'destructive',
+      });
     }
-  }, [handleScan]);
+  }, [handleScanSuccess]);
 
   if (!mounted) return null;
 
@@ -139,13 +162,12 @@ export function CameraScannerOverlay({ onClose, onScan }: CameraScannerOverlayPr
 
       <div className="flex-1 flex flex-col items-center justify-center gap-6 px-6">
         {usePhotoMode ? (
-          /* Photo capture mode — iOS Safari */
           <>
             <div className="flex flex-col items-center gap-3 text-white text-center">
               <ScanLine className="h-16 w-16 text-white/60" />
               <p className="text-base font-medium">Take a photo of the barcode</p>
               <p className="text-sm text-white/60">
-                Point your camera at the barcode, then tap the button below.
+                Hold steady so the barcode fills the frame, then tap below.
               </p>
             </div>
 
@@ -172,7 +194,6 @@ export function CameraScannerOverlay({ onClose, onScan }: CameraScannerOverlayPr
             </Button>
           </>
         ) : (
-          /* Continuous scan mode — Chrome / Android */
           <div className="w-full flex-1 flex items-center justify-center relative overflow-hidden -mx-6">
             <video
               ref={videoRef}
@@ -193,9 +214,7 @@ export function CameraScannerOverlay({ onClose, onScan }: CameraScannerOverlayPr
                   <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-white rounded-br" />
                   <div className="absolute inset-x-2 top-1/2 h-px bg-primary/80 animate-pulse" />
                 </div>
-                <p className="absolute bottom-8 text-white/70 text-sm">
-                  Point camera at barcode
-                </p>
+                <p className="absolute bottom-8 text-white/70 text-sm">Point camera at barcode</p>
               </div>
             )}
 
@@ -211,9 +230,7 @@ export function CameraScannerOverlay({ onClose, onScan }: CameraScannerOverlayPr
                 <AlertCircle className="h-10 w-10 text-destructive" />
                 <p className="font-medium">Camera unavailable</p>
                 <p className="text-sm text-white/70">{errorMessage}</p>
-                <Button variant="secondary" onClick={handleClose} className="mt-2">
-                  Close
-                </Button>
+                <Button variant="secondary" onClick={handleClose} className="mt-2">Close</Button>
               </div>
             )}
           </div>

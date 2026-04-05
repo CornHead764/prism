@@ -34,8 +34,9 @@ export async function POST(req: Request) {
   if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const body = await req.json() as { barcode?: string };
+    const body = await req.json() as { barcode?: string; listId?: string };
     const barcode = body.barcode?.trim();
+    const requestedListId = body.listId?.trim() || null;
 
     if (!barcode) {
       return NextResponse.json({ error: 'barcode is required' }, { status: 400 });
@@ -57,8 +58,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ found: false, barcode });
     }
 
-    // Resolve target list
-    const defaultListId = (await getSetting('scanner.defaultListId')) as string | null;
+    // Resolve target list: explicit listId from client > settings default > fallback
+    const defaultListId = requestedListId ?? ((await getSetting('scanner.defaultListId')) as string | null);
     const listId = await resolveTargetList(defaultListId);
     if (!listId) {
       return NextResponse.json({ error: 'No shopping list found' }, { status: 500 });
