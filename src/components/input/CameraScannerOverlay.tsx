@@ -18,17 +18,39 @@ function hasBarcodeDetector() {
   return typeof window !== 'undefined' && 'BarcodeDetector' in window;
 }
 
+// Decode a photo file by drawing it to a canvas first.
+// Static image → canvas works on iOS; the restriction only applies to live video streams.
+// We also downscale to max 1280px wide so ZXing doesn't choke on 12MP+ iPhone photos.
 async function decodeImageFile(file: File): Promise<string | null> {
   try {
-    const { BrowserMultiFormatReader } = await import('@zxing/browser');
     const url = URL.createObjectURL(file);
+    let img: HTMLImageElement;
     try {
-      const reader = new BrowserMultiFormatReader();
-      const result = await reader.decodeFromImageUrl(url);
-      return result.getText();
+      img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const el = new Image();
+        el.onload = () => resolve(el);
+        el.onerror = reject;
+        el.src = url;
+      });
     } finally {
       URL.revokeObjectURL(url);
     }
+
+    // Downscale to max 1280px wide — ZXing handles this resolution well
+    const MAX_W = 1280;
+    const scale = img.naturalWidth > MAX_W ? MAX_W / img.naturalWidth : 1;
+    const w = Math.round(img.naturalWidth * scale);
+    const h = Math.round(img.naturalHeight * scale);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+
+    const { BrowserMultiFormatReader } = await import('@zxing/browser');
+    const reader = new BrowserMultiFormatReader();
+    const result = await reader.decodeFromCanvas(canvas);
+    return result.getText();
   } catch {
     return null;
   }
