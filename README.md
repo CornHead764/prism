@@ -75,7 +75,7 @@ Build your home view with drag-and-drop widgets:
 - **Weather** - Current conditions and forecasts via OpenWeatherMap
 - **Photos** - Rotating family photo slideshow from OneDrive
 - **Tasks** - To-do lists with due dates, syncs with Microsoft To Do
-- **Shopping** - Grocery lists organized by category with check-off mode
+- **Shopping** - Grocery lists organized by category with check-off mode and barcode scanning
 - **Chores** - Assigned chores with points, pending approvals, and completion tracking
 - **Meals** - Weekly meal planning grid with recipe linking
 - **Messages** - Family message board with pinned and expiring messages
@@ -93,7 +93,7 @@ Beyond the dashboard, Prism includes dedicated pages for:
 
 - **Calendar** - Full calendar with multiple view modes (day, week, multi-week, month, 3-month), event creation, and configurable hidden hours
 - **Recipes** - Recipe library with URL import (schema.org), Paprika import, and favorites
-- **Shopping** - Multiple lists with drag-to-reorder categories and shopping mode
+- **Shopping** - Multiple lists with drag-to-reorder categories, shopping mode, and barcode scanning
 - **Chores** - Chore management with group-by-person view and approval workflow
 - **Tasks** - Task lists with Microsoft To Do sync
 - **Meals** - Weekly meal planning with recipe linking
@@ -116,6 +116,8 @@ Beyond the dashboard, Prism includes dedicated pages for:
 - **OneDrive** - Photos for slideshow and wallpaper
 - **OpenWeatherMap** - Weather data
 - **Gmail + FirstView** - School bus arrival tracking via geofence email notifications
+- **Open Food Facts** - Product lookup for barcode scanning (no API key required)
+- **USB HID barcode scanners** - Plug-and-play on desktop — scanner acts as a keyboard, items added instantly
 - **Paprika** - Recipe import
 
 The goal isn't to replace your existing tools. It's to bring them together in one place that works for your family's rhythms.
@@ -204,6 +206,7 @@ Rather than reviewing code myself - which I’m not well-positioned to do - I us
 
 Some features exist because I needed them:
 
+- **Barcode scanner** - Point your phone camera at a grocery item and it appears on your shopping list. Warns you if the item is already on a list, lets you pick which list to add it to, and suggests a category. USB barcode scanners work on desktop too — plug in and scan, no configuration needed. Product lookup via Open Food Facts, no API key required.
 - **Recipe viewer** - Not another recipe app, but a way to view recipes on a large kitchen screen without repeatedly unlocking my phone
 - **Calendar parsing** - Handles the integrations that matter most to families (school calendars, work calendars, shared family events)
 - **Drag-and-drop layout** - Build your dashboard the way you want it, resize and arrange widgets to fit your screen
