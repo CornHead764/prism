@@ -21,6 +21,9 @@ import {
   StickyNote,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { contrastText } from '@/lib/utils/color';
+import { UserAvatar } from '@/components/ui/avatar';
+import { useFamily } from '@/components/providers';
 import { Button } from '@/components/ui/button';
 import { AddEventModal } from '@/components/modals';
 import { PageWrapper, SubpageHeader, FilterBar } from '@/components/layout';
@@ -39,6 +42,7 @@ import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 
 export function CalendarView() {
   const { activeUser, requireAuth } = useAuth();
+  const { members: familyMembers } = useFamily();
   const { weekStartsOn } = useWeekStartsOn();
   const {
     currentDate, setCurrentDate,
@@ -250,13 +254,17 @@ export function CalendarView() {
                   variant={isSelected ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => toggleCalendar(group.id)}
-                  className={cn('h-7 text-xs gap-1.5', isSelected && 'text-white border-transparent')}
-                  style={isSelected ? { backgroundColor: group.color } : undefined}
+                  className={cn('h-7 text-xs gap-1.5', isSelected && 'border-transparent')}
+                  style={isSelected ? { backgroundColor: group.color, color: contrastText(group.color) } : undefined}
                 >
-                  <span
-                    className="w-2 h-2 rounded-full shrink-0"
-                    style={{ backgroundColor: group.color, border: isSelected ? '1px solid rgba(255,255,255,0.6)' : undefined }}
-                  />
+                  {(() => {
+                    const member = group.userId ? familyMembers.find(m => m.id === group.userId) : null;
+                    return member ? (
+                      <UserAvatar name={member.name} imageUrl={member.avatarUrl} color={member.color} size="sm" className="h-4 w-4 text-[8px]" />
+                    ) : (
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: group.color }} />
+                    );
+                  })()}
                   {group.name}
                 </Button>
               );

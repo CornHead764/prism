@@ -1,14 +1,19 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { toast } from '@/components/ui/use-toast';
-import { X, Upload, Trash2 } from 'lucide-react';
+import { X, Upload, Trash2, Smile } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/ui/avatar';
-import { AVATAR_PRESETS } from '@/lib/constants/avatarPresets';
 import type { FamilyMember } from './PinEditModal';
+
+const EmojiPicker = dynamic(
+  () => import('@emoji-mart/react').then((m) => ({ default: m.default as React.ComponentType<Record<string, unknown>> })),
+  { ssr: false },
+);
 
 const colorOptions = [
   '#3B82F6', '#EC4899', '#10B981', '#F59E0B',
@@ -38,6 +43,7 @@ export function MemberModal({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(member?.avatarUrl || null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,9 +66,10 @@ export function MemberModal({
     setAvatarPreview(objectUrl);
   };
 
-  const selectPreset = (emoji: string) => {
+  const selectEmoji = (emoji: string) => {
     setAvatarUrl(`emoji:${emoji}`);
     setAvatarFile(null);
+    setShowEmojiPicker(false);
     if (avatarPreview) {
       URL.revokeObjectURL(avatarPreview);
       setAvatarPreview(null);
@@ -153,24 +160,31 @@ export function MemberModal({
               />
             </div>
 
-            {/* Emoji Presets */}
-            <div className="grid grid-cols-8 gap-1.5 mt-3">
-              {AVATAR_PRESETS.map((preset) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  onClick={() => selectPreset(preset.emoji)}
-                  className={cn(
-                    'w-9 h-9 rounded-lg flex items-center justify-center text-lg',
-                    'hover:bg-accent transition-colors',
-                    avatarUrl === `emoji:${preset.emoji}`
-                      ? 'bg-accent ring-2 ring-primary'
-                      : 'bg-muted/50'
-                  )}
-                >
-                  {preset.emoji}
-                </button>
-              ))}
+            {/* Emoji picker */}
+            <div className="mt-3 relative">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowEmojiPicker((v) => !v)}
+                className="gap-2"
+              >
+                <Smile className="h-4 w-4" />
+                {avatarUrl?.startsWith('emoji:') ? 'Change Emoji' : 'Choose Emoji'}
+              </Button>
+              {showEmojiPicker && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowEmojiPicker(false)} />
+                  <div className="absolute left-0 top-10 z-50">
+                    <EmojiPicker
+                      onEmojiSelect={(e: Record<string, unknown>) => selectEmoji(e.native as string)}
+                      theme="auto"
+                      previewPosition="none"
+                      skinTonePosition="none"
+                    />
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

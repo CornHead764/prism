@@ -1,10 +1,11 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
+import { UserAvatar } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 
 export interface PersonFilterProps {
-  members: Array<{ id: string; name: string; color: string }>;
+  members: Array<{ id: string; name: string; color: string; avatarUrl?: string | null }>;
   selected: string | null;
   onSelect: (id: string | null) => void;
   className?: string;
@@ -27,11 +28,14 @@ export function PersonFilter({ members, selected, onSelect, className }: PersonF
           variant={selected === member.id ? 'secondary' : 'ghost'}
           size="sm"
           onClick={() => onSelect(member.id)}
-          className="gap-1.5 h-8"
+          className="gap-1.5 h-8 px-2"
         >
-          <div
-            className="w-3 h-3 rounded-full shrink-0"
-            style={{ backgroundColor: member.color }}
+          <UserAvatar
+            name={member.name}
+            imageUrl={member.avatarUrl}
+            color={member.color}
+            size="sm"
+            className="h-5 w-5 text-[10px]"
           />
           <span className="hidden sm:inline">{member.name}</span>
         </Button>

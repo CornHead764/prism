@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import type { useDashboardData } from './useDashboardData';
 import type { CalendarEvent } from '@/types/calendar';
+import type { BusRouteStatus, BusPrediction } from '@/lib/hooks/useBusTracking';
 
 type DashData = ReturnType<typeof useDashboardData>;
 
@@ -268,7 +269,37 @@ export function PhotosCard() {
   );
 }
 
-export function BusTrackingCard({ routes }: { routes: { id: string; label: string; studentName: string; prediction: { status: string; etaMinutes: number | null } }[] }) {
+function busStatusColor(p: BusPrediction): string {
+  switch (p.status) {
+    case 'at_stop':
+    case 'at_school': return 'bg-green-500';
+    case 'in_transit':
+    case 'cold_start': return 'bg-amber-500';
+    case 'overdue': return 'bg-red-500';
+    default: return 'bg-muted-foreground/40';
+  }
+}
+
+function busStatusText(p: BusPrediction): string {
+  switch (p.status) {
+    case 'at_stop': return 'Arrived at stop';
+    case 'at_school': return 'Arrived at school';
+    case 'in_transit':
+      if (p.etaRangeLow != null && p.etaRangeHigh != null && p.etaRangeLow !== p.etaRangeHigh)
+        return `${p.etaRangeLow}–${p.etaRangeHigh} min away`;
+      if (p.etaMinutes != null) return `~${p.etaMinutes} min away`;
+      return 'In transit';
+    case 'cold_start':
+      if (p.lastCheckpointIndex === -1) return 'En route from school';
+      if (p.lastCheckpointName && p.minutesSinceLastCheckpoint != null)
+        return `${p.minutesSinceLastCheckpoint}m ago at ${p.lastCheckpointName}`;
+      return 'In transit';
+    case 'overdue': return 'Overdue — no updates';
+    default: return 'No updates yet';
+  }
+}
+
+export function BusTrackingCard({ routes }: { routes: BusRouteStatus[] }) {
   if (!routes || routes.length === 0) return null;
 
   const active = routes.filter((r) => r.prediction.status !== 'no_data');
@@ -278,15 +309,23 @@ export function BusTrackingCard({ routes }: { routes: { id: string; label: strin
       {active.length === 0 ? (
         <p className="text-xs text-muted-foreground">No active routes</p>
       ) : (
-        <div className="space-y-1">
+        <div className="space-y-2">
           {active.slice(0, 3).map((r) => (
-            <div key={r.id} className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground truncate">{r.label}</span>
-              <span className="text-muted-foreground shrink-0">
-                {r.prediction.etaMinutes != null
-                  ? `${r.prediction.etaMinutes}m`
-                  : r.prediction.status.replace('_', ' ')}
-              </span>
+            <div key={r.id} className="space-y-0.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium truncate">{r.label}</span>
+                <span className="text-[11px] text-muted-foreground shrink-0 ml-2">{r.scheduledTime}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className={`w-2 h-2 rounded-full shrink-0 ${busStatusColor(r.prediction)}`} />
+                <span className="text-[11px] text-muted-foreground">{busStatusText(r.prediction)}</span>
+              </div>
+              {r.prediction.lastCheckpointName && r.prediction.minutesSinceLastCheckpoint != null &&
+                r.prediction.status === 'in_transit' && (
+                <p className="text-[10px] text-muted-foreground/70 pl-3.5">
+                  Last: {r.prediction.lastCheckpointName} ({r.prediction.minutesSinceLastCheckpoint}m ago)
+                </p>
+              )}
             </div>
           ))}
         </div>

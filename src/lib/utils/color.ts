@@ -51,6 +51,11 @@ export function isLightColor(hex: string): boolean {
   return blackContrast > whiteContrast;
 }
 
+/** Returns '#000000' or '#ffffff' — whichever has better WCAG contrast against the given hex. */
+export function contrastText(hex: string): string {
+  return isLightColor(hex) ? '#000000' : '#ffffff';
+}
+
 /**
  * Converts a hex color to Tailwind HSL variable format: "h s% l%"
  * Used to override CSS custom properties like --foreground, --muted-foreground.

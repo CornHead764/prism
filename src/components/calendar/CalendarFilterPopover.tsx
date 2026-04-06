@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useState, useRef, useEffect } from 'react';
 import { Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { contrastText } from '@/lib/utils/color';
 import type { CalendarGroup } from '@/lib/hooks/useCalendarFilter';
 
 export interface CalendarFilterPopoverProps {
@@ -75,9 +76,9 @@ export function CalendarFilterPopover({
                 onClick={() => onToggle(group.id)}
                 className={cn(
                   'w-full text-left px-2 py-1.5 rounded text-xs font-medium transition-colors flex items-center gap-2',
-                  isSelected ? 'text-white' : 'hover:bg-accent text-muted-foreground'
+                  isSelected ? '' : 'hover:bg-accent text-muted-foreground'
                 )}
-                style={isSelected ? { backgroundColor: group.color } : undefined}
+                style={isSelected ? { backgroundColor: group.color, color: contrastText(group.color) } : undefined}
               >
                 <span
                   className="w-2 h-2 rounded-full flex-shrink-0 border border-white/60 dark:border-white/80"

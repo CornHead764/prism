@@ -16,7 +16,8 @@ import {
 } from 'date-fns';
 import { Calendar, ChevronLeft, ChevronRight, Grid3X3, Merge, StickyNote, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { isLightColor } from '@/lib/utils/color';
+import { contrastText, isLightColor } from '@/lib/utils/color';
+import { UserAvatar } from '@/components/ui/avatar';
 import { deduplicateEvents } from '@/lib/utils/calendarDedup';
 import { WidgetContainer, WidgetEmpty, useWidgetBgOverride } from './WidgetContainer';
 import {
@@ -28,7 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui';
 import { useCalendarEvents, useCalendarFilter, useCalendarNotes } from '@/lib/hooks';
-import { useAuth } from '@/components/providers';
+import { useAuth, useFamily } from '@/components/providers';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 const MonthView = lazy(() => import('@/components/calendar/MonthView').then(m => ({ default: m.MonthView })));
 const WeekView = lazy(() => import('@/components/calendar/WeekView').then(m => ({ default: m.WeekView })));
@@ -97,6 +98,7 @@ export const CalendarWidget = React.memo(function CalendarWidget({
   gridH = 2,
 }: CalendarWidgetProps) {
   const { activeUser } = useAuth();
+  const { members: familyMembers } = useFamily();
   const { weekStartsOn } = useWeekStartsOn();
   const bgOverride = useWidgetBgOverride();
   const transparentMode = bgOverride?.hasCustomBg === true;
@@ -316,8 +318,8 @@ export const CalendarWidget = React.memo(function CalendarWidget({
           className={cn(
             'px-2 py-1 rounded-full text-[10px] font-medium transition-colors inline-flex items-center gap-1 leading-none',
             selectedCalendarIds.has(group.id) || selectedCalendarIds.has('all')
-              ? isLightColor(group.color) ? 'text-black' : 'text-white'
-              : 'bg-muted text-muted-foreground hover:bg-accent'
+              ? isLightColor(group.color) ? '!text-black' : '!text-white'
+              : transparentMode ? 'text-current/60 hover:text-current' : 'bg-muted text-muted-foreground hover:bg-accent'
           )}
           style={
             selectedCalendarIds.has(group.id) || selectedCalendarIds.has('all')
@@ -325,10 +327,14 @@ export const CalendarWidget = React.memo(function CalendarWidget({
               : undefined
           }
         >
-          <span
-            className="w-1.5 h-1.5 rounded-full"
-            style={{ backgroundColor: group.color }}
-          />
+          {(() => {
+            const member = group.userId ? familyMembers.find(m => m.id === group.userId) : null;
+            return member ? (
+              <UserAvatar name={member.name} imageUrl={member.avatarUrl} color={member.color} size="sm" className="h-3 w-3 text-[6px]" />
+            ) : (
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: group.color }} />
+            );
+          })()}
           {group.name}
         </button>
       ))}

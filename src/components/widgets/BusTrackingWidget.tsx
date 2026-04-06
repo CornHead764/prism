@@ -114,9 +114,11 @@ function RouteStatusCard({ route, compact }: { route: BusRouteStatus; compact: b
         <span className="text-xs text-muted-foreground">{statusText}</span>
       </div>
 
-      {/* Train map */}
+      {/* Train map — px-8 gives room for centered labels that extend ~26px each side */}
       {nodes.length > 0 && (
-        <TrainMap nodes={nodes} prediction={p} compact={compact} statusColor={statusColor} />
+        <div className="px-8">
+          <TrainMap nodes={nodes} prediction={p} compact={compact} statusColor={statusColor} />
+        </div>
       )}
 
       {/* Last update info */}
@@ -162,7 +164,7 @@ function TrainMap({
       <div
         key={`node-${node.index}`}
         className="absolute flex flex-col items-center"
-        style={{ left: `${leftPct}%`, transform: 'translateX(-50%)', top: topOffset }}
+        style={{ left: `${leftPct}%`, transform: 'translateX(-50%)', top: topOffset, zIndex: 1 }}
       >
         {node.isSchool ? (
           <div data-keep-bg className={shapeBase}
@@ -179,40 +181,47 @@ function TrainMap({
         )}
         {!compact && (
           <div
-            className="absolute text-[9px] leading-none text-muted-foreground whitespace-nowrap pointer-events-none"
+            className="absolute text-[9px] leading-tight text-muted-foreground text-center pointer-events-none"
             style={{
               top: nodeSize + 3,
               left: '50%',
-              transformOrigin: 'top left',
-              transform: 'rotate(45deg)',
-              maxWidth: 64,
+              transform: 'translateX(-50%)',
+              width: 56,
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
               overflow: 'hidden',
-              textOverflow: 'ellipsis',
             }}
           >
-            {node.name.length > 12 ? node.name.slice(0, 11) + '…' : node.name}
+            {node.name}
           </div>
         )}
       </div>
     );
   };
 
-  // Snake (2-row) layout for full mode with 6+ nodes
+  // Reading-order 2-row layout for full mode with 6+ nodes:
+  // top row left→right, bottom row left→right, U-turn connector on the right.
   if (!compact && nodes.length >= 6) {
     const half = Math.ceil(nodes.length / 2);
     const topNodes = nodes.slice(0, half);
     const botNodes = nodes.slice(half);
     const rowH = nodeSize + labelHeight;
-    const connGap = 8;
+    const connGap = 16;
     const totalH = rowH * 2 + connGap;
 
-    // Top row: left→right. Bottom row: right→left (botNodes[0] at right).
+    // Both rows left→right
     const topPct = (i: number) =>
       topNodes.length <= 1 ? 50 : (i / (topNodes.length - 1)) * 100;
     const botPct = (i: number) =>
-      botNodes.length <= 1 ? 50 : ((botNodes.length - 1 - i) / (botNodes.length - 1)) * 100;
+      botNodes.length <= 1 ? 0 : (i / (botNodes.length - 1)) * 100;
 
-    const connPassed = botNodes[0]!.index <= lastIdx;
+    const connPassed = botNodes.length > 0 && botNodes[0]!.index <= lastIdx;
+
+    // U-turn connector geometry
+    const connTopY = nodeSize / 2;           // centre of last top-row node
+    const connMidY = rowH + connGap / 2;     // midpoint of gap between rows
+    const connBotY = rowH + connGap + nodeSize / 2; // centre of first bottom-row node
 
     return (
       <div className="relative w-full select-none" style={{ height: totalH }}>
@@ -226,20 +235,28 @@ function TrainMap({
           />
         ))}
 
-        {/* Bottom row segments (right→left: botNodes[i] is right of botNodes[i+1]) */}
+        {/* Bottom row segments (left→right) */}
         {botNodes.map((node, i) => i < botNodes.length - 1 && (
           <div key={`bs-${i}`} data-keep-bg
             className={cn('absolute', isSegPassed(node, botNodes[i + 1]!) ? statusColor : 'bg-muted-foreground/25')}
             style={{ top: rowH + connGap + trackY, height: 2,
-              left: `calc(${botPct(i + 1)}% + ${nodeSize / 2}px)`,
-              right: `calc(${100 - botPct(i)}% + ${nodeSize / 2}px)` }}
+              left: `calc(${botPct(i)}% + ${nodeSize / 2}px)`,
+              right: `calc(${100 - botPct(i + 1)}% + ${nodeSize / 2}px)` }}
           />
         ))}
 
-        {/* Right-side connector joining the two rows */}
+        {/* U-turn connector — 1px, 60% opacity so node labels render in front */}
         <div data-keep-bg
           className={cn('absolute', connPassed ? statusColor : 'bg-muted-foreground/25')}
-          style={{ top: nodeSize / 2, right: 0, width: 2, height: rowH + connGap }}
+          style={{ top: connTopY, right: 0, width: 1, height: connMidY - connTopY, opacity: 0.6 }}
+        />
+        <div data-keep-bg
+          className={cn('absolute', connPassed ? statusColor : 'bg-muted-foreground/25')}
+          style={{ top: connMidY, left: 0, right: 0, height: 1, opacity: 0.6 }}
+        />
+        <div data-keep-bg
+          className={cn('absolute', connPassed ? statusColor : 'bg-muted-foreground/25')}
+          style={{ top: connMidY, left: 0, width: 1, height: connBotY - connMidY, opacity: 0.6 }}
         />
 
         {topNodes.map((node, i) => renderNodeAt(node, topPct(i), 0))}
