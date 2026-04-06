@@ -9,8 +9,6 @@
 
 Prism is a configurable family dashboard designed for large wall-mounted screens and handheld tablets. It connects to existing services you already use - Google Calendar, Microsoft To Do, OneDrive, and more - and displays the information your family actually needs. Built for people who value privacy, hate subscriptions, and are comfortable with Docker.
 
-If Prism is useful to you, a star helps others find it.
-
 ---
 
 ## Screenshots
