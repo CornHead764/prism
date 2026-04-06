@@ -131,22 +131,29 @@ function DayCell({
       {/* Date header */}
       <div
         className={cn(
-          'shrink-0 px-1',
-          compact ? 'py-0.5' : 'py-1',
+          'shrink-0 px-1.5',
+          compact ? 'py-1' : 'py-2',
           isToday(date) && 'bg-primary',
           isToday(date) && (bordered ? 'rounded-t-[5px]' : 'rounded-md'),
         )}
         {...(isToday(date) ? { 'data-keep-bg': '' } : {})}
       >
         <div className={cn(
-          'font-medium flex items-center gap-1 text-sm',
+          'flex items-baseline gap-1.5',
           isToday(date) && 'text-primary-foreground'
         )}>
-          <span className="font-bold">{format(date, 'd')}</span>
-          <span className={cn('text-xs', isToday(date) ? 'text-primary-foreground/80' : 'text-muted-foreground')}>{format(date, 'MMM')}</span>
+          <span className={cn('font-bold leading-none', compact ? 'text-sm' : 'text-base')}>{format(date, 'd')}</span>
+          {!compact && (
+            <span className={cn('text-xs font-medium', isToday(date) ? 'text-primary-foreground/80' : 'text-muted-foreground')}>
+              {format(date, 'EEE')}
+            </span>
+          )}
+          <span className={cn('text-xs', isToday(date) ? 'text-primary-foreground/70' : 'text-muted-foreground/70')}>
+            {format(date, 'MMM')}
+          </span>
         </div>
         <div className={cn(
-          'mt-0.5',
+          'mt-1',
           !bordered && 'border-b border-border',
         )} />
       </div>
