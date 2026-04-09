@@ -1,19 +1,11 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { toast } from '@/components/ui/use-toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
-import {
-  ChefHat,
-  Plus,
-  Search,
-  Heart,
-  X,
-  Link2,
-  FileUp,
-} from 'lucide-react';
+import { ChefHat, Plus, Search, Heart, X, Link2, FileUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +14,7 @@ import type { OverflowItem } from '@/components/layout';
 import { useRecipes, type Recipe } from '@/lib/hooks/useRecipes';
 import { useShoppingLists } from '@/lib/hooks/useShoppingLists';
 import { useAuth } from '@/components/providers';
+import { useRecipesFilters } from './useRecipesFilters';
 import { RecipeCard } from './RecipeCard';
 import { RecipeDetailModal } from './RecipeDetailModal';
 import { RecipeFormModal } from './RecipeFormModal';
@@ -34,107 +27,69 @@ export function RecipesView() {
   const { requireAuth } = useAuth();
   const { confirm, dialogProps: confirmDialogProps } = useConfirmDialog();
   const searchParams = useSearchParams();
-  const [search, setSearch] = useState('');
+
   const [viewMode, setViewMode] = useState<ViewMode>('all');
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
-  const [filterCuisine, setFilterCuisine] = useState<string | null>(null);
-  const [filterCategory, setFilterCategory] = useState<string | null>(null);
-
-  // Modals
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImportUrlModal, setShowImportUrlModal] = useState(false);
   const [showImportPaprikaModal, setShowImportPaprikaModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-
-  const handleAddWithAuth = async () => {
-    const user = await requireAuth('Add Recipe', 'Please log in to add a recipe');
-    if (!user) return;
-    setShowAddModal(true);
-  };
-
-  const handleImportUrlWithAuth = async () => {
-    const user = await requireAuth('Import Recipe', 'Please log in to import a recipe');
-    if (!user) return;
-    setShowImportUrlModal(true);
-  };
-
-  const handleImportPaprikaWithAuth = async () => {
-    const user = await requireAuth('Import Recipes', 'Please log in to import recipes');
-    if (!user) return;
-    setShowImportPaprikaModal(true);
-  };
+  const [paramHandled, setParamHandled] = useState(false);
 
   const { recipes, loading, error, deleteRecipe, toggleFavorite, importFromUrl, importFromPaprika, createRecipe, updateRecipe } = useRecipes({
     favorite: viewMode === 'favorites' ? true : undefined,
   });
 
+  const {
+    search, setSearch,
+    filterCuisine, setFilterCuisine,
+    filterCategory, setFilterCategory,
+    cuisines, categories, filteredRecipes,
+    clearFilters, hasActiveFilters,
+  } = useRecipesFilters(recipes);
+
   const { lists: shoppingLists, addItem: addShoppingItem } = useShoppingLists();
 
-  // Keep selectedRecipe in sync with recipes array (for favorite toggle, etc.)
+  // Keep selectedRecipe in sync (for favorite toggle, etc.)
   useEffect(() => {
-    if (selectedRecipe) {
-      const updated = recipes.find((r) => r.id === selectedRecipe.id);
-      if (updated && updated.isFavorite !== selectedRecipe.isFavorite) {
-        setSelectedRecipe(updated);
-      }
-    }
+    if (!selectedRecipe) return;
+    const updated = recipes.find(r => r.id === selectedRecipe.id);
+    if (updated && updated.isFavorite !== selectedRecipe.isFavorite) setSelectedRecipe(updated);
   }, [recipes, selectedRecipe]);
 
   // Auto-open recipe from ?recipe=<id> search param (e.g. linked from meals page)
   const recipeParam = searchParams.get('recipe');
-  const [paramHandled, setParamHandled] = useState(false);
   useEffect(() => {
     if (recipeParam && recipes.length > 0 && !paramHandled) {
-      const match = recipes.find((r) => r.id === recipeParam);
+      const match = recipes.find(r => r.id === recipeParam);
       if (match) setSelectedRecipe(match);
       setParamHandled(true);
     }
   }, [recipeParam, recipes, paramHandled]);
-
-  // Get unique cuisines and categories for filters
-  const cuisines = useMemo(() => {
-    const unique = new Set(recipes.map(r => r.cuisine).filter(Boolean));
-    return Array.from(unique).sort() as string[];
-  }, [recipes]);
-
-  const categories = useMemo(() => {
-    const unique = new Set(recipes.map(r => r.category).filter(Boolean));
-    return Array.from(unique).sort() as string[];
-  }, [recipes]);
-
-  const filteredRecipes = useMemo(() => {
-    let result = recipes;
-
-    if (search.trim()) {
-      const searchLower = search.toLowerCase();
-      result = result.filter(
-        (r) =>
-          r.name.toLowerCase().includes(searchLower) ||
-          r.description?.toLowerCase().includes(searchLower) ||
-          r.cuisine?.toLowerCase().includes(searchLower) ||
-          r.category?.toLowerCase().includes(searchLower)
-      );
-    }
-
-    if (filterCuisine) {
-      result = result.filter((r) => r.cuisine === filterCuisine);
-    }
-
-    if (filterCategory) {
-      result = result.filter((r) => r.category === filterCategory);
-    }
-
-    return result;
-  }, [recipes, search, filterCuisine, filterCategory]);
 
   const handleDelete = async (recipe: Recipe) => {
     if (!await confirm(`Delete "${recipe.name}"?`, 'This cannot be undone.')) return;
     try {
       await deleteRecipe(recipe.id);
       setSelectedRecipe(null);
-    } catch (err) {
+    } catch {
       toast({ title: 'Failed to delete recipe', variant: 'destructive' });
     }
+  };
+
+  const handleAddWithAuth = async () => {
+    if (!await requireAuth('Add Recipe', 'Please log in to add a recipe')) return;
+    setShowAddModal(true);
+  };
+
+  const handleImportUrlWithAuth = async () => {
+    if (!await requireAuth('Import Recipe', 'Please log in to import a recipe')) return;
+    setShowImportUrlModal(true);
+  };
+
+  const handleImportPaprikaWithAuth = async () => {
+    if (!await requireAuth('Import Recipes', 'Please log in to import recipes')) return;
+    setShowImportPaprikaModal(true);
   };
 
   return (
@@ -146,8 +101,7 @@ export function RecipesView() {
           badge={<Badge variant="secondary">{recipes.length}</Badge>}
           actions={
             <Button size="sm" onClick={handleAddWithAuth}>
-              <Plus className="h-4 w-4 mr-1" />
-              Add Recipe
+              <Plus className="h-4 w-4 mr-1" />Add Recipe
             </Button>
           }
           overflow={[
@@ -159,68 +113,43 @@ export function RecipesView() {
         <FilterBar>
           <div className="relative min-w-[180px] max-w-md shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search recipes..."
-              className="pl-9 h-8"
-            />
+            <Input value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search recipes..." className="pl-9 h-8" />
           </div>
           <div className="w-px h-5 bg-border shrink-0" />
           <div className="flex items-center gap-1 shrink-0">
-            <Button
-              variant={viewMode === 'all' ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('all')}
-              className="h-8"
-            >
-              All
-            </Button>
-            <Button
-              variant={viewMode === 'favorites' ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('favorites')}
-              className="h-8"
-            >
-              <Heart className="h-4 w-4 mr-1" />
-              Favorites
+            <Button variant={viewMode === 'all' ? 'secondary' : 'ghost'} size="sm"
+              onClick={() => setViewMode('all')} className="h-8">All</Button>
+            <Button variant={viewMode === 'favorites' ? 'secondary' : 'ghost'} size="sm"
+              onClick={() => setViewMode('favorites')} className="h-8">
+              <Heart className="h-4 w-4 mr-1" />Favorites
             </Button>
           </div>
           {cuisines.length > 0 && (
             <>
               <div className="w-px h-5 bg-border shrink-0" />
-              <FilterDropdown
-                label="Cuisine"
-                options={cuisines.map((c) => ({ value: c, label: c }))}
+              <FilterDropdown label="Cuisine"
+                options={cuisines.map(c => ({ value: c, label: c }))}
                 selected={filterCuisine ? new Set([filterCuisine]) : new Set()}
-                onSelectionChange={(s) => setFilterCuisine(s.size > 0 ? [...s][0]! : null)}
-                mode="single"
-              />
+                onSelectionChange={s => setFilterCuisine(s.size > 0 ? [...s][0]! : null)}
+                mode="single" />
             </>
           )}
           {categories.length > 0 && (
-            <FilterDropdown
-              label="Category"
-              options={categories.map((c) => ({ value: c, label: c }))}
+            <FilterDropdown label="Category"
+              options={categories.map(c => ({ value: c, label: c }))}
               selected={filterCategory ? new Set([filterCategory]) : new Set()}
-              onSelectionChange={(s) => setFilterCategory(s.size > 0 ? [...s][0]! : null)}
-              mode="single"
-            />
+              onSelectionChange={s => setFilterCategory(s.size > 0 ? [...s][0]! : null)}
+              mode="single" />
           )}
-          {(filterCuisine || filterCategory) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => { setFilterCuisine(null); setFilterCategory(null); }}
-              className="shrink-0 text-muted-foreground h-8"
-            >
-              <X className="h-3 w-3 mr-1" />
-              Clear
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters}
+              className="shrink-0 text-muted-foreground h-8">
+              <X className="h-3 w-3 mr-1" />Clear
             </Button>
           )}
         </FilterBar>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">
           {loading ? (
             <div className="flex justify-center py-12">
@@ -234,77 +163,48 @@ export function RecipesView() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredRecipes.map((recipe) => (
-                <RecipeCard
-                  key={recipe.id}
-                  recipe={recipe}
+              {filteredRecipes.map(recipe => (
+                <RecipeCard key={recipe.id} recipe={recipe}
                   onClick={() => setSelectedRecipe(recipe)}
-                  onToggleFavorite={() => toggleFavorite(recipe.id)}
-                />
+                  onToggleFavorite={() => toggleFavorite(recipe.id)} />
               ))}
             </div>
           )}
         </div>
       </div>
 
-      {/* Recipe Detail Modal */}
       {selectedRecipe && (
         <RecipeDetailModal
           recipe={selectedRecipe}
-          shoppingLists={shoppingLists.map((l) => ({ id: l.id, name: l.name }))}
+          shoppingLists={shoppingLists.map(l => ({ id: l.id, name: l.name }))}
           onClose={() => setSelectedRecipe(null)}
-          onEdit={() => {
-            setShowEditModal(true);
-          }}
+          onEdit={() => setShowEditModal(true)}
           onDelete={() => handleDelete(selectedRecipe)}
           onToggleFavorite={() => toggleFavorite(selectedRecipe.id)}
           onAddToShoppingList={async (listId, ingredients) => {
-            for (const ing of ingredients) {
-              await addShoppingItem(listId, { name: ing.text });
-            }
+            for (const ing of ingredients) await addShoppingItem(listId, { name: ing.text });
           }}
         />
       )}
 
-      {/* Add Recipe Modal */}
       {showAddModal && (
-        <RecipeFormModal
-          onClose={() => setShowAddModal(false)}
-          onSave={async (data) => {
-            await createRecipe(data);
-            setShowAddModal(false);
-          }}
-        />
+        <RecipeFormModal onClose={() => setShowAddModal(false)}
+          onSave={async data => { await createRecipe(data); setShowAddModal(false); }} />
       )}
 
-      {/* Edit Recipe Modal */}
       {showEditModal && selectedRecipe && (
-        <RecipeFormModal
-          recipe={selectedRecipe}
-          onClose={() => setShowEditModal(false)}
-          onSave={async (data) => {
-            await updateRecipe(selectedRecipe.id, data);
-            setShowEditModal(false);
-            setSelectedRecipe(null);
-          }}
-        />
+        <RecipeFormModal recipe={selectedRecipe} onClose={() => setShowEditModal(false)}
+          onSave={async data => { await updateRecipe(selectedRecipe.id, data); setShowEditModal(false); setSelectedRecipe(null); }} />
       )}
 
-      {/* Import URL Modal */}
       {showImportUrlModal && (
-        <ImportUrlModal
-          onClose={() => setShowImportUrlModal(false)}
-          onImport={importFromUrl}
-        />
+        <ImportUrlModal onClose={() => setShowImportUrlModal(false)} onImport={importFromUrl} />
       )}
 
-      {/* Import Paprika Modal */}
       {showImportPaprikaModal && (
-        <ImportPaprikaModal
-          onClose={() => setShowImportPaprikaModal(false)}
-          onImport={importFromPaprika}
-        />
+        <ImportPaprikaModal onClose={() => setShowImportPaprikaModal(false)} onImport={importFromPaprika} />
       )}
+
       <ConfirmDialog {...confirmDialogProps} />
     </PageWrapper>
   );

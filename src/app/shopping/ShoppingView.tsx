@@ -1,15 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
-import {
-  ShoppingCart,
-  Plus,
-  Settings,
-  Maximize2,
-  Minimize2,
-  Tags,
-} from 'lucide-react';
+import { ShoppingCart, Plus, Settings, Maximize2, Minimize2, Tags } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -21,16 +14,20 @@ import { ItemModal } from '@/app/shopping/ItemModal';
 import { ListModal } from '@/app/shopping/ListModal';
 import { ShoppingCelebration } from '@/app/shopping/ShoppingCelebration';
 import { ManageCategoriesModal } from '@/app/shopping/ManageCategoriesModal';
+import { ScanFlowSheet } from '@/app/shopping/ScanFlowSheet';
 import { useShoppingViewData } from './useShoppingViewData';
 import { useShoppingCategories } from '@/lib/hooks/useShoppingCategories';
 import { useShoppingDragReorder } from './useShoppingDragReorder';
 import { useShoppingInlineInput, BASE_EMPTY_LINES } from './useShoppingInlineInput';
 import { useShoppingCelebration } from './useShoppingCelebration';
+import { useShoppingScanFlow } from './useShoppingScanFlow';
+import { useShoppingCrudHandlers } from './useShoppingCrudHandlers';
 import { useOrientation } from '@/lib/hooks/useOrientation';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { cn } from '@/lib/utils';
 import type { ShoppingItem } from '@/types';
 import dynamic from 'next/dynamic';
+
 const CameraScannerOverlay = dynamic(
   () => import('@/components/input/CameraScannerOverlay').then(m => m.CameraScannerOverlay),
   { ssr: false }
@@ -45,104 +42,10 @@ export function getCategoryEmoji(category: string): string {
   return defaults[category] || '🛒';
 }
 
-// Scan flow types
-type ScanStep = 'loading' | 'duplicate' | 'list' | 'category' | null;
-interface ScanProduct { name: string; brand?: string; suggestedCategory?: string | null }
-interface ScanExisting { listId: string; listName: string; itemId: string }
-interface ScanState {
-  barcode: string;
-  product: ScanProduct | null;
-  existingInLists: ScanExisting[];
-  step: ScanStep;
-  targetListId: string | null;
-  targetListName: string | null;
-}
-
 export function ShoppingView() {
   const [showCameraScanner, setShowCameraScanner] = useState(false);
-  const [scan, setScan] = useState<ScanState | null>(null);
 
-  const clearScan = useCallback(() => setScan(null), []);
-
-  // Called by overlay after decode — close the scanner immediately, then look up product
-  const handleCameraScan = useCallback(async (barcode: string) => {
-    setShowCameraScanner(false); // close overlay right away; don't wait for async
-    setScan({ barcode, product: null, existingInLists: [], step: 'loading', targetListId: null, targetListName: null });
-    try {
-      const r = await fetch('/api/shopping/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ barcode, dryRun: true }),
-      });
-      const data = await r.json() as {
-        found: boolean;
-        product?: ScanProduct;
-        existingInLists?: ScanExisting[];
-      };
-
-      if (!data.found || !data.product) {
-        toast({ title: 'Product not found', description: 'Barcode not in database. Add it manually.', variant: 'destructive' });
-        setScan(null);
-        return;
-      }
-
-      setScan(prev => prev ? ({
-        ...prev,
-        product: data.product!,
-        existingInLists: data.existingInLists ?? [],
-        step: 'list', // always start at list picker; duplicate warning shown after list selection
-      }) : null);
-    } catch {
-      toast({ title: 'Lookup failed', variant: 'destructive' });
-      setScan(null);
-    }
-  }, []);
-
-  // After list is chosen — check for cross-list duplicates, then go to category picker
-  const handleListChosen = useCallback((listId: string, listName: string) => {
-    setScan(prev => {
-      if (!prev) return null;
-      const inOtherLists = prev.existingInLists.filter(e => e.listId !== listId);
-      return {
-        ...prev,
-        targetListId: listId,
-        targetListName: listName,
-        step: inOtherLists.length > 0 ? 'duplicate' : 'category',
-      };
-    });
-  }, []);
-
-  // Execute the actual add
-  const doAdd = useCallback(async (category: string | null) => {
-    if (!scan?.product || !scan.targetListId) return;
-    setScan(prev => prev ? { ...prev, step: null } : null);
-    try {
-      const r = await fetch('/api/shopping/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          barcode: scan.barcode,
-          listId: scan.targetListId,
-          ...(category ? { category } : {}),
-        }),
-      });
-      const data = await r.json() as { found: boolean; item?: { name: string }; action?: string; itemId?: string };
-      setScan(null);
-      if (!data.found) {
-        toast({ title: 'Product not found', variant: 'destructive' });
-        return;
-      }
-      window.dispatchEvent(new CustomEvent('prism:scan-result', { detail: data }));
-      toast({
-        title: data.action === 'updated_existing'
-          ? `Already on list — ${data.item!.name}`
-          : `Added — ${data.item!.name}`,
-      });
-    } catch {
-      setScan(null);
-      toast({ title: 'Add failed', variant: 'destructive' });
-    }
-  }, [scan]);
+  const { scan, clearScan, handleCameraScan, handleListChosen, doAdd } = useShoppingScanFlow();
 
   const {
     lists, loading, error, refreshLists, familyMembers,
@@ -164,14 +67,14 @@ export function ShoppingView() {
     handleListChosen(lists[0]!.id, lists[0]!.name);
   }, [scan?.step, lists, handleListChosen]);
 
-  // Listen for PWA FAB "Scan" button — opens scanner from mobile + button
+  // Listen for PWA FAB "Scan" button
   useEffect(() => {
     const handler = () => setShowCameraScanner(true);
     window.addEventListener('prism:open-barcode-scanner', handler);
     return () => window.removeEventListener('prism:open-barcode-scanner', handler);
   }, []);
 
-  // Listen for barcode scan results — scroll to and highlight the added/updated item
+  // Listen for scan results — scroll to and highlight the added/updated item
   useEffect(() => {
     const handler = (e: Event) => {
       const data = (e as CustomEvent<{ itemId?: string }>).detail;
@@ -184,7 +87,7 @@ export function ShoppingView() {
           el.classList.add('scan-highlight');
           setTimeout(() => el.classList.remove('scan-highlight'), 1500);
         }
-      }, 400); // wait for re-render after refreshLists
+      }, 400);
     };
     window.addEventListener('prism:scan-result', handler);
     return () => window.removeEventListener('prism:scan-result', handler);
@@ -232,114 +135,16 @@ export function ShoppingView() {
     ([cat]) => !effectiveCategoryOrder.includes(cat)
   );
 
-  const handleAddItem = async (category?: string) => {
-    const user = await requireAuth("Who's adding an item?");
-    if (!user) return;
-    if (category) {
-      setDefaultCategory(category);
-    }
-    setShowAddItemModal(true);
-  };
-
-  const handleNewList = async () => {
-    const user = await requireAuth("Who's creating a list?");
-    if (user) {
-      setEditingList(null);
-      setShowListModal(true);
-    }
-  };
-
-  const handleEditItem = async (item: ShoppingItem) => {
-    const user = await requireAuth("Who's editing this item?");
-    if (user) {
-      setEditingItem(item);
-    }
-  };
-
-  const handleDeleteItem = async (itemId: string) => {
-    const user = await requireAuth("Who's deleting this item?");
-    if (user) {
-      deleteItem(itemId);
-    }
-  };
-
-  const handleSaveNewItem = async (item: Omit<ShoppingItem, 'id' | 'createdAt'>) => {
-    const user = await requireAuth("Who's adding an item?");
-    if (!user) { setShowAddItemModal(false); setDefaultCategory(null); return; }
-    try {
-      await apiAddItem(item.listId, {
-        name: item.name, quantity: item.quantity ?? undefined,
-        unit: item.unit ?? undefined, category: item.category ?? undefined,
-        notes: item.notes ?? undefined,
-      });
-      setShowAddItemModal(false);
-      setDefaultCategory(null);
-      if (activeList && item.listId !== activeList.id) setActiveListId(item.listId);
-    } catch (err) {
-      console.error('Failed to add item:', err);
-      toast({ title: 'Failed to add item. Please try again.', variant: 'destructive' });
-    }
-  };
-
-  const handleUpdateItem = async (updatedItem: Omit<ShoppingItem, 'id' | 'createdAt'>) => {
-    if (!editingItem) return;
-    try {
-      const response = await fetch(`/api/shopping-items/${editingItem.id}`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: updatedItem.name, quantity: updatedItem.quantity,
-          unit: updatedItem.unit, category: updatedItem.category, notes: updatedItem.notes,
-        }),
-      });
-      if (!response.ok) throw new Error('Failed to update item');
-      setEditingItem(null);
-      refreshLists();
-    } catch (err) {
-      console.error('Failed to update item:', err);
-      toast({ title: 'Failed to update item. Please try again.', variant: 'destructive' });
-    }
-  };
-
-  const handleSaveList = async (listData: { name: string; description?: string; assignedTo?: string; listType?: string; visibleCategories?: string[] | null }) => {
-    try {
-      if (editingList) {
-        const response = await fetch(`/api/shopping-lists/${editingList.id}`, {
-          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(listData),
-        });
-        if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.error || 'Failed to update list'); }
-      } else {
-        const response = await fetch('/api/shopping-lists', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(listData),
-        });
-        if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.error || 'Failed to create list'); }
-        const newList = await response.json();
-        setActiveListId(newList.id);
-      }
-      setShowListModal(false);
-      setEditingList(null);
-      refreshLists();
-    } catch (err) {
-      console.error('Failed to save list:', err);
-      toast({ title: err instanceof Error ? err.message : 'Failed to save list. Please try again.', variant: 'destructive' });
-    }
-  };
-
-  const handleDeleteList = editingList ? async () => {
-    try {
-      const response = await fetch(`/api/shopping-lists/${editingList.id}`, { method: 'DELETE' });
-      if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.error || 'Failed to delete list'); }
-      setShowListModal(false);
-      setEditingList(null);
-      const remainingLists = lists.filter(l => l.id !== editingList.id);
-      setActiveListId(remainingLists[0]?.id || '');
-      refreshLists();
-    } catch (err) {
-      console.error('Failed to delete list:', err);
-      toast({ title: err instanceof Error ? err.message : 'Failed to delete list. Please try again.', variant: 'destructive' });
-    }
-  } : undefined;
+  const {
+    handleAddItem, handleNewList, handleEditItem, handleDeleteItem,
+    handleSaveNewItem, handleUpdateItem, handleSaveList, handleDeleteList,
+  } = useShoppingCrudHandlers({
+    requireAuth, refreshLists,
+    setShowAddItemModal, setDefaultCategory, setEditingItem,
+    setShowListModal, setEditingList, setActiveListId,
+    deleteItem, apiAddItem,
+    activeList, editingItem, editingList, lists,
+  });
 
   return (
     <PageWrapper>
@@ -456,7 +261,6 @@ export function ShoppingView() {
                   const categoryExtraRows = extraRows[category] || 0;
                   const totalEmptyLines = BASE_EMPTY_LINES + categoryExtraRows;
                   const emptyLinesNeeded = Math.max(0, totalEmptyLines - items.length);
-
                   return (
                     <ShoppingCategoryCard
                       key={category}
@@ -536,108 +340,22 @@ export function ShoppingView() {
         {showCameraScanner && (
           <CameraScannerOverlay
             onClose={() => setShowCameraScanner(false)}
-            onScan={handleCameraScan}
+            onScan={(barcode) => handleCameraScan(barcode, () => setShowCameraScanner(false))}
           />
         )}
 
-        {/* Scan flow bottom sheets */}
-        {scan && scan.step && scan.step !== 'loading' && (() => {
-          const product = scan.product;
-          if (!product) return null;
-          return (
-            <div className="fixed inset-0 z-[9100] flex items-end justify-center bg-black/60"
-              onClick={clearScan}>
-              <div className="w-full max-w-lg bg-card rounded-t-2xl p-4 pb-8 shadow-xl"
-                onClick={e => e.stopPropagation()}>
-                <div className="w-10 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-3" />
-                <p className="font-semibold text-center mb-1">{product.name}</p>
-                {product.brand && <p className="text-sm text-muted-foreground text-center mb-3">{product.brand}</p>}
-
-                {/* Step: list picker */}
-                {scan.step === 'list' && (
-                  <>
-                    <p className="text-sm text-muted-foreground text-center mb-3">Which list?</p>
-                    <div className="flex flex-col gap-2">
-                      {lists.map(list => (
-                        <Button key={list.id}
-                          variant={list.id === activeListId ? 'default' : 'outline'}
-                          className="w-full justify-start text-base py-3"
-                          onClick={() => handleListChosen(list.id, list.name)}>
-                          {list.name}
-                        </Button>
-                      ))}
-                    </div>
-                  </>
-                )}
-
-                {/* Step: duplicate warning */}
-                {scan.step === 'duplicate' && (() => {
-                  const others = scan.existingInLists.filter(e => e.listId !== scan.targetListId);
-                  return (
-                    <>
-                      <p className="text-sm text-muted-foreground text-center mb-3">
-                        Already on <strong>{others.map(e => e.listName).join(', ')}</strong>.
-                        Add to <strong>{scan.targetListName}</strong> anyway?
-                      </p>
-                      <div className="flex flex-col gap-2">
-                        <Button className="w-full py-3" onClick={() => setScan(prev => prev ? { ...prev, step: 'category' } : null)}>
-                          Yes, add to {scan.targetListName}
-                        </Button>
-                        <Button variant="outline" className="w-full py-3" onClick={clearScan}>
-                          Cancel
-                        </Button>
-                      </div>
-                    </>
-                  );
-                })()}
-
-                {/* Step: category picker */}
-                {scan.step === 'category' && (
-                  <>
-                    <p className="text-sm text-muted-foreground text-center mb-3">Which category?</p>
-                    <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
-                      {dynamicCategories.map(cat => (
-                        <Button key={cat.id}
-                          variant={cat.id === product.suggestedCategory ? 'default' : 'outline'}
-                          className="w-full justify-start text-base py-3 gap-2"
-                          onClick={() => doAdd(cat.id)}>
-                          <span>{getDynCategoryEmoji(cat.id)}</span>
-                          <span>{cat.name}</span>
-                          {cat.id === product.suggestedCategory && (
-                            <span className="ml-auto text-xs opacity-60">suggested</span>
-                          )}
-                        </Button>
-                      ))}
-                      <Button variant="ghost" className="w-full py-3 text-muted-foreground"
-                        onClick={() => doAdd(null)}>
-                        No category
-                      </Button>
-                    </div>
-                  </>
-                )}
-
-                <Button variant="ghost" className="w-full mt-2 text-muted-foreground" onClick={clearScan}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* Loading indicator while doing dryRun lookup */}
-        {scan?.step === 'loading' && (
-          <div className="fixed inset-0 z-[9100] flex items-center justify-center bg-black/40">
-            <div className="bg-card rounded-2xl p-6 flex flex-col items-center gap-3 shadow-xl">
-              <div className="h-6 w-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm text-muted-foreground">Looking up product…</p>
-            </div>
-          </div>
-        )}
-
-        <ShoppingCelebration
-          show={showCelebration}
-          onComplete={() => setShowCelebration(false)}
+        <ScanFlowSheet
+          scan={scan}
+          lists={lists}
+          activeListId={activeListId}
+          dynamicCategories={dynamicCategories}
+          getCategoryEmoji={getDynCategoryEmoji}
+          onClear={clearScan}
+          onListChosen={handleListChosen}
+          onDoAdd={doAdd}
         />
+
+        <ShoppingCelebration show={showCelebration} onComplete={() => setShowCelebration(false)} />
       </div>
     </PageWrapper>
   );
