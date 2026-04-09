@@ -32,7 +32,7 @@ export function useInactivityRedirect() {
   }, [router]);
 
   useEffect(() => {
-    const events = ['mousedown', 'touchstart', 'keydown', 'scroll', 'pointermove'] as const;
+    const events = ['mousedown', 'touchstart', 'keydown', 'scroll'] as const;
     const handler = () => resetTimer();
 
     events.forEach(e => window.addEventListener(e, handler, { passive: true }));
