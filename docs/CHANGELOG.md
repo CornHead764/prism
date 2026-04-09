@@ -2,10 +2,53 @@
 
 All notable changes to Prism are documented in this file.
 
-## [Unreleased] - feature/nested-grouping
+## [1.3.0] - 2026-04-08
 
 ### Added
 - **Tasks**: Person→List and List→Person nested group modes — primary group cards with sub-group sections inside (colored left-border dividers, per-sub-group badge counts). Available in the Group dropdown when task lists exist.
+- **Undo Stack**: Global undo across shopping, tasks, wishes, and chores — undo button in the nav bar reverses the most recent mutation
+- **Dashboard Editor**: Transparent background mode — widget cards can render over the grid background image without a double-card effect
+- **Dashboard Editor**: Per-widget text color and opacity controls
+- **Dashboard Editor**: Custom color picker for theme palette swatches
+- **Dashboard Editor**: Grid line opacity and cell background color/opacity controls for calendar and weather widgets
+- **Camera Scanner**: Scan product barcodes with phone/tablet camera on the Shopping page — camera icon in header opens full-screen scanner overlay; automatically looks up product on Open Food Facts and adds it to the active list
+- **Docker**: Multi-arch builds (amd64 + arm64) — Raspberry Pi support via pre-built GHCR image
+- **Health check**: `GET /api/health` now probes PostgreSQL and Redis — returns 503 with `status: "degraded"` if either is down (previously always returned 200)
+- **Calendar**: Profile columns now follow family member sort order from Settings
+- **Calendar**: Family calendar group always sorts first before person columns
+
+### Improved
+- **Calendar**: Day view and week view hourly rows now expand to fill available widget/subpage height — `1fr` grid rows scale proportionally instead of using a fixed minimum
+- **Bus Tracker**: Train map switches to 2-row snake layout when 6+ nodes — top row left→right, bottom row right→left, connected by a right-side vertical segment
+- **Bus Tracker**: PM route at-school status now shows "Bus at school — en route" instead of a bogus 0-minute ETA
+- **Bus Tracker**: Route dialog "Scheduled" field renamed to "Home ETA" with helper text clarifying it is the expected arrival time at your stop
+- **Bus Tracker**: Large minute values now display as hours and minutes (e.g., "15h 25m" instead of "925m")
+- **README**: Replaced GIF demos with static screenshots for faster loading
+
+### Security
+- **Rate limiting**: In-memory fallback limiter — rate limits now enforced even when Redis is unavailable (previously all requests passed through)
+- **Backups**: `POST /api/admin/backups` rate-limited to 5 per hour per user
+- **API**: `GET /api/settings` now requires display auth — previously exposed all app configuration unauthenticated
+- **API**: `GET /api/settings/wifi` now requires auth — previously exposed Wi-Fi credentials unauthenticated
+- **API**: `POST /api/shopping/scan` now requires display auth — previously allowed unauthenticated writes to shopping list
+
+### Fixed
+- **Virtual Keyboard**: Tapping a key no longer dismisses the keyboard after one character — `preventDefault` on `pointerDown` keeps focus in the active input field
+- **Virtual Keyboard**: Toggle button now appears correctly on touchscreen laptops where Windows converts touch events to mouse events (uses `navigator.maxTouchPoints` instead of pointer type tracking)
+- **Virtual Keyboard**: Reduced height from 38vh to 32vh — less intrusive on 1080p displays
+- **Virtual Keyboard**: Scroll position no longer jumps after voice input adds a new list item — scroll restore is skipped when text was injected while the keyboard was open
+- **Camera Scanner**: Overlay now self-dismisses immediately after a successful scan — no longer stays open waiting for parent state propagation
+- **Camera Scanner**: Haptic feedback (`navigator.vibrate`) on successful scan (Android; iOS does not support web vibration)
+- **Camera Scanner**: iOS photo mode — AudioContext unlocked synchronously on "Open Camera" tap to maximise audio feedback compatibility
+- **UI**: Desktop/laptop font size reduced to 14px base (via `pointer: fine` media query) — previously used the same 16px as touch displays, making the UI feel oversized on mouse-driven monitors
+- **Calendar**: Day name headers rotate correctly when week starts on Monday
+- **Mobile**: Navigation no longer causes flash/slide animation on page transitions
+- **Docker**: App health check uses node instead of curl (not available in Alpine)
+- **Docker**: Fresh install schema fixed (removed duplicate function and restrict lines from pg_dump)
+- **Docker**: `VirtualKeyboard` and `CameraScannerOverlay` now loaded via `next/dynamic` with `ssr: false` — prevents `HTMLInputElement is not defined` crash during Next.js prerender on fresh builds
+- **Database**: Truncate operation now includes all tables (gift_ideas, calendar_notes, wish_items, bus_tracking, audit_logs)
+- **CI**: GitHub Actions upgraded from Node.js 20 to 22
+- **CI**: Layout validation size constraints downgraded to warnings
 
 ---
 
@@ -31,48 +74,6 @@ All notable changes to Prism are documented in this file.
 - **Mobile PWA**: GripVertical drag icons hidden on mobile across all list pages
 - **Mobile PWA**: Card-level drag disabled on mobile to prevent scroll interference
 - **Mobile PWA**: Body overflow-hidden changed to md:overflow-hidden for mobile scrolling
-
-## [Unreleased]
-
-### Added
-- **Camera Scanner**: Scan product barcodes with phone/tablet camera on the Shopping page — camera icon in header opens full-screen scanner overlay; automatically looks up product on Open Food Facts and adds it to the active list
-- **Docker**: Multi-arch builds (amd64 + arm64) — Raspberry Pi support via pre-built GHCR image
-- **Health check**: `GET /api/health` now probes PostgreSQL and Redis — returns 503 with `status: "degraded"` if either is down (previously always returned 200)
-- **Calendar**: Profile columns now follow family member sort order from Settings
-- **Calendar**: Family calendar group always sorts first before person columns
-
-### Improved
-- **Bus Tracker**: Train map switches to 2-row snake layout when 6+ nodes — top row left→right, bottom row right→left, connected by a right-side vertical segment
-- **Bus Tracker**: PM route at-school status now shows "Bus at school — en route" instead of a bogus 0-minute ETA
-- **Bus Tracker**: Route dialog "Scheduled" field renamed to "Home ETA" with helper text clarifying it is the expected arrival time at your stop
-- **Bus Tracker**: Large minute values now display as hours and minutes (e.g., "15h 25m" instead of "925m")
-- **README**: Replaced GIF demos with static screenshots for faster loading
-
-### Security
-- **Rate limiting**: In-memory fallback limiter — rate limits now enforced even when Redis is unavailable (previously all requests passed through)
-- **Backups**: `POST /api/admin/backups` rate-limited to 5 per hour per user
-- **API**: `GET /api/settings` now requires display auth — previously exposed all app configuration unauthenticated
-- **API**: `GET /api/settings/wifi` now requires auth — previously exposed Wi-Fi credentials unauthenticated
-- **API**: `POST /api/shopping/scan` now requires display auth — previously allowed unauthenticated writes to shopping list
-
-### Fixed
-- **Camera Scanner**: Overlay now self-dismisses immediately after a successful scan — no longer stays open waiting for parent state propagation
-- **Camera Scanner**: Haptic feedback (`navigator.vibrate`) on successful scan (Android; iOS does not support web vibration)
-- **Camera Scanner**: iOS photo mode — AudioContext unlocked synchronously on "Open Camera" tap to maximise audio feedback compatibility
-- **UI**: Desktop/laptop font size reduced to 14px base (via `pointer: fine` media query) — previously used the same 16px as touch displays, making the UI feel oversized on mouse-driven monitors
-- **Docker**: `VirtualKeyboard` (simple-keyboard) and `CameraScannerOverlay` (@zxing/browser) now loaded via `next/dynamic` with `ssr: false` — prevents `HTMLInputElement is not defined` crash during Next.js prerender on fresh builds
-- **Virtual Keyboard**: Toggle button now appears correctly on touchscreen laptops where Windows converts touch events to mouse events (uses `navigator.maxTouchPoints` instead of pointer type tracking)
-- **Virtual Keyboard**: Reduced height from 38vh to 32vh — less intrusive on 1080p displays
-- **Virtual Keyboard**: Scroll position no longer jumps after voice input adds a new list item — scroll restore is skipped when text was injected while the keyboard was open
-- **Calendar**: Day view with hidden hours now fills full available height
-- **Calendar**: Week view with hidden hours now fills full available height
-- **Calendar**: Day name headers rotate correctly when week starts on Monday
-- **Mobile**: Navigation no longer causes flash/slide animation on page transitions
-- **Docker**: App health check uses node instead of curl (not available in Alpine)
-- **Docker**: Fresh install schema fixed (removed duplicate function and restrict lines from pg_dump)
-- **Database**: Truncate operation now includes all tables (gift_ideas, calendar_notes, wish_items, bus_tracking, audit_logs)
-- **CI**: GitHub Actions upgraded from Node.js 20 to 22
-- **CI**: Layout validation size constraints downgraded to warnings
 
 ## [1.1.0] - 2026-03-16
 
