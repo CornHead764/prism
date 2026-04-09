@@ -26,6 +26,7 @@
 import * as React from 'react';
 import { Cloud, CloudRain, CloudSnow, Sun, CloudSun, Wind, Droplets } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { DAYS_SHORT_ARRAY } from '@/lib/constants/days';
 import { WidgetContainer } from './WidgetContainer';
 
 
@@ -321,7 +322,7 @@ function WeatherIcon({
  */
 function getDemoWeatherData(location: string): WeatherData {
   const today = new Date();
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dayNames = DAYS_SHORT_ARRAY;
 
   return {
     location,

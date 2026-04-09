@@ -47,3 +47,12 @@ export const DAY_SHORT_LABELS: Record<DayOfWeek, string> = {
   friday: 'Fri',
   saturday: 'Sat',
 };
+
+/** Short display labels as a Sunday-first array (index = Date.getDay()) */
+export const DAYS_SHORT_ARRAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
+
+/** Long display labels as a Sunday-first array (index = Date.getDay()) */
+export const DAYS_LONG_ARRAY = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
+
+/** Single-letter display labels as a Sunday-first array (index = Date.getDay()) */
+export const DAYS_SINGLE_ARRAY = ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as const;

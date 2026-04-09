@@ -441,8 +441,17 @@ export function TasksView() {
 
   const isMobile = useIsMobile();
 
-  // Group mode
-  const [groupMode, setGroupMode] = useState<'none' | 'person' | 'list' | 'person_then_list' | 'list_then_person'>('person');
+  // Group mode — two-level control
+  type GroupBy = 'none' | 'person' | 'list';
+  const [primaryGroup, setPrimaryGroup] = useState<GroupBy>('person');
+  const [secondaryGroup, setSecondaryGroup] = useState<GroupBy>('none');
+
+  const groupMode = useMemo((): 'none' | 'person' | 'list' | 'person_then_list' | 'list_then_person' => {
+    if (primaryGroup === 'none') return 'none';
+    if (primaryGroup === 'person' && secondaryGroup === 'list') return 'person_then_list';
+    if (primaryGroup === 'list' && secondaryGroup === 'person') return 'list_then_person';
+    return primaryGroup;
+  }, [primaryGroup, secondaryGroup]);
 
   // Inline task add state
   const [inlineTask, setInlineTask] = useState('');
@@ -629,19 +638,23 @@ export function TasksView() {
     return opts;
   }, [taskLists]);
 
-  // Build group mode options for dropdown
-  const groupOptions = useMemo(() => {
+  // Primary group options
+  const primaryGroupOptions = useMemo((): FilterOption[] => {
     const opts: FilterOption[] = [
       { value: 'none', label: 'None' },
       { value: 'person', label: 'Person' },
     ];
-    if (taskLists.length > 0) {
-      opts.push({ value: 'list', label: 'List' });
-      opts.push({ value: 'person_then_list', label: 'Person → List', dividerBefore: 'Nested' });
-      opts.push({ value: 'list_then_person', label: 'List → Person' });
-    }
+    if (taskLists.length > 0) opts.push({ value: 'list', label: 'List' });
     return opts;
   }, [taskLists]);
+
+  // Secondary group options (excludes the primary choice)
+  const secondaryGroupOptions = useMemo((): FilterOption[] => {
+    const opts: FilterOption[] = [{ value: 'none', label: 'None' }];
+    if (primaryGroup !== 'person') opts.push({ value: 'person', label: 'Person' });
+    if (primaryGroup !== 'list' && taskLists.length > 0) opts.push({ value: 'list', label: 'List' });
+    return opts;
+  }, [primaryGroup, taskLists]);
 
   return (
     <PageWrapper>
@@ -700,15 +713,28 @@ export function TasksView() {
           <div className="w-px h-5 bg-border shrink-0" />
           <FilterDropdown
             label="Group"
-            options={groupOptions}
-            selected={new Set([groupMode])}
+            options={primaryGroupOptions}
+            selected={new Set([primaryGroup])}
             onSelectionChange={(s) => {
-              const val = s.size > 0 ? [...s][0] : 'none';
-              setGroupMode(val as 'none' | 'person' | 'list' | 'person_then_list' | 'list_then_person');
+              const val = (s.size > 0 ? [...s][0]! : 'none') as GroupBy;
+              setPrimaryGroup(val);
+              if (val === 'none') setSecondaryGroup('none');
             }}
             mode="single"
             icon={<Users className="h-3.5 w-3.5" />}
           />
+          {primaryGroup !== 'none' && taskLists.length > 0 && (
+            <FilterDropdown
+              label="Then by"
+              options={secondaryGroupOptions}
+              selected={new Set([secondaryGroup])}
+              onSelectionChange={(s) => {
+                const val = (s.size > 0 ? [...s][0]! : 'none') as GroupBy;
+                setSecondaryGroup(val);
+              }}
+              mode="single"
+            />
+          )}
           <SortSelect
             value={sortBy}
             onValueChange={(v) => setSortBy(v as typeof sortBy)}

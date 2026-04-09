@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useState } from 'react';
+import { DAYS_SHORT_ARRAY, DAYS_LONG_ARRAY } from '@/lib/constants/days';
 import { X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -134,7 +135,7 @@ export function ChoreModal({
             <div>
               <label className="text-sm font-medium">Reset Day</label>
               <div className="flex gap-2 mt-1 flex-wrap">
-                {(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const).map((day, idx) => (
+                {DAYS_SHORT_ARRAY.map((day, idx) => (
                   <Button
                     key={day}
                     type="button"
@@ -147,7 +148,7 @@ export function ChoreModal({
                 ))}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                {startDay ? `Resets every ${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][parseInt(startDay)]}` : 'Defaults to Sunday'}
+                {startDay ? `Resets every ${DAYS_LONG_ARRAY[parseInt(startDay)]}` : 'Defaults to Sunday'}
               </p>
             </div>
           )}

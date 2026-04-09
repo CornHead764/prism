@@ -17,6 +17,7 @@ import {
   getMonth,
 } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { DAYS_SINGLE_ARRAY } from '@/lib/constants/days';
 import { useWidgetBgOverride } from '@/components/widgets/WidgetContainer';
 import { useOrientation } from '@/lib/hooks/useOrientation';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
@@ -38,7 +39,7 @@ export interface ThreeMonthViewProps {
   bordered?: boolean;
 }
 
-const ALL_DAY_NAMES = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const ALL_DAY_NAMES = DAYS_SINGLE_ARRAY;
 
 function MiniMonth({
   month,

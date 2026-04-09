@@ -394,15 +394,17 @@ export function ChoresView() {
             onSelectionChange={setCategoryFilters}
             mode="multi"
           />
-          <Button
-            variant={groupByUser ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setGroupByUser(!groupByUser)}
-            className="gap-1 shrink-0 h-8"
-          >
-            <Users className="h-4 w-4" />
-            <span className="hidden sm:inline">Group by Person</span>
-          </Button>
+          <FilterDropdown
+            label="Group"
+            options={[
+              { value: 'none', label: 'None' },
+              { value: 'person', label: 'Person' },
+            ]}
+            selected={new Set([groupByUser ? 'person' : 'none'])}
+            onSelectionChange={(s) => setGroupByUser(s.size > 0 && [...s][0] === 'person')}
+            mode="single"
+            icon={<Users className="h-4 w-4" />}
+          />
           <SortSelect
             value={sortBy}
             onValueChange={(v) => setSortBy(v as typeof sortBy)}

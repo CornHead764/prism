@@ -9,6 +9,7 @@
  *
  */
 
+import { DAYS_SHORT_ARRAY } from '@/lib/constants/days';
 import type {
   WeatherData,
   WeatherCondition,
@@ -176,7 +177,7 @@ async function fetchForecastRaw(location?: string): Promise<{
   }
 
   const data: OpenWeatherForecast = await response.json();
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dayNames = DAYS_SHORT_ARRAY;
 
   // Group forecast by day and find daily highs/lows
   const dailyData = new Map<

@@ -16,6 +16,7 @@
 
 import * as React from 'react';
 import { useState, useEffect } from 'react';
+import { DAYS_SHORT_ARRAY, DAYS_LONG_ARRAY } from '@/lib/constants/days';
 import { Loader2 } from 'lucide-react';
 import {
   Dialog,
@@ -309,7 +310,7 @@ export function AddChoreModal({
             <div className="space-y-2">
               <Label>Reset Day</Label>
               <div className="flex gap-2 flex-wrap">
-                {(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const).map((day, idx) => (
+                {DAYS_SHORT_ARRAY.map((day, idx) => (
                   <Button
                     key={day}
                     type="button"
@@ -322,7 +323,7 @@ export function AddChoreModal({
                 ))}
               </div>
               <p className="text-xs text-muted-foreground">
-                {startDay ? `Resets every ${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][parseInt(startDay)]}` : 'Defaults to Sunday'}
+                {startDay ? `Resets every ${DAYS_LONG_ARRAY[parseInt(startDay)]}` : 'Defaults to Sunday'}
               </p>
             </div>
           )}

@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { useWidgetBgOverride } from '@/components/widgets/WidgetContainer';
 import { hexToRgba } from '@/lib/utils/color';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
+import { DAYS_SHORT_ARRAY } from '@/lib/constants/days';
 import type { CalendarEvent } from '@/types/calendar';
 import { seasonalPalettes } from '@/lib/themes/seasonalThemes';
 
@@ -63,8 +64,7 @@ export function MonthView({
   }
 
   const numWeeks = Math.ceil(days.length / 7);
-  const allDayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const dayNames = [...allDayNames.slice(weekStartsOn), ...allDayNames.slice(0, weekStartsOn)];
+  const dayNames = [...DAYS_SHORT_ARRAY.slice(weekStartsOn), ...DAYS_SHORT_ARRAY.slice(0, weekStartsOn)];
 
   return (
     <div className="h-full flex flex-col overflow-auto">

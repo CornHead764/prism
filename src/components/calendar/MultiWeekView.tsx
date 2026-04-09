@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { useWidgetBgOverride } from '@/components/widgets/WidgetContainer';
 import { hexToRgba } from '@/lib/utils/color';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
+import { DAYS_SHORT_ARRAY } from '@/lib/constants/days';
 import type { CalendarEvent } from '@/types/calendar';
 
 export interface MultiWeekViewProps {
@@ -43,8 +44,7 @@ export function MultiWeekView({
     days.push(addDays(weekStart, i));
   }
 
-  const allDayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const dayNames = [...allDayNames.slice(weekStartsOn), ...allDayNames.slice(0, weekStartsOn)];
+  const dayNames = [...DAYS_SHORT_ARRAY.slice(weekStartsOn), ...DAYS_SHORT_ARRAY.slice(0, weekStartsOn)];
   const compact = weekCount > 2;
 
   // Group days into week rows
