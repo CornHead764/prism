@@ -138,7 +138,7 @@ export function VirtualKeyboard() {
         isExiting ? 'animate-keyboard-out' : 'animate-keyboard-in',
       )}
       style={{ height: '38vh', minHeight: 320, maxHeight: 480 }}
-      onPointerDown={e => e.stopPropagation()}
+      onPointerDown={e => { e.stopPropagation(); e.preventDefault(); }}
     >
       <div
         ref={containerRef}

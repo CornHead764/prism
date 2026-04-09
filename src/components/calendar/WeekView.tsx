@@ -95,7 +95,7 @@ export function WeekView({
 
         {/* All-day events - scrollable */}
         {allDayEvents.length > 0 && (
-          <div className={cn('shrink-0 border-b border-border p-0.5 max-h-16 overflow-y-auto', !transparentMode && 'bg-card/50')}>
+          <div className={cn('shrink-0 p-0.5 max-h-16 overflow-y-auto', !transparentMode && 'bg-card/50')}>
             {allDayEvents.map((event, idx) => (
               <button
                 key={event.id}
@@ -212,122 +212,126 @@ export function WeekView({
     );
   }
 
-  // Landscape: 7-column hourly grid
-  // Single scroll container with sticky header eliminates scrollbar width mismatch
+  // Landscape: single scroll container with sticky header — keeps header/content columns in
+  // the same layout context so they always align (no scrollbar-width mismatch).
+  // The inner min-h-full flex-col wrapper makes the hourly grid stretch to fill available
+  // space; 1fr rows distribute the remaining height so hours grow when fewer are visible.
   return (
-    <div className={cn('h-full rounded-md overflow-hidden flex flex-col', !transparentMode && 'bg-card/85 backdrop-blur-sm')}>
-      {/* Day headers row - sticky so it stays visible while scrolling hours */}
-      <div className={cn('flex shrink-0 z-20', !transparentMode && 'bg-card')}>
-        {/* Time column spacer with toggle button */}
-        <div className="w-14 shrink-0 flex items-center justify-center">
-          <button
-            onClick={toggleHidden}
-            className={cn(
-              'p-1.5 rounded-full transition-colors',
-              hiddenSettings.enabled
-                ? 'bg-primary text-primary-foreground'
-                : 'hover:bg-accent text-muted-foreground'
-            )}
-            title={hiddenSettings.enabled ? 'Show all hours' : 'Hide time block'}
-            aria-label={hiddenSettings.enabled ? 'Show all hours' : 'Hide time block'}
-          >
-            <Clock className="h-4 w-4" />
-          </button>
-        </div>
-        {days.map((date) => {
-          const isPast = isBefore(date, startOfDay(new Date())) && !isToday(date);
-          const allDayEvents = getAllDayEvents(date);
-          return (
-            <div key={date.toISOString()} className="flex-1 min-w-0 border-l border-border">
-              <div
+    <div className={cn('h-full rounded-md overflow-hidden', !transparentMode && 'bg-card/85 backdrop-blur-sm')}>
+      <div className="h-full overflow-y-auto">
+        <div className="h-full min-h-full flex flex-col">
+          {/* Sticky day headers */}
+          <div className={cn('flex sticky top-0 z-20', !transparentMode && 'bg-card')}>
+            {/* Time column spacer with toggle button */}
+            <div className="w-14 shrink-0 flex items-center justify-center">
+              <button
+                onClick={toggleHidden}
                 className={cn(
-                  'text-center py-2',
-                  !transparentMode && isPast && 'bg-muted/50 text-muted-foreground',
-                  isToday(date) && 'bg-primary text-primary-foreground'
+                  'p-1.5 rounded-full transition-colors',
+                  hiddenSettings.enabled
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-accent text-muted-foreground'
                 )}
+                title={hiddenSettings.enabled ? 'Show all hours' : 'Hide time block'}
+                aria-label={hiddenSettings.enabled ? 'Show all hours' : 'Hide time block'}
               >
-                <div className="text-sm font-bold uppercase">{format(date, 'EEE')}</div>
-                <div className="text-2xl font-bold">{format(date, 'd')}</div>
-              </div>
-              <div className="border-b border-border" />
-              {/* All-day events - scrollable */}
-              {allDayEvents.length > 0 && (
-                <div className={cn('px-1 py-0.5 border-b border-border max-h-20 overflow-y-auto', !transparentMode && 'bg-card/50')}>
-                  {allDayEvents.map((event) => (
-                    <button
-                      key={event.id}
-                      onClick={() => onEventClick(event)}
-                      className="w-full text-left text-xs px-1 py-px rounded truncate hover:opacity-80 transition-all"
-                      style={{ backgroundColor: event.color, color: '#fff', borderLeft: `2px solid ${event.color}` }}
-                    >
-                      {event.title}
-                    </button>
-                  ))}
-                </div>
-              )}
+                <Clock className="h-4 w-4" />
+              </button>
             </div>
-          );
-        })}
-      </div>
-
-      {/* Hourly grid */}
-      <div className="flex flex-1 overflow-auto">
-        {/* Time column */}
-        <div className="w-14 shrink-0 grid" style={{ gridTemplateRows: `repeat(${hours.length}, minmax(28px, 1fr))` }}>
-          {hours.map((hour) => (
-            <div key={hour} className={cn('pl-1 pr-1 text-right text-xs text-muted-foreground flex items-start pt-0.5 min-h-0', bordered && 'border-t border-border')}>
-              {format(new Date().setHours(hour, 0), 'h a')}
-            </div>
-          ))}
-        </div>
-        {/* Day columns */}
-        {days.map((date) => {
-          const isPast = isBefore(date, startOfDay(new Date())) && !isToday(date);
-          return (
-            <div
-              key={date.toISOString()}
-              className={cn('flex-1 min-w-0 border-l border-border grid', !transparentMode && isPast && 'bg-muted/10')}
-              style={{ gridTemplateRows: `repeat(${hours.length}, minmax(28px, 1fr))` }}
-            >
-              {hours.map((hour) => {
-                const hourEvents = getHourEvents(date, hour);
-                const positions = calculateEventPositions(hourEvents);
-                return (
-                  <div key={hour} className={cn('relative min-h-0 overflow-visible', bordered && 'border-t border-border')} style={cellBgStyle}>
-                    {hourEvents.map((event) => {
-                      const pos = positions.get(event.id);
-                      if (!pos) return null;
-                      const css = positionToCSS(pos);
-                      const durationMin = ((event.endTime?.getTime() ?? (event.startTime.getTime() + 3600000)) - event.startTime.getTime()) / 60000;
-                      const heightPct = Math.max((durationMin / 60) * 100, 20);
-                      return (
+            {days.map((date) => {
+              const isPast = isBefore(date, startOfDay(new Date())) && !isToday(date);
+              const allDayEvents = getAllDayEvents(date);
+              return (
+                <div key={date.toISOString()} className="flex-1 min-w-0 border-l border-border">
+                  <div
+                    className={cn(
+                      'text-center py-2',
+                      !transparentMode && isPast && 'bg-muted/50 text-muted-foreground',
+                      isToday(date) && 'bg-primary text-primary-foreground'
+                    )}
+                  >
+                    <div className="text-sm font-bold uppercase">{format(date, 'EEE')}</div>
+                    <div className="text-2xl font-bold">{format(date, 'd')}</div>
+                  </div>
+                  {allDayEvents.length > 0 && (
+                    <div className={cn('px-0.5 pb-0.5 flex flex-col gap-px', !transparentMode && 'bg-card/50')}>
+                      {allDayEvents.map((event) => (
                         <button
                           key={event.id}
                           onClick={() => onEventClick(event)}
-                          className="absolute p-0.5 rounded text-left text-xs z-10 overflow-hidden hover:opacity-90 hover:ring-2 hover:ring-seasonal-accent/50 transition-all flex flex-col items-start"
-                          style={{
-                            backgroundColor: event.color,
-                            color: '#fff',
-                            borderLeft: `2px solid ${event.color}`,
-                            top: `${(event.startTime.getMinutes() / 60) * 100}%`,
-                            height: `${heightPct}%`,
-                            left: css.left,
-                            width: css.width,
-                          }}
+                          className="w-full text-left text-[10px] font-medium px-1 py-px rounded truncate hover:opacity-80 transition-all leading-tight"
+                          style={{ backgroundColor: event.color, color: '#fff', borderLeft: `2px solid ${event.color}` }}
                         >
-                          <div className="font-medium truncate w-full text-[10px] leading-tight">{event.title}</div>
-                          <div className="text-[9px] opacity-70 leading-tight">
-                            {format(event.startTime, 'h:mm')}&ndash;{format(event.endTime ?? new Date(event.startTime.getTime() + 3600000), 'h:mm a')}
-                          </div>
+                          {event.title}
                         </button>
-                      );
-                    })}
-                  </div>
-                );
-              })}
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Hourly grid — flex-1 fills remaining space; 1fr rows stretch when hours are hidden */}
+          <div className="flex-1 flex">
+            {/* Time column */}
+            <div className="w-14 shrink-0 h-full grid" style={{ gridTemplateRows: `repeat(${hours.length}, 1fr)` }}>
+              {hours.map((hour) => (
+                <div key={hour} className={cn('pl-1 pr-1 text-right text-xs text-muted-foreground flex items-start pt-0.5 min-h-0', bordered && 'border-t border-border')}>
+                  {format(new Date().setHours(hour, 0), 'h a')}
+                </div>
+              ))}
             </div>
-          );
-        })}
+            {/* Day columns */}
+            {days.map((date) => {
+              const isPast = isBefore(date, startOfDay(new Date())) && !isToday(date);
+              return (
+                <div
+                  key={date.toISOString()}
+                  className={cn('flex-1 min-w-0 h-full border-l border-border grid', !transparentMode && isPast && 'bg-muted/10')}
+                  style={{ gridTemplateRows: `repeat(${hours.length}, 1fr)` }}
+                >
+                  {hours.map((hour) => {
+                    const hourEvents = getHourEvents(date, hour);
+                    const positions = calculateEventPositions(hourEvents);
+                    return (
+                      <div key={hour} className={cn('relative min-h-0 overflow-visible', bordered && 'border-t border-border')} style={cellBgStyle}>
+                        {hourEvents.map((event) => {
+                          const pos = positions.get(event.id);
+                          if (!pos) return null;
+                          const css = positionToCSS(pos);
+                          const durationMin = ((event.endTime?.getTime() ?? (event.startTime.getTime() + 3600000)) - event.startTime.getTime()) / 60000;
+                          const heightPct = Math.max((durationMin / 60) * 100, 20);
+                          return (
+                            <button
+                              key={event.id}
+                              onClick={() => onEventClick(event)}
+                              className="absolute p-0.5 rounded text-left text-xs z-10 overflow-hidden hover:opacity-90 hover:ring-2 hover:ring-seasonal-accent/50 transition-all flex flex-col items-start"
+                              style={{
+                                backgroundColor: event.color,
+                                color: '#fff',
+                                borderLeft: `2px solid ${event.color}`,
+                                top: `${(event.startTime.getMinutes() / 60) * 100}%`,
+                                height: `${heightPct}%`,
+                                left: css.left,
+                                width: css.width,
+                              }}
+                            >
+                              <div className="font-medium truncate w-full text-[10px] leading-tight">{event.title}</div>
+                              <div className="text-[9px] opacity-70 leading-tight">
+                                {format(event.startTime, 'h:mm')}&ndash;{format(event.endTime ?? new Date(event.startTime.getTime() + 3600000), 'h:mm a')}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );

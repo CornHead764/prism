@@ -359,85 +359,89 @@ export const CalendarWidget = React.memo(function CalendarWidget({
         </div>
       )}
 
-      <Suspense fallback={<div className="h-full flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>}>
-        {resolvedView === 'agenda' && (
-          <AgendaView
-            events={events}
-            days={14}
-            maxEventsPerDay={5}
-            onEventClick={handleEventClick}
-          />
-        )}
+      {/* flex-1 min-h-0: fills remaining space after calendar chips / notices so views
+          get a proper definite height for their internal h-full / overflow-y-auto */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <Suspense fallback={<div className="h-full flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>}>
+          {resolvedView === 'agenda' && (
+            <AgendaView
+              events={events}
+              days={14}
+              maxEventsPerDay={5}
+              onEventClick={handleEventClick}
+            />
+          )}
 
-        {resolvedView === 'list' && (
-          <WeekVerticalView
-            currentDate={currentDate}
-            events={events}
-            calendarGroups={calendarGroups}
-            selectedCalendarIds={selectedCalendarIds}
-            mergedView={mergedView}
-            bordered={widgetBordered}
-            onEventClick={handleEventClick}
-            showNotes={showNotes}
-            notesByDate={notesByDate}
-            onNoteChange={activeUser ? upsertNote : undefined}
-          />
-        )}
+          {resolvedView === 'list' && (
+            <WeekVerticalView
+              currentDate={currentDate}
+              events={events}
+              calendarGroups={calendarGroups}
+              selectedCalendarIds={selectedCalendarIds}
+              mergedView={mergedView}
+              bordered={widgetBordered}
+              onEventClick={handleEventClick}
+              showNotes={showNotes}
+              notesByDate={notesByDate}
+              onNoteChange={activeUser ? upsertNote : undefined}
+            />
+          )}
 
-        {resolvedView === 'month' && (
-          <MonthView
-            currentDate={currentDate}
-            events={events}
-            onEventClick={handleEventClick}
-            bordered={widgetBordered}
-            onDateClick={(date) => {
-              setCurrentDate(date);
-              setViewType('day');
-            }}
-          />
-        )}
+          {resolvedView === 'month' && (
+            <MonthView
+              currentDate={currentDate}
+              events={events}
+              onEventClick={handleEventClick}
+              bordered={widgetBordered}
+              onDateClick={(date) => {
+                setCurrentDate(date);
+                setViewType('day');
+              }}
+            />
+          )}
 
-        {resolvedView === 'week' && (
-          <WeekView
-            currentDate={currentDate}
-            events={events}
-            onEventClick={handleEventClick}
-            bordered={widgetBordered}
-          />
-        )}
+          {resolvedView === 'week' && (
+            <WeekView
+              currentDate={currentDate}
+              events={events}
+              onEventClick={handleEventClick}
+              bordered={widgetBordered}
+            />
+          )}
 
-        {resolvedView === 'multiWeek' && (
-          <MultiWeekView
-            currentDate={currentDate}
-            events={events}
-            onEventClick={handleEventClick}
-            weekCount={resolvedWeekCount}
-            bordered={widgetBordered}
-          />
-        )}
+          {resolvedView === 'multiWeek' && (
+            <MultiWeekView
+              currentDate={currentDate}
+              events={events}
+              onEventClick={handleEventClick}
+              weekCount={resolvedWeekCount}
+              bordered={widgetBordered}
+            />
+          )}
 
-        {resolvedView === 'day' && (
-          <>
-            <div className="text-center text-sm font-medium text-foreground mb-2">
-              {formatDayHeader(currentDate)}
+          {resolvedView === 'day' && (
+            <div className="h-full flex flex-col">
+              <div className="text-center text-sm font-medium text-foreground mb-2 shrink-0">
+                {formatDayHeader(currentDate)}
+              </div>
+              <div className="flex-1 min-h-0">
+                <DayViewSideBySide
+                  currentDate={currentDate}
+                  events={events}
+                  calendarGroups={calendarGroups}
+                  selectedCalendarIds={selectedCalendarIds}
+                  mergedView={mergedView}
+                  bordered={widgetBordered}
+                  onEventClick={handleEventClick}
+                  showNotes={showNotes}
+                  notesByDate={notesByDate}
+                  onNoteChange={activeUser ? upsertNote : undefined}
+                />
+              </div>
             </div>
-            <div className="h-full">
-              <DayViewSideBySide
-                currentDate={currentDate}
-                events={events}
-                calendarGroups={calendarGroups}
-                selectedCalendarIds={selectedCalendarIds}
-                mergedView={mergedView}
-                bordered={widgetBordered}
-                onEventClick={handleEventClick}
-                showNotes={showNotes}
-                notesByDate={notesByDate}
-                onNoteChange={activeUser ? upsertNote : undefined}
-              />
-            </div>
-          </>
-        )}
-      </Suspense>
+          )}
+        </Suspense>
+      </div>
     </WidgetContainer>
   );
 });
