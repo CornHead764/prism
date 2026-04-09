@@ -16,6 +16,16 @@ All notable changes to Prism are documented in this file.
 ### Performance
 - **FamilyProvider**: Equality check on polling results before calling `setMembers` — prevents unnecessary re-renders across all consumers on every 10-minute poll when data is unchanged
 
+### Tests
+- **API error shape** (19 tests): every error code maps to correct HTTP status; `{ error: { code, message } }` shape enforced; `apiSuccess` coverage
+- **Cache cross-dependency** (14 tests): `invalidateEntity('chores')` cascades to points/goals; visited-set prevents double-invalidation; `invalidateEntities` shares visited set across entities
+- **Middleware request ID** (8 tests): `x-request-id` generated and propagated; CSRF blocks mismatched origin; exempt paths pass through; 403 responses still carry the ID
+- **Redis-down degradation** (7 tests): `validateSession` returns `unavailable` vs `invalid`; `requireAuth` returns 503 not 401 on Redis outage; `optionalAuth` degrades to null
+- **PinPad behavioral** (21 tests): member selection, digit entry, backspace, auto-submit, wrong PIN error, keyboard input, cancel, demo mode
+- **Shopping widget behavioral** (10 tests): check/uncheck items, optimistic update, progress bar ratio, list switching, all-checked, empty state
+- **OAuth token expiry** (10 tests): calendar/photo tokens expiring soon → warn; stale/missing backup → warn; Redis/DB down → degraded 503; auth enforcement
+- **Integration tests** (8 tests, `jest.integration.config.js`): events CRUD, chore completion flow with cascade, auth session create/validate/invalidate against real `prism_test` database
+
 ### Refactored
 - **TasksView** (943→235 lines): extracted `TaskRow`, `GroupedTaskGrid`, `NestedGroupedTaskGrid`, `TaskContentArea`, `useTaskGrouping`, `taskGroupTypes` — all files under 250 lines
 - **ChoresView** (632→213 lines): extracted `ChoreGroupCard`, `ChoreGroupGrid`, `ChoreCompletionsList`, `useChoreModals`
