@@ -283,6 +283,10 @@ export const calendarNotesQuerySchema = z.object({
 
 export const createApiTokenSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
+  scopes: z
+    .array(z.string().min(1).max(100))
+    .optional()
+    .default(['*']),
 });
 
 // LAYOUT SCHEMAS

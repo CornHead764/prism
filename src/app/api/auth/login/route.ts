@@ -192,7 +192,7 @@ export async function POST(request: NextRequest) {
       });
 
       cookieStore.set('prism_user', user.id, {
-        httpOnly: false,
+        httpOnly: true,
         secure: isSecure,
         sameSite: 'lax',
         expires: session.expiresAt,

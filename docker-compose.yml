@@ -89,6 +89,7 @@ services:
       - RCLONE_RETENTION_DAYS=30
     volumes:
       - ./backups:/backups
+      - ./uploads:/uploads:ro
       - ./config/rclone.conf:/root/.config/rclone/rclone.conf:ro
     depends_on:
       db:

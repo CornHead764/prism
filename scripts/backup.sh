@@ -40,9 +40,9 @@ ls -lh "$BACKUP_DIR"/prism_*.sql.gz 2>/dev/null || echo "  (none)"
 
 # Off-site backup via rclone (if configured)
 if [ -n "$RCLONE_REMOTE" ] && command -v rclone >/dev/null 2>&1; then
-  echo "[$(date)] Syncing to off-site storage: $RCLONE_REMOTE..."
+  echo "[$(date)] Syncing database backup to off-site storage: $RCLONE_REMOTE..."
   if rclone copy "$BACKUP_FILE" "$RCLONE_REMOTE" --progress; then
-    echo "[$(date)] Off-site sync completed successfully"
+    echo "[$(date)] Database backup sync completed successfully"
 
     # Clean up old remote backups too
     if [ -n "$RCLONE_RETENTION_DAYS" ]; then
@@ -50,7 +50,20 @@ if [ -n "$RCLONE_REMOTE" ] && command -v rclone >/dev/null 2>&1; then
       rclone delete "$RCLONE_REMOTE" --min-age "${RCLONE_RETENTION_DAYS}d" 2>/dev/null || true
     fi
   else
-    echo "[$(date)] WARNING: Off-site sync failed!"
+    echo "[$(date)] WARNING: Database backup off-site sync failed!"
+  fi
+
+  # Sync user-uploaded file assets (avatars, etc.)
+  UPLOADS_REMOTE="${RCLONE_REMOTE%/*}/uploads"
+  if [ -d "/uploads" ] && [ "$(ls -A /uploads 2>/dev/null)" ]; then
+    echo "[$(date)] Syncing uploads directory to off-site storage: $UPLOADS_REMOTE..."
+    if rclone sync /uploads "$UPLOADS_REMOTE" --progress; then
+      echo "[$(date)] Uploads sync completed successfully"
+    else
+      echo "[$(date)] WARNING: Uploads off-site sync failed!"
+    fi
+  else
+    echo "[$(date)] Uploads directory is empty or missing, skipping."
   fi
 elif [ -n "$RCLONE_REMOTE" ]; then
   echo "[$(date)] WARNING: RCLONE_REMOTE set but rclone not installed"

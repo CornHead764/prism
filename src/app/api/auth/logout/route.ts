@@ -71,7 +71,7 @@ export async function POST() {
 
     // Clear the user ID cookie
     cookieStore.set('prism_user', '', {
-      httpOnly: false,
+      httpOnly: true,
       secure: isSecure,
       sameSite: 'lax',
       maxAge: 0,

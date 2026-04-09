@@ -43,7 +43,8 @@ export async function POST(request: NextRequest) {
 
       const { rawToken, token } = await createApiToken(
         validation.data.name,
-        auth.userId
+        auth.userId,
+        validation.data.scopes
       );
 
       return NextResponse.json({

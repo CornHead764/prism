@@ -56,13 +56,13 @@ export async function validateApiToken(rawToken: string): Promise<ApiTokenAuthRe
  * Create a new API token. Returns the raw token (only visible once)
  * and the DB record (with hashed token).
  */
-export async function createApiToken(name: string, createdBy: string) {
+export async function createApiToken(name: string, createdBy: string, scopes: string[] = ['*']) {
   const rawToken = generateApiToken();
   const tokenHash = hashToken(rawToken);
 
   const [record] = await db
     .insert(apiTokens)
-    .values({ name, tokenHash, createdBy })
+    .values({ name, tokenHash, createdBy, scopes })
     .returning();
 
   return {
