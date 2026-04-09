@@ -1,5 +1,5 @@
 import { getRedisClient } from '@/lib/cache/getRedisClient';
-import { SESSION_DURATION, MAX_LOGIN_ATTEMPTS, LOCKOUT_DURATION } from '@/lib/constants';
+import { SESSION_DURATION, MAX_LOGIN_ATTEMPTS, LOCKOUT_TIERS, LOCKOUT_TIER_TTL } from '@/lib/constants';
 
 export interface SessionData {
   userId: string;
@@ -146,7 +146,7 @@ export async function isLoginLockedOut(userId: string): Promise<{ lockedOut: boo
     const count = parseInt(attempts, 10);
     if (count >= MAX_LOGIN_ATTEMPTS) {
       const ttl = await client.ttl(attemptsKey);
-      return { lockedOut: true, retryAfter: ttl > 0 ? ttl : LOCKOUT_DURATION };
+      return { lockedOut: true, retryAfter: ttl > 0 ? ttl : LOCKOUT_TIERS[0] };
     }
 
     return { lockedOut: false };
@@ -162,10 +162,24 @@ export async function recordFailedLogin(userId: string): Promise<{ remainingAtte
 
   try {
     const attemptsKey = `login_attempts:${userId}`;
+    const tierKey = `login_lockout_tier:${userId}`;
     const newCount = await client.incr(attemptsKey);
 
     if (newCount === 1) {
-      await client.expire(attemptsKey, LOCKOUT_DURATION);
+      // First attempt in this window — set a short initial expiry as a safety net
+      await client.expire(attemptsKey, LOCKOUT_TIERS[0]);
+    }
+
+    if (newCount >= MAX_LOGIN_ATTEMPTS) {
+      // Increment the lockout tier counter and pick the appropriate duration
+      const tierCount = await client.incr(tierKey);
+      const tierIndex = Math.min(tierCount - 1, LOCKOUT_TIERS.length - 1);
+      const lockoutDuration = LOCKOUT_TIERS[tierIndex] as number;
+
+      // Override the attempts key expiry with the escalated lockout duration
+      await client.expire(attemptsKey, lockoutDuration);
+      // Tier key resets after 24 h of inactivity so persistent offenders keep escalating
+      await client.expire(tierKey, LOCKOUT_TIER_TTL);
     }
 
     return { remainingAttempts: Math.max(0, MAX_LOGIN_ATTEMPTS - newCount) };
@@ -180,7 +194,9 @@ export async function clearLoginAttempts(userId: string): Promise<void> {
   if (!client) return;
 
   try {
+    // Clear both the attempt counter and the tier — successful login resets the escalation ladder
     await client.del(`login_attempts:${userId}`);
+    await client.del(`login_lockout_tier:${userId}`);
   } catch (error) {
     console.error('Failed to clear login attempts:', error instanceof Error ? error.message : 'Unknown error');
   }

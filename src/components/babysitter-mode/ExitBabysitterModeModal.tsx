@@ -25,6 +25,7 @@ export function ExitBabysitterModeModal({
     .filter((m) => m.role === 'parent')
     .map((m) => ({
       id: m.id,
+      loginIndex: m.loginIndex,
       name: m.name,
       color: m.color,
       avatarUrl: m.avatarUrl ?? undefined,
@@ -97,7 +98,7 @@ export function ExitBabysitterModeModal({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userId: selectedParent.id,
+            ...(selectedParent.id ? { userId: selectedParent.id } : { memberIndex: selectedParent.loginIndex }),
             pin: enteredPin,
           }),
         });

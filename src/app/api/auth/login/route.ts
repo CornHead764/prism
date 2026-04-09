@@ -26,7 +26,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db/client';
 import { users } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
 import { logError } from '@/lib/utils/logError';
@@ -73,45 +73,83 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Validate required fields
-    if (!body.userId || typeof body.userId !== 'string') {
+    // Support two login strategies:
+    //   userId      — direct UUID (API clients, authenticated contexts)
+    //   memberIndex — ordinal position (PinPad login screen; keeps UUIDs off the wire)
+    const hasMemberIndex = typeof body.memberIndex === 'number';
+    const hasUserId = body.userId && typeof body.userId === 'string';
+
+    if (!hasMemberIndex && !hasUserId) {
       return NextResponse.json(
-        { error: 'User ID is required' },
+        { error: 'Either userId or memberIndex is required' },
         { status: 400 }
       );
     }
 
-    // Check if user is locked out (Redis-based rate limiting)
-    const lockoutStatus = await isLoginLockedOut(body.userId);
-    if (lockoutStatus.lockedOut) {
-      return NextResponse.json(
-        {
-          error: 'Too many failed attempts. Please try again later.',
-          lockedOut: true,
-          retryAfter: lockoutStatus.retryAfter,
-        },
-        { status: 403 }
-      );
+    const userSelect = {
+      id: users.id,
+      name: users.name,
+      role: users.role,
+      color: users.color,
+      avatarUrl: users.avatarUrl,
+      pin: users.pin,
+    };
+
+    let user: { id: string; name: string; role: string; color: string; avatarUrl: string | null; pin: string | null };
+
+    if (hasMemberIndex) {
+      const index = Math.floor(body.memberIndex as number);
+      if (index < 0 || index > 999) {
+        return NextResponse.json({ error: 'Invalid member index' }, { status: 400 });
+      }
+      const results = await db
+        .select(userSelect)
+        .from(users)
+        .orderBy(asc(users.sortOrder), asc(users.createdAt))
+        .limit(1)
+        .offset(index);
+      const found = results[0];
+      if (!found) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      }
+      user = found;
+    } else {
+      // userId path — fetch after lockout check (lockout key is userId)
+      const lockoutStatus = await isLoginLockedOut(body.userId as string);
+      if (lockoutStatus.lockedOut) {
+        return NextResponse.json(
+          {
+            error: 'Too many failed attempts. Please try again later.',
+            lockedOut: true,
+            retryAfter: lockoutStatus.retryAfter,
+          },
+          { status: 403 }
+        );
+      }
+      const results = await db
+        .select(userSelect)
+        .from(users)
+        .where(eq(users.id, body.userId as string));
+      const found = results[0];
+      if (!found) {
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      }
+      user = found;
     }
 
-    // Fetch user from database
-    const [user] = await db
-      .select({
-        id: users.id,
-        name: users.name,
-        role: users.role,
-        color: users.color,
-        avatarUrl: users.avatarUrl,
-        pin: users.pin,
-      })
-      .from(users)
-      .where(eq(users.id, body.userId));
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+    // For memberIndex path: check lockout now that we have the real userId
+    if (hasMemberIndex) {
+      const lockoutStatus = await isLoginLockedOut(user.id);
+      if (lockoutStatus.lockedOut) {
+        return NextResponse.json(
+          {
+            error: 'Too many failed attempts. Please try again later.',
+            lockedOut: true,
+            retryAfter: lockoutStatus.retryAfter,
+          },
+          { status: 403 }
+        );
+      }
     }
 
     const role = user.role as 'parent' | 'child' | 'guest';
@@ -193,7 +231,7 @@ export async function POST(request: NextRequest) {
     const isValidPin = await bcrypt.compare(body.pin, user.pin);
 
     if (!isValidPin) {
-      const { remainingAttempts } = await recordFailedLogin(body.userId);
+      const { remainingAttempts } = await recordFailedLogin(user.id);
 
       return NextResponse.json(
         {
@@ -205,7 +243,7 @@ export async function POST(request: NextRequest) {
     }
 
     // PIN is valid - clear any failed attempts
-    await clearLoginAttempts(body.userId);
+    await clearLoginAttempts(user.id);
 
     // Create session in Redis
     const session = await createSession(user.id, role, {

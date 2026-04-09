@@ -3,6 +3,8 @@ export type { DayOfWeek };
 
 export interface FamilyMember {
   id: string;
+  /** Ordinal position in the sorted member list. Present in unauthenticated context; id will be ''. */
+  loginIndex?: number;
   name: string;
   color: string;
   avatarUrl?: string | null;

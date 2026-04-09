@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth, requireRole } from '@/lib/auth';
+import { requireAuth, requireRole, optionalAuth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { users } from '@/lib/db/schema';
 
@@ -20,9 +20,54 @@ interface FamilyMemberResponse {
   createdAt: string;
 }
 
-// No auth required — PinPad needs the member list to show the login screen
+/** Display-only shape returned to unauthenticated callers (no UUIDs). */
+interface PublicFamilyMemberResponse {
+  id: ''; // empty — never a real UUID; loginIndex is the login token
+  loginIndex: number;
+  name: string;
+  color: string;
+  avatarUrl: string | null;
+  hasPin: boolean;
+}
+
 export async function GET(request: NextRequest) {
   try {
+    const auth = await optionalAuth();
+
+    // -----------------------------------------------------------------------
+    // Unauthenticated: return display-only list with ordinal login indices.
+    // No UUIDs exposed — the login endpoint accepts memberIndex instead.
+    // -----------------------------------------------------------------------
+    if (!auth) {
+      const data = await getCached('family:public', async () => {
+        const results = await db
+          .select({
+            name: users.name,
+            color: users.color,
+            avatarUrl: users.avatarUrl,
+            pin: users.pin,
+          })
+          .from(users)
+          .orderBy(users.sortOrder, users.createdAt);
+
+        const members: PublicFamilyMemberResponse[] = results.map((user, index) => ({
+          id: '' as const,
+          loginIndex: index,
+          name: user.name,
+          color: user.color,
+          avatarUrl: user.avatarUrl,
+          hasPin: !!user.pin,
+        }));
+
+        return { members, total: members.length };
+      }, 600);
+
+      return NextResponse.json(data);
+    }
+
+    // -----------------------------------------------------------------------
+    // Authenticated: return full data including UUIDs (existing behaviour).
+    // -----------------------------------------------------------------------
     const { searchParams } = new URL(request.url);
     const role = searchParams.get('role');
     const cacheKey = role ? `family:role:${role}` : 'family:all';
@@ -44,7 +89,7 @@ export async function GET(request: NextRequest) {
 
       let filteredResults = results;
       if (role && ['parent', 'child', 'guest'].includes(role)) {
-        filteredResults = results.filter((user) => user.role === role);
+        filteredResults = results.filter((u) => u.role === role);
       }
 
       const members: FamilyMemberResponse[] = filteredResults.map((user) => ({

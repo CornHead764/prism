@@ -12,7 +12,11 @@ export const SESSION_DURATION = {
 export const MIN_PIN_LENGTH = 4;
 export const MAX_PIN_LENGTH = 6;
 export const MAX_LOGIN_ATTEMPTS = 5;
-export const LOCKOUT_DURATION = 5 * 60;
+export const LOCKOUT_DURATION = 5 * 60; // kept for backward compat — use LOCKOUT_TIERS for new code
+/** Progressive lockout durations in seconds: 5 min → 15 min → 1 hr → 4 hr */
+export const LOCKOUT_TIERS = [5 * 60, 15 * 60, 60 * 60, 4 * 60 * 60] as const;
+/** How long the lockout tier counter persists after the last failed attempt (24 hr). */
+export const LOCKOUT_TIER_TTL = 24 * 60 * 60;
 
 export const TARGET_RESOLUTION = {
   WIDTH: 1920,

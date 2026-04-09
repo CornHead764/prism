@@ -2,15 +2,27 @@ import { createClient, RedisClientType } from 'redis';
 
 let redisClient: RedisClientType | null = null;
 let isConnecting = false;
-let connectionFailed = false;
+/** Timestamp (ms) when we gave up on connecting. null = not in failed state. */
+let connectionFailedAt: number | null = null;
+/** How long to wait before retrying after a connection failure (ms). */
+const RECONNECT_RETRY_INTERVAL = 60_000;
 
 /**
  * Shared Redis connection factory. Used by both cache and session modules
  * to avoid maintaining independent connection pools.
+ *
+ * After a failure, retries automatically every 60 seconds so a transient Redis
+ * restart does not permanently degrade the app until a container restart.
  */
 export async function getRedisClient(): Promise<RedisClientType | null> {
-  if (connectionFailed) {
-    return null;
+  if (connectionFailedAt !== null) {
+    if (Date.now() - connectionFailedAt < RECONNECT_RETRY_INTERVAL) {
+      return null;
+    }
+    // Retry window elapsed — reset and attempt reconnection
+    console.info('Redis retry interval elapsed, attempting reconnection...');
+    connectionFailedAt = null;
+    redisClient = null;
   }
 
   if (redisClient?.isOpen) {
@@ -25,7 +37,7 @@ export async function getRedisClient(): Promise<RedisClientType | null> {
   const redisUrl = process.env.REDIS_URL;
   if (!redisUrl) {
     console.warn('REDIS_URL not configured');
-    connectionFailed = true;
+    connectionFailedAt = Date.now();
     return null;
   }
 
@@ -39,7 +51,7 @@ export async function getRedisClient(): Promise<RedisClientType | null> {
         reconnectStrategy: (retries: number) => {
           if (retries > 3) {
             console.warn('Redis connection failed after 3 retries');
-            connectionFailed = true;
+            connectionFailedAt = Date.now();
             return new Error('Redis connection failed');
           }
           return Math.min(retries * 100, 1000);
@@ -58,7 +70,7 @@ export async function getRedisClient(): Promise<RedisClientType | null> {
   } catch (error) {
     console.warn('Failed to connect to Redis:', error instanceof Error ? error.message : 'Unknown error');
     isConnecting = false;
-    connectionFailed = true;
+    connectionFailedAt = Date.now();
     return null;
   }
 }

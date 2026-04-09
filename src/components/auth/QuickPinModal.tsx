@@ -32,6 +32,7 @@ import { useFamily } from '@/components/providers';
  */
 export interface QuickPinMember {
   id: string;
+  loginIndex?: number;
   name: string;
   color: string;
   avatarUrl?: string;
@@ -74,6 +75,7 @@ export function QuickPinModal({
   const { members: contextMembers, loading: loadingMembers } = useFamily();
   const members: QuickPinMember[] = contextMembers.filter(m => m.role).map(m => ({
     id: m.id,
+    loginIndex: m.loginIndex,
     name: m.name,
     color: m.color,
     avatarUrl: m.avatarUrl ?? undefined,
@@ -154,7 +156,7 @@ export function QuickPinModal({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userId: selectedMember.id,
+            ...(selectedMember.id ? { userId: selectedMember.id } : { memberIndex: selectedMember.loginIndex }),
             pin: enteredPin,
           }),
         });
