@@ -19,6 +19,7 @@ import { createWishItemSchema, validateRequest } from '@/lib/validations';
 import { invalidateCache } from '@/lib/cache/redis';
 import { logActivity } from '@/lib/services/auditLog';
 import { formatWishItemRow } from '@/lib/utils/formatters';
+import { logError } from '@/lib/utils/logError';
 
 // Alias for claimedBy user join
 import { alias } from 'drizzle-orm/pg-core';
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ items: formattedItems });
   } catch (error) {
-    console.error('Error fetching wish items:', error);
+    logError('Error fetching wish items:', error);
     return NextResponse.json(
       { error: 'Failed to fetch wish items' },
       { status: 500 }
@@ -152,7 +153,7 @@ export async function POST(request: NextRequest) {
       createdAt: newItem.createdAt.toISOString(),
     }, { status: 201 });
   } catch (error) {
-    console.error('Error creating wish item:', error);
+    logError('Error creating wish item:', error);
     return NextResponse.json(
       { error: 'Failed to create wish item' },
       { status: 500 }

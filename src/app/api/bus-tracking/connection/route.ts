@@ -5,6 +5,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { db } from '@/lib/db/client';
 import { apiCredentials } from '@/lib/db/schema';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 export async function GET() {
   const auth = await requireAuth();
@@ -21,7 +22,7 @@ export async function GET() {
       updatedAt: cred?.updatedAt || null,
     });
   } catch (error) {
-    console.error('Failed to check Gmail connection:', error);
+    logError('Failed to check Gmail connection:', error);
     return NextResponse.json({ error: 'Failed to check connection' }, { status: 500 });
   }
 }
@@ -48,7 +49,7 @@ export async function DELETE() {
 
       return NextResponse.json({ success: true });
     } catch (error) {
-      console.error('Failed to disconnect Gmail:', error);
+      logError('Failed to disconnect Gmail:', error);
       return NextResponse.json({ error: 'Failed to disconnect' }, { status: 500 });
     }
   }, { permission: 'canModifySettings' });

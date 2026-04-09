@@ -18,6 +18,7 @@ import { db } from '@/lib/db/client';
 import { birthdays, users } from '@/lib/db/schema';
 import { eq, asc } from 'drizzle-orm';
 import { createBirthdaySchema, validateRequest } from '@/lib/validations';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * GET /api/birthdays
@@ -116,7 +117,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ birthdays: formattedBirthdays });
   } catch (error) {
-    console.error('Error fetching birthdays:', error);
+    logError('Error fetching birthdays:', error);
     return NextResponse.json(
       { error: 'Failed to fetch birthdays' },
       { status: 500 }
@@ -189,7 +190,7 @@ export async function POST(request: NextRequest) {
       createdAt: newBirthday.createdAt.toISOString(),
     }, { status: 201 });
   } catch (error) {
-    console.error('Error creating birthday:', error);
+    logError('Error creating birthday:', error);
     return NextResponse.json(
       { error: 'Failed to create birthday' },
       { status: 500 }

@@ -5,6 +5,7 @@ import { photoSources } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { exchangeCodeForTokens } from '@/lib/integrations/onedrive';
 import { encrypt } from '@/lib/utils/crypto';
+import { logError } from '@/lib/utils/logError';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
@@ -66,7 +67,7 @@ export async function GET(request: Request) {
 
     return NextResponse.redirect(`${BASE_URL}/settings?section=photos&success=microsoft_connected`);
   } catch (error) {
-    console.error('Microsoft OAuth callback error:', error);
+    logError('Microsoft OAuth callback error:', error);
     return NextResponse.redirect(`${BASE_URL}/settings?error=microsoft_auth_failed`);
   }
 }

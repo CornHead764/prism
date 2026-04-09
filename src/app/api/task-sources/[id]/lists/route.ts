@@ -5,6 +5,7 @@ import { taskSources } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
 import { getTaskProvider } from '@/lib/integrations/tasks';
+import { logError } from '@/lib/utils/logError';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -99,7 +100,7 @@ export async function GET(
 
     return NextResponse.json({ lists });
   } catch (error) {
-    console.error('Error fetching provider lists:', error);
+    logError('Error fetching provider lists:', error);
     return NextResponse.json(
       { error: 'Failed to fetch lists from provider' },
       { status: 500 }

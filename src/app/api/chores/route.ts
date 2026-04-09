@@ -23,6 +23,7 @@ import { format } from 'date-fns';
 import { getCached, invalidateCache } from '@/lib/cache/redis';
 import { logActivity } from '@/lib/services/auditLog';
 import { formatChoreRow } from '@/lib/utils/formatters';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * GET /api/chores
@@ -135,7 +136,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error fetching chores:', error);
+    logError('Error fetching chores:', error);
     return NextResponse.json(
       { error: 'Failed to fetch chores' },
       { status: 500 }
@@ -231,7 +232,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newChore, { status: 201 });
   } catch (error) {
-    console.error('Error creating chore:', error);
+    logError('Error creating chore:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
       { error: `Failed to create chore: ${errorMessage}` },

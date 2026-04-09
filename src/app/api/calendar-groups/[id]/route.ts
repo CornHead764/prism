@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client';
 import { calendarGroups, calendarSources } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { invalidateCache } from '@/lib/cache/redis';
+import { logError } from '@/lib/utils/logError';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -40,7 +41,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error('Error updating calendar group:', error);
+    logError('Error updating calendar group:', error);
     return NextResponse.json({ error: 'Failed to update group' }, { status: 500 });
   }
 }
@@ -73,7 +74,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ message: 'Group deleted' });
   } catch (error) {
-    console.error('Error deleting calendar group:', error);
+    logError('Error deleting calendar group:', error);
     return NextResponse.json({ error: 'Failed to delete group' }, { status: 500 });
   }
 }

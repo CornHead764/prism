@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAuth, requireRole } from '@/lib/auth';
+import { logError } from '@/lib/utils/logError';
 
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const SCOPES = 'https://www.googleapis.com/auth/tasks';
@@ -44,7 +45,7 @@ export async function GET(request: Request) {
 
     return NextResponse.redirect(`${GOOGLE_AUTH_URL}?${params.toString()}`);
   } catch (error) {
-    console.error('Failed to initiate Google Tasks OAuth:', error);
+    logError('Failed to initiate Google Tasks OAuth:', error);
     return NextResponse.json(
       { error: 'Failed to initiate Google authentication' },
       { status: 500 }

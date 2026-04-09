@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { layouts } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { logError } from '@/lib/utils/logError';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -49,7 +50,7 @@ export async function POST(
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error('Error setting default layout:', error);
+    logError('Error setting default layout:', error);
     return NextResponse.json(
       { error: 'Failed to set default layout' },
       { status: 500 }

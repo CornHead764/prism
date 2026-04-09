@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client';
 import { babysitterInfo } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { invalidateCache } from '@/lib/cache/redis';
+import { logError } from '@/lib/utils/logError';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -74,7 +75,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       },
     });
   } catch (error) {
-    console.error('Error updating babysitter info:', error);
+    logError('Error updating babysitter info:', error);
     return NextResponse.json(
       { error: 'Failed to update babysitter info' },
       { status: 500 }
@@ -107,7 +108,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting babysitter info:', error);
+    logError('Error deleting babysitter info:', error);
     return NextResponse.json(
       { error: 'Failed to delete babysitter info' },
       { status: 500 }

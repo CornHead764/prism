@@ -5,6 +5,7 @@ import { photos } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { getPhotoPath } from '@/lib/services/photo-storage';
 import { promises as fs } from 'fs';
+import { logError } from '@/lib/utils/logError';
 
 export async function GET(
   request: NextRequest,
@@ -43,7 +44,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Error serving photo:', error);
+    logError('Error serving photo:', error);
     return NextResponse.json({ error: 'Failed to serve photo' }, { status: 500 });
   }
 }

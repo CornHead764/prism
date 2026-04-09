@@ -5,6 +5,7 @@ import { babysitterInfo } from '@/lib/db/schema';
 import { asc, max } from 'drizzle-orm';
 import { getCached, invalidateCache } from '@/lib/cache/redis';
 import { rateLimitGuard } from '@/lib/cache/rateLimit';
+import { logError } from '@/lib/utils/logError';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ items });
   } catch (error) {
-    console.error('Error fetching babysitter info:', error);
+    logError('Error fetching babysitter info:', error);
     return NextResponse.json(
       { error: 'Failed to fetch babysitter info' },
       { status: 500 }
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error('Error creating babysitter info:', error);
+    logError('Error creating babysitter info:', error);
     return NextResponse.json(
       { error: 'Failed to create babysitter info' },
       { status: 500 }

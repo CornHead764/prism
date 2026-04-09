@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAuth, requireRole } from '@/lib/auth';
+import { logError } from '@/lib/utils/logError';
 
 const MICROSOFT_AUTH_URL = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize';
 const SCOPES = ['Tasks.ReadWrite', 'offline_access'].join(' ');
@@ -47,7 +48,7 @@ export async function GET(request: Request) {
 
     return NextResponse.redirect(`${MICROSOFT_AUTH_URL}?${params.toString()}`);
   } catch (error) {
-    console.error('Failed to initiate Microsoft Tasks OAuth:', error);
+    logError('Failed to initiate Microsoft Tasks OAuth:', error);
     return NextResponse.json(
       { error: 'Failed to initiate Microsoft authentication' },
       { status: 500 }

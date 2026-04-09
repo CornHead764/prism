@@ -22,6 +22,7 @@ import { familyMessages, users } from '@/lib/db/schema';
 import { eq, desc, asc, and, gt, isNull, or, sql } from 'drizzle-orm';
 import { formatMessageRow } from '@/lib/utils/formatters';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 
 /**
@@ -128,7 +129,7 @@ export async function GET(request: NextRequest) {
       offset,
     });
   } catch (error) {
-    console.error('Error fetching messages:', error);
+    logError('Error fetching messages:', error);
     return NextResponse.json(
       { error: 'Failed to fetch messages' },
       { status: 500 }
@@ -269,7 +270,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(formatMessageRow(messageWithAuthor), { status: 201 });
     } catch (error) {
-      console.error('Error creating message:', error);
+      logError('Error creating message:', error);
       return NextResponse.json(
         { error: 'Failed to create message' },
         { status: 500 }

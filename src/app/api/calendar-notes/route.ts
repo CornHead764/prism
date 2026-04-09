@@ -17,6 +17,7 @@ import { calendarNotes } from '@/lib/db/schema';
 import { gte, lte, and, eq, asc } from 'drizzle-orm';
 import { upsertCalendarNoteSchema, calendarNotesQuerySchema } from '@/lib/validations';
 import { getCached, invalidateCache } from '@/lib/cache/redis';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * GET /api/calendar-notes?from=YYYY-MM-DD&to=YYYY-MM-DD
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Failed to fetch calendar notes:', error);
+    logError('Failed to fetch calendar notes:', error);
     return NextResponse.json({ error: 'Failed to fetch notes' }, { status: 500 });
   }
 }
@@ -124,7 +125,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ note });
   } catch (error) {
-    console.error('Failed to upsert calendar note:', error);
+    logError('Failed to upsert calendar note:', error);
     return NextResponse.json({ error: 'Failed to save note' }, { status: 500 });
   }
 }

@@ -4,6 +4,7 @@ import { auditLogs, users } from '@/lib/db/schema';
 import { eq, desc, and, count, SQL } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { cleanupOldAuditLogs } from '@/lib/services/auditCleanup';
+import { logError } from '@/lib/utils/logError';
 
 export async function GET(request: NextRequest) {
   try {
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
       page,
     });
   } catch (error) {
-    console.error('Error fetching audit logs:', error);
+    logError('Error fetching audit logs:', error);
     return NextResponse.json(
       { error: 'Failed to fetch audit logs' },
       { status: 500 }

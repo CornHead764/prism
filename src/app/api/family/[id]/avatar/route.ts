@@ -8,6 +8,7 @@ import { saveAvatar, deleteAvatar, getAvatarPath } from '@/lib/services/avatar-s
 import { invalidateCache } from '@/lib/cache/redis';
 import { validateMagicBytes } from '@/lib/utils/validateFileType';
 import { rateLimitGuard } from '@/lib/cache/rateLimit';
+import { logError } from '@/lib/utils/logError';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -66,7 +67,7 @@ export async function POST(
 
     return NextResponse.json({ avatarUrl });
   } catch (error) {
-    console.error('Error uploading avatar:', error);
+    logError('Error uploading avatar:', error);
     return NextResponse.json({ error: 'Failed to upload avatar' }, { status: 500 });
   }
 }
@@ -118,7 +119,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting avatar:', error);
+    logError('Error deleting avatar:', error);
     return NextResponse.json({ error: 'Failed to delete avatar' }, { status: 500 });
   }
 }

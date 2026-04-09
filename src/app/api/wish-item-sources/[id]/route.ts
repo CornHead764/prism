@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { invalidateCache } from '@/lib/cache/redis';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -52,7 +53,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting wish item source:', error);
+    logError('Error deleting wish item source:', error);
     return NextResponse.json(
       { error: 'Failed to delete wish item source' },
       { status: 500 }
@@ -132,7 +133,7 @@ export async function PATCH(
       createdAt: updated.createdAt,
     });
   } catch (error) {
-    console.error('Error updating wish item source:', error);
+    logError('Error updating wish item source:', error);
     return NextResponse.json(
       { error: 'Failed to update wish item source' },
       { status: 500 }

@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client';
 import { layouts } from '@/lib/db/schema';
 import { eq, desc, isNull } from 'drizzle-orm';
 import { createLayoutSchema, validateRequest } from '@/lib/validations';
+import { logError } from '@/lib/utils/logError';
 
 function slugify(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80);
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ layouts: results });
   } catch (error) {
-    console.error('Error fetching layouts:', error);
+    logError('Error fetching layouts:', error);
     return NextResponse.json(
       { error: 'Failed to fetch layouts' },
       { status: 500 }
@@ -126,7 +127,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newLayout, { status: 201 });
   } catch (error) {
-    console.error('Error creating layout:', error);
+    logError('Error creating layout:', error);
     return NextResponse.json(
       { error: 'Failed to create layout' },
       { status: 500 }

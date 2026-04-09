@@ -6,6 +6,7 @@ import { db } from '@/lib/db/client';
 import { busRoutes } from '@/lib/db/schema';
 import { validateRequest, updateBusRouteSchema } from '@/lib/validations';
 import { invalidateCache } from '@/lib/cache/redis';
+import { logError } from '@/lib/utils/logError';
 
 export async function GET(
   _request: NextRequest,
@@ -27,7 +28,7 @@ export async function GET(
 
     return NextResponse.json(route);
   } catch (error) {
-    console.error('Failed to fetch bus route:', error);
+    logError('Failed to fetch bus route:', error);
     return NextResponse.json({ error: 'Failed to fetch bus route' }, { status: 500 });
   }
 }
@@ -61,7 +62,7 @@ export async function PATCH(
       await invalidateCache('bus:*');
       return NextResponse.json(updated);
     } catch (error) {
-      console.error('Failed to update bus route:', error);
+      logError('Failed to update bus route:', error);
       return NextResponse.json({ error: 'Failed to update bus route' }, { status: 500 });
     }
   }, { permission: 'canModifySettings' });
@@ -86,7 +87,7 @@ export async function DELETE(
       await invalidateCache('bus:*');
       return NextResponse.json({ success: true });
     } catch (error) {
-      console.error('Failed to delete bus route:', error);
+      logError('Failed to delete bus route:', error);
       return NextResponse.json({ error: 'Failed to delete bus route' }, { status: 500 });
     }
   }, { permission: 'canModifySettings' });

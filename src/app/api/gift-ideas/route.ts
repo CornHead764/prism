@@ -16,6 +16,7 @@ import { createGiftIdeaSchema, validateRequest } from '@/lib/validations';
 import { getCached, invalidateCache } from '@/lib/cache/redis';
 import { logActivity } from '@/lib/services/auditLog';
 import { alias } from 'drizzle-orm/pg-core';
+import { logError } from '@/lib/utils/logError';
 
 const forUser = alias(users, 'forUser');
 const creatorUser = alias(users, 'creatorUser');
@@ -92,7 +93,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error fetching gift ideas:', error);
+    logError('Error fetching gift ideas:', error);
     return NextResponse.json({ error: 'Failed to fetch gift ideas' }, { status: 500 });
   }
 }
@@ -171,7 +172,7 @@ export async function POST(request: NextRequest) {
       createdAt: newIdea.createdAt.toISOString(),
     }, { status: 201 });
   } catch (error) {
-    console.error('Error creating gift idea:', error);
+    logError('Error creating gift idea:', error);
     return NextResponse.json({ error: 'Failed to create gift idea' }, { status: 500 });
   }
 }

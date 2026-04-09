@@ -5,6 +5,7 @@ import { eq, desc, ilike, or, sql } from 'drizzle-orm';
 import { requireAuth, requireRole, getDisplayAuth } from '@/lib/auth';
 import { invalidateCache, getCached } from '@/lib/cache/redis';
 import { formatRecipeRow } from '@/lib/utils/formatters';
+import { logError } from '@/lib/utils/logError';
 
 async function fetchRecipes(
   search: string | null,
@@ -123,7 +124,7 @@ export async function GET(request: NextRequest) {
     const result = await fetchRecipes(search, category, cuisine, favorite, limit, offset);
     return NextResponse.json(result);
   } catch (error) {
-    console.error('Error fetching recipes:', error);
+    logError('Error fetching recipes:', error);
     return NextResponse.json(
       { error: 'Failed to fetch recipes' },
       { status: 500 }
@@ -221,7 +222,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(formatRecipeRow(fullRecipe), { status: 201 });
   } catch (error) {
-    console.error('Error creating recipe:', error);
+    logError('Error creating recipe:', error);
     return NextResponse.json(
       { error: 'Failed to create recipe' },
       { status: 500 }

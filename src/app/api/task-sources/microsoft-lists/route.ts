@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { getRedisClient } from '@/lib/cache/getRedisClient';
 import { microsoftTodoProvider } from '@/lib/integrations/tasks/microsoft-todo';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * GET /api/task-sources/microsoft-lists
@@ -79,7 +80,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ lists });
   } catch (error) {
-    console.error('Error fetching MS lists:', error);
+    logError('Error fetching MS lists:', error);
     return NextResponse.json(
       { error: 'Failed to fetch Microsoft To-Do lists' },
       { status: 500 }

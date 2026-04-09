@@ -23,6 +23,7 @@ import { requireAuth, requireRole } from '@/lib/auth';
 import { formatTaskRow } from '@/lib/utils/formatters';
 import { invalidateCache } from '@/lib/cache/redis';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 
 /**
@@ -102,7 +103,7 @@ export async function GET(
     // Format and return response
     return NextResponse.json(formatTaskRow(taskWithUser));
   } catch (error) {
-    console.error('Error fetching task:', error);
+    logError('Error fetching task:', error);
     return NextResponse.json(
       { error: 'Failed to fetch task' },
       { status: 500 }
@@ -310,7 +311,7 @@ export async function PATCH(
 
     return NextResponse.json(formatTaskRow(updatedTaskWithUser));
   } catch (error) {
-    console.error('Error updating task:', error);
+    logError('Error updating task:', error);
     return NextResponse.json(
       { error: 'Failed to update task' },
       { status: 500 }
@@ -399,7 +400,7 @@ export async function DELETE(
       },
     });
   } catch (error) {
-    console.error('Error deleting task:', error);
+    logError('Error deleting task:', error);
     return NextResponse.json(
       { error: 'Failed to delete task' },
       { status: 500 }

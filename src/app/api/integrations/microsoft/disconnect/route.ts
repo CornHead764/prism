@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client';
 import { taskSources, shoppingListSources } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 export async function POST() {
   const auth = await requireAuth();
@@ -30,7 +31,7 @@ export async function POST() {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error disconnecting Microsoft:', error);
+    logError('Error disconnecting Microsoft:', error);
     return NextResponse.json(
       { error: 'Failed to disconnect Microsoft' },
       { status: 500 }

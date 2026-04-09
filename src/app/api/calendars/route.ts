@@ -13,6 +13,7 @@ import { requireAuth, getDisplayAuth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { calendarSources, users, calendarGroups } from '@/lib/db/schema';
 import { eq, asc } from 'drizzle-orm';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * GET /api/calendars
@@ -87,7 +88,7 @@ export async function GET() {
       total: formattedSources.length,
     });
   } catch (error) {
-    console.error('Error fetching calendar sources:', error);
+    logError('Error fetching calendar sources:', error);
     return NextResponse.json(
       { error: 'Failed to fetch calendar sources' },
       { status: 500 }
@@ -156,7 +157,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error('Error creating calendar:', error);
+    logError('Error creating calendar:', error);
     return NextResponse.json(
       { error: 'Failed to create calendar' },
       { status: 500 }

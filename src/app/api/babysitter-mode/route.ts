@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client';
 import { settings } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 const BABYSITTER_MODE_KEY = 'babysitterMode';
 
@@ -31,7 +32,7 @@ export async function GET() {
     const state = row.value as BabysitterModeState;
     return NextResponse.json(state);
   } catch (error) {
-    console.error('Error fetching babysitter mode state:', error);
+    logError('Error fetching babysitter mode state:', error);
     return NextResponse.json(
       { error: 'Failed to fetch babysitter mode state' },
       { status: 500 }
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newState);
   } catch (error) {
-    console.error('Error toggling babysitter mode:', error);
+    logError('Error toggling babysitter mode:', error);
     return NextResponse.json(
       { error: 'Failed to toggle babysitter mode' },
       { status: 500 }

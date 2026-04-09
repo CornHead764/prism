@@ -16,6 +16,7 @@ import { requireAuth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { birthdays, calendarSources } from '@/lib/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
+import { logError } from '@/lib/utils/logError';
 import {
   fetchCalendarEvents,
   refreshAccessToken,
@@ -280,7 +281,7 @@ export async function POST() {
       errors: errors.length > 0 ? errors : undefined,
     });
   } catch (error) {
-    console.error('Error syncing birthdays:', error);
+    logError('Error syncing birthdays:', error);
     return NextResponse.json(
       { error: 'Failed to sync birthdays from Google Calendar' },
       { status: 500 }

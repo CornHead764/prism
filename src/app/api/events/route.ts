@@ -29,6 +29,7 @@ import { createCalendarEvent, refreshAccessToken } from '@/lib/integrations/goog
 import { decrypt, encrypt } from '@/lib/utils/crypto';
 import { formatEventRow } from '@/lib/utils/formatters';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 // Cache events for 5 minutes
 const EVENTS_CACHE_TTL = 5 * 60;
@@ -197,7 +198,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error fetching events:', error);
+    logError('Error fetching events:', error);
     return NextResponse.json(
       { error: 'Failed to fetch events' },
       { status: 500 }
@@ -350,7 +351,7 @@ export async function POST(request: NextRequest) {
 
           externalEventId = googleEvent.id;
         } catch (error) {
-          console.error('Failed to create event on Google Calendar:', error);
+          logError('Failed to create event on Google Calendar:', error);
           googleWarning = `Event was saved locally but could not be synced to Google Calendar: ${error instanceof Error ? error.message : 'Unknown error'}`;
         }
       }
@@ -433,7 +434,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error('Error creating event:', error);
+    logError('Error creating event:', error);
     return NextResponse.json(
       { error: 'Failed to create event' },
       { status: 500 }

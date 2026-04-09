@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client';
 import { settings } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 const WIFI_SETTINGS_KEY = 'wifiConfig';
 
@@ -25,7 +26,7 @@ export async function GET() {
 
     return NextResponse.json({ config });
   } catch (error) {
-    console.error('Error fetching WiFi config:', error);
+    logError('Error fetching WiFi config:', error);
     return NextResponse.json(
       { error: 'Failed to fetch WiFi config' },
       { status: 500 }
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, config });
   } catch (error) {
-    console.error('Error saving WiFi config:', error);
+    logError('Error saving WiFi config:', error);
     return NextResponse.json(
       { error: 'Failed to save WiFi config' },
       { status: 500 }

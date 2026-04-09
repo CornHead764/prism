@@ -8,6 +8,7 @@ import { getShoppingProvider } from '@/lib/integrations/shopping';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
 import { logActivity } from '@/lib/services/auditLog';
 import type { ShoppingProviderTokens, SyncResult } from '@/lib/integrations/shopping/types';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * POST /api/shopping-list-sources/sync-all
@@ -167,7 +168,7 @@ export async function POST(request: NextRequest) {
       results,
     });
   } catch (error) {
-    console.error('Sync-all error:', error);
+    logError('Sync-all error:', error);
     return NextResponse.json(
       { error: 'Sync failed', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

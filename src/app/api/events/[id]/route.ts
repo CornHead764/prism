@@ -23,6 +23,7 @@ import { invalidateCache } from '@/lib/cache/redis';
 import { updateCalendarEvent, deleteCalendarEvent, refreshAccessToken } from '@/lib/integrations/google-calendar';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 
 interface RouteParams {
@@ -101,7 +102,7 @@ export async function GET(
       updatedAt: eventWithSource.updatedAt.toISOString(),
     });
   } catch (error) {
-    console.error('Error fetching event:', error);
+    logError('Error fetching event:', error);
     return NextResponse.json(
       { error: 'Failed to fetch event' },
       { status: 500 }
@@ -327,7 +328,7 @@ export async function PATCH(
             googleUpdate
           );
         } catch (error) {
-          console.error('Failed to update event on Google Calendar:', error);
+          logError('Failed to update event on Google Calendar:', error);
           // Continue with local update even if Google fails
         }
       }
@@ -406,7 +407,7 @@ export async function PATCH(
       updatedAt: updatedEvent.updatedAt.toISOString(),
     });
   } catch (error) {
-    console.error('Error updating event:', error);
+    logError('Error updating event:', error);
     return NextResponse.json(
       { error: 'Failed to update event' },
       { status: 500 }
@@ -497,7 +498,7 @@ export async function DELETE(
             existingEvent.externalEventId
           );
         } catch (error) {
-          console.error('Failed to delete event from Google Calendar:', error);
+          logError('Failed to delete event from Google Calendar:', error);
           // Continue with local delete even if Google fails
         }
       }
@@ -528,7 +529,7 @@ export async function DELETE(
       },
     });
   } catch (error) {
-    console.error('Error deleting event:', error);
+    logError('Error deleting event:', error);
     return NextResponse.json(
       { error: 'Failed to delete event' },
       { status: 500 }

@@ -21,6 +21,7 @@ import { createMealSchema, validateRequest } from '@/lib/validations';
 import { formatMealRow } from '@/lib/utils/formatters';
 import { getCached, invalidateCache } from '@/lib/cache/redis';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 const cookedByUser = aliasedTable(users, 'cookedByUser');
 
@@ -88,7 +89,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error fetching meals:', error);
+    logError('Error fetching meals:', error);
     return NextResponse.json(
       { error: 'Failed to fetch meals' },
       { status: 500 }
@@ -210,7 +211,7 @@ export async function POST(request: NextRequest) {
       createdAt: newMeal.createdAt.toISOString(),
     }, { status: 201 });
   } catch (error) {
-    console.error('Error creating meal:', error);
+    logError('Error creating meal:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
       { error: `Failed to create meal: ${errorMessage}` },

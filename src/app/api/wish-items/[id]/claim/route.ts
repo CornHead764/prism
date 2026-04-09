@@ -15,6 +15,7 @@ import { wishItems } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireAuth } from '@/lib/auth';
 import { invalidateCache } from '@/lib/cache/redis';
+import { logError } from '@/lib/utils/logError';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -95,7 +96,7 @@ export async function POST(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error claiming wish item:', error);
+    logError('Error claiming wish item:', error);
     return NextResponse.json(
       { error: 'Failed to claim wish item' },
       { status: 500 }

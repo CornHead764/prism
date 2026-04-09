@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client';
 import { photos } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { deletePhoto } from '@/lib/services/photo-storage';
+import { logError } from '@/lib/utils/logError';
 
 export async function GET(
   request: NextRequest,
@@ -24,7 +25,7 @@ export async function GET(
 
     return NextResponse.json(photo);
   } catch (error) {
-    console.error('Error fetching photo:', error);
+    logError('Error fetching photo:', error);
     return NextResponse.json({ error: 'Failed to fetch photo' }, { status: 500 });
   }
 }
@@ -63,7 +64,7 @@ export async function PATCH(
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error('Error updating photo:', error);
+    logError('Error updating photo:', error);
     return NextResponse.json({ error: 'Failed to update photo' }, { status: 500 });
   }
 }
@@ -90,7 +91,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting photo:', error);
+    logError('Error deleting photo:', error);
     return NextResponse.json({ error: 'Failed to delete photo' }, { status: 500 });
   }
 }

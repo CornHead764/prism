@@ -5,6 +5,7 @@ import { choreCompletions, chores, users } from '@/lib/db/schema';
 import { eq, desc, gte, sql } from 'drizzle-orm';
 import { getCached } from '@/lib/cache/redis';
 import { subDays } from 'date-fns';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * GET /api/chores/completions
@@ -92,7 +93,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error fetching chore completions:', error);
+    logError('Error fetching chore completions:', error);
     return NextResponse.json({ error: 'Failed to fetch completions' }, { status: 500 });
   }
 }

@@ -14,6 +14,7 @@ import { requireAuth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { calendarSources, events, settings } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { logError } from '@/lib/utils/logError';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       user: calendar.user,
     });
   } catch (error) {
-    console.error('Error fetching calendar:', error);
+    logError('Error fetching calendar:', error);
     return NextResponse.json(
       { error: 'Failed to fetch calendar' },
       { status: 500 }
@@ -191,7 +192,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       updatedAt: updated.updatedAt.toISOString(),
     });
   } catch (error) {
-    console.error('Error updating calendar:', error);
+    logError('Error updating calendar:', error);
     return NextResponse.json(
       { error: 'Failed to update calendar' },
       { status: 500 }
@@ -247,7 +248,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       deletedId: id,
     });
   } catch (error) {
-    console.error('Error deleting calendar:', error);
+    logError('Error deleting calendar:', error);
     return NextResponse.json(
       { error: 'Failed to delete calendar' },
       { status: 500 }

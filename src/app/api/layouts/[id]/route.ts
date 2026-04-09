@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client';
 import { layouts } from '@/lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { updateLayoutSchema, validateRequest } from '@/lib/validations';
+import { logError } from '@/lib/utils/logError';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -40,7 +41,7 @@ export async function GET(
 
     return NextResponse.json(layout);
   } catch (error) {
-    console.error('Error fetching layout:', error);
+    logError('Error fetching layout:', error);
     return NextResponse.json(
       { error: 'Failed to fetch layout' },
       { status: 500 }
@@ -118,7 +119,7 @@ export async function PATCH(
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error('Error updating layout:', error);
+    logError('Error updating layout:', error);
     return NextResponse.json(
       { error: 'Failed to update layout' },
       { status: 500 }
@@ -184,7 +185,7 @@ export async function DELETE(
       },
     });
   } catch (error) {
-    console.error('Error deleting layout:', error);
+    logError('Error deleting layout:', error);
     return NextResponse.json(
       { error: 'Failed to delete layout' },
       { status: 500 }

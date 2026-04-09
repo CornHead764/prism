@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/api/withAuth';
 import { createApiToken, listApiTokens } from '@/lib/auth/apiTokens';
 import { createApiTokenSchema, validateRequest } from '@/lib/validations';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * GET /api/auth/tokens
@@ -14,7 +15,7 @@ export async function GET() {
       const tokens = await listApiTokens();
       return NextResponse.json({ tokens });
     } catch (error) {
-      console.error('Error listing API tokens:', error);
+      logError('Error listing API tokens:', error);
       return NextResponse.json(
         { error: 'Failed to list API tokens' },
         { status: 500 }
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
         createdAt: token.createdAt.toISOString(),
       }, { status: 201 });
     } catch (error) {
-      console.error('Error creating API token:', error);
+      logError('Error creating API token:', error);
       return NextResponse.json(
         { error: 'Failed to create API token' },
         { status: 500 }

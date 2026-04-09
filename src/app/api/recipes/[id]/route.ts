@@ -4,6 +4,7 @@ import { recipes, users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { invalidateCache } from '@/lib/cache/redis';
+import { logError } from '@/lib/utils/logError';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -58,7 +59,7 @@ export async function GET(
 
     return NextResponse.json(recipe);
   } catch (error) {
-    console.error('Error fetching recipe:', error);
+    logError('Error fetching recipe:', error);
     return NextResponse.json(
       { error: 'Failed to fetch recipe' },
       { status: 500 }
@@ -180,7 +181,7 @@ export async function PATCH(
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error('Error updating recipe:', error);
+    logError('Error updating recipe:', error);
     return NextResponse.json(
       { error: 'Failed to update recipe' },
       { status: 500 }
@@ -231,7 +232,7 @@ export async function DELETE(
       deletedRecipe: { id: existing.id, name: existing.name },
     });
   } catch (error) {
-    console.error('Error deleting recipe:', error);
+    logError('Error deleting recipe:', error);
     return NextResponse.json(
       { error: 'Failed to delete recipe' },
       { status: 500 }

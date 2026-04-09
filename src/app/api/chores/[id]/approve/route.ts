@@ -16,6 +16,7 @@ import { requireAuth, requireRole } from '@/lib/auth';
 import { invalidateCache } from '@/lib/cache/redis';
 import { calculateNextDue } from '@/lib/utils/calculateNextDue';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * Route params type
@@ -198,7 +199,7 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error('Error approving chore:', error);
+    logError('Error approving chore:', error);
     return NextResponse.json(
       { error: 'Failed to approve chore' },
       { status: 500 }

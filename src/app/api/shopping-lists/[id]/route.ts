@@ -13,6 +13,7 @@ import { db } from '@/lib/db/client';
 import { shoppingLists } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { createShoppingListSchema, validateRequest } from '@/lib/validations';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * Route params type
@@ -59,7 +60,7 @@ export async function GET(
       createdAt: list.createdAt.toISOString(),
     });
   } catch (error) {
-    console.error('Error fetching shopping list:', error);
+    logError('Error fetching shopping list:', error);
     return NextResponse.json(
       { error: 'Failed to fetch shopping list' },
       { status: 500 }
@@ -146,7 +147,7 @@ export async function PATCH(
       createdAt: updatedList.createdAt.toISOString(),
     });
   } catch (error) {
-    console.error('Error updating shopping list:', error);
+    logError('Error updating shopping list:', error);
     return NextResponse.json(
       { error: 'Failed to update shopping list' },
       { status: 500 }
@@ -194,7 +195,7 @@ export async function DELETE(
       },
     });
   } catch (error) {
-    console.error('Error deleting shopping list:', error);
+    logError('Error deleting shopping list:', error);
     return NextResponse.json(
       { error: 'Failed to delete shopping list' },
       { status: 500 }

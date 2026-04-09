@@ -6,6 +6,7 @@ import { db } from '@/lib/db/client';
 import { busRoutes } from '@/lib/db/schema';
 import { validateRequest, createBusRouteSchema } from '@/lib/validations';
 import { invalidateCache } from '@/lib/cache/redis';
+import { logError } from '@/lib/utils/logError';
 
 export async function GET() {
   const auth = await requireAuth();
@@ -16,7 +17,7 @@ export async function GET() {
       .orderBy(asc(busRoutes.sortOrder), asc(busRoutes.label));
     return NextResponse.json(routes);
   } catch (error) {
-    console.error('Failed to fetch bus routes:', error);
+    logError('Failed to fetch bus routes:', error);
     return NextResponse.json({ error: 'Failed to fetch bus routes' }, { status: 500 });
   }
 }
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
       await invalidateCache('bus:*');
       return NextResponse.json(route, { status: 201 });
     } catch (error) {
-      console.error('Failed to create bus route:', error);
+      logError('Failed to create bus route:', error);
       return NextResponse.json({ error: 'Failed to create bus route' }, { status: 500 });
     }
   }, { permission: 'canModifySettings' });

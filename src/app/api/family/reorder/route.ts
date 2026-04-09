@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { invalidateCache } from '@/lib/cache/redis';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * PUT /api/family/reorder
@@ -32,7 +33,7 @@ export async function PUT(request: NextRequest) {
 
       return NextResponse.json({ success: true });
     } catch (error) {
-      console.error('Error reordering family members:', error);
+      logError('Error reordering family members:', error);
       return NextResponse.json(
         { error: 'Failed to reorder members' },
         { status: 500 }

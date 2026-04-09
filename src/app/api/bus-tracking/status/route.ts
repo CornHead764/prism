@@ -7,6 +7,7 @@ import { getCached } from '@/lib/cache/redis';
 import { getRedisClient } from '@/lib/cache/getRedisClient';
 import { predictArrival } from '@/lib/services/bus-arrival-predictor';
 import { isGmailConnected, syncBusEmails } from '@/lib/services/bus-tracking-sync';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * Fire-and-forget: sync Gmail emails with a mutex lock (not a cooldown).
@@ -71,7 +72,7 @@ export async function GET() {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Failed to get bus status:', error);
+    logError('Failed to get bus status:', error);
     return NextResponse.json({ error: 'Failed to get bus status' }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { listBackups, createBackup } from '@/lib/utils/backup';
 import { rateLimitGuard } from '@/lib/cache/rateLimit';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * GET /api/admin/backups - List all backups
@@ -17,7 +18,7 @@ export async function GET() {
     const backups = await listBackups();
     return NextResponse.json({ backups });
   } catch (error) {
-    console.error('Error listing backups:', error);
+    logError('Error listing backups:', error);
     return NextResponse.json(
       { error: 'Failed to list backups' },
       { status: 500 }
@@ -53,7 +54,7 @@ export async function POST() {
       filename: result.filename,
     });
   } catch (error) {
-    console.error('Error creating backup:', error);
+    logError('Error creating backup:', error);
     return NextResponse.json(
       { error: 'Failed to create backup' },
       { status: 500 }

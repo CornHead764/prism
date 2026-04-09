@@ -7,6 +7,7 @@ import { invalidateCache } from '@/lib/cache/redis';
 import { getWishItemProvider } from '@/lib/integrations/wish-items';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 import type {
   WishItemProviderTokens,
   ExternalWishItem,
@@ -163,7 +164,7 @@ export async function POST(
       ...result,
     });
   } catch (error) {
-    console.error('Wish item sync error:', error);
+    logError('Wish item sync error:', error);
 
     await db
       .update(wishItemSources)

@@ -4,6 +4,7 @@ import { recipes } from '@/lib/db/schema';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { invalidateCache } from '@/lib/cache/redis';
 import { parsePaprikaHtml } from '@/lib/utils/paprikaParser';
+import { logError } from '@/lib/utils/logError';
 
 export async function POST(request: NextRequest) {
   const auth = await requireAuth();
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
       recipes: insertedRecipes,
     }, { status: 201 });
   } catch (error) {
-    console.error('Error importing Paprika recipes:', error);
+    logError('Error importing Paprika recipes:', error);
     return NextResponse.json(
       { error: 'Failed to import Paprika recipes' },
       { status: 500 }

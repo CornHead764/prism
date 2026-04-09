@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client';
 import { goals, goalAchievements } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { invalidateCache } from '@/lib/cache/redis';
+import { logError } from '@/lib/utils/logError';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -57,7 +58,7 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
       message: `Goal "${goal.name}" has been reset. Progress starts over.`,
     });
   } catch (error) {
-    console.error('Error resetting goal:', error);
+    logError('Error resetting goal:', error);
     return NextResponse.json({ error: 'Failed to reset goal' }, { status: 500 });
   }
 }

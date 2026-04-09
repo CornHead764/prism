@@ -17,6 +17,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { invalidateSession } from '@/lib/auth/session';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 // Determine if cookies should be secure based on APP_URL/BASE_URL scheme
 const appUrl = process.env.APP_URL || process.env.BASE_URL;
@@ -81,7 +82,7 @@ export async function POST() {
       message: 'Logged out successfully',
     });
   } catch (error) {
-    console.error('Logout error:', error);
+    logError('Logout error:', error);
 
     // Even if there's an error, try to clear cookies
     // The user should be logged out regardless

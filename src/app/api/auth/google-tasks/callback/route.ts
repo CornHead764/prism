@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { encrypt } from '@/lib/utils/crypto';
 import { getRedisClient } from '@/lib/cache/getRedisClient';
+import { logError } from '@/lib/utils/logError';
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
@@ -68,7 +69,7 @@ export async function GET(request: Request) {
     const error = searchParams.get('error');
 
     if (error) {
-      console.error('Google Tasks OAuth error:', error);
+      logError('Google Tasks OAuth error:', error);
       return NextResponse.redirect(
         `${BASE_URL}/settings?section=${returnSection}&error=google_tasks_auth_denied`
       );
@@ -117,7 +118,7 @@ export async function GET(request: Request) {
 
     return NextResponse.redirect(redirectUrl);
   } catch (error) {
-    console.error('Google Tasks OAuth callback error:', error);
+    logError('Google Tasks OAuth callback error:', error);
     return NextResponse.redirect(
       `${BASE_URL}/settings?section=${returnSection}&error=google_tasks_auth_failed`
     );

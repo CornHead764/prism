@@ -16,6 +16,7 @@ import { eq } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { formatMessageRow } from '@/lib/utils/formatters';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 
 interface RouteParams {
@@ -63,7 +64,7 @@ export async function GET(
 
     return NextResponse.json(formatMessageRow(messageWithAuthor));
   } catch (error) {
-    console.error('Error fetching message:', error);
+    logError('Error fetching message:', error);
     return NextResponse.json(
       { error: 'Failed to fetch message' },
       { status: 500 }
@@ -202,7 +203,7 @@ export async function PATCH(
 
     return NextResponse.json(formatMessageRow(updatedMessage));
   } catch (error) {
-    console.error('Error updating message:', error);
+    logError('Error updating message:', error);
     return NextResponse.json(
       { error: 'Failed to update message' },
       { status: 500 }
@@ -282,7 +283,7 @@ export async function DELETE(
       },
     });
   } catch (error) {
-    console.error('Error deleting message:', error);
+    logError('Error deleting message:', error);
     return NextResponse.json(
       { error: 'Failed to delete message' },
       { status: 500 }

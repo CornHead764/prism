@@ -14,6 +14,7 @@ import { updateWishItemSchema, validateRequest } from '@/lib/validations';
 import { requireAuth } from '@/lib/auth';
 import { invalidateCache } from '@/lib/cache/redis';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -98,7 +99,7 @@ export async function PATCH(
       updatedAt: updated.updatedAt.toISOString(),
     });
   } catch (error) {
-    console.error('Error updating wish item:', error);
+    logError('Error updating wish item:', error);
     return NextResponse.json(
       { error: 'Failed to update wish item' },
       { status: 500 }
@@ -159,7 +160,7 @@ export async function DELETE(
       deletedItem: { id: existing.id, name: existing.name },
     });
   } catch (error) {
-    console.error('Error deleting wish item:', error);
+    logError('Error deleting wish item:', error);
     return NextResponse.json(
       { error: 'Failed to delete wish item' },
       { status: 500 }

@@ -3,6 +3,7 @@ import { getDisplayAuth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { calendarSources, taskSources, shoppingListSources } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { logError } from '@/lib/utils/logError';
 
 export async function GET() {
   const auth = await getDisplayAuth();
@@ -65,7 +66,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error('Error fetching integration status:', error);
+    logError('Error fetching integration status:', error);
     return NextResponse.json(
       { error: 'Failed to fetch integration status' },
       { status: 500 }

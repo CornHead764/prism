@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { invalidateCache } from '@/lib/cache/redis';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -52,7 +53,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting shopping list source:', error);
+    logError('Error deleting shopping list source:', error);
     return NextResponse.json(
       { error: 'Failed to delete shopping list source' },
       { status: 500 }
@@ -132,7 +133,7 @@ export async function PATCH(
       createdAt: updated.createdAt,
     });
   } catch (error) {
-    console.error('Error updating shopping list source:', error);
+    logError('Error updating shopping list source:', error);
     return NextResponse.json(
       { error: 'Failed to update shopping list source' },
       { status: 500 }

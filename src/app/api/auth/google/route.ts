@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { getGoogleAuthUrl } from '@/lib/integrations/google-calendar';
+import { logError } from '@/lib/utils/logError';
 
 export async function GET(request: Request) {
   const auth = await requireAuth();
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
 
     return NextResponse.redirect(authUrl);
   } catch (error) {
-    console.error('Failed to initiate Google OAuth:', error);
+    logError('Failed to initiate Google OAuth:', error);
     return NextResponse.json(
       { error: 'Failed to initiate Google authentication' },
       { status: 500 }

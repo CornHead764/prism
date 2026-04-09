@@ -17,6 +17,7 @@ import { getCached } from '@/lib/cache/redis';
 import { db } from '@/lib/db/client';
 import { settings } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { logError } from '@/lib/utils/logError';
 
 // Cache weather data for 30 minutes
 const WEATHER_CACHE_TTL = 30 * 60;
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(weatherData);
   } catch (error) {
-    console.error('Weather API error:', error);
+    logError('Weather API error:', error);
 
     // Check if it's a configuration error
     if (error instanceof Error && error.message.includes('not configured')) {

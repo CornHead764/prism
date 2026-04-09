@@ -18,6 +18,7 @@ import { shoppingLists, shoppingItems, users } from '@/lib/db/schema';
 import { asc, eq } from 'drizzle-orm';
 import { createShoppingListSchema, validateRequest } from '@/lib/validations';
 import { getPresetsForListType } from '@/lib/constants/shoppingPresets';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * GET /api/shopping-lists
@@ -125,7 +126,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ lists: formattedLists });
   } catch (error) {
-    console.error('Error fetching shopping lists:', error);
+    logError('Error fetching shopping lists:', error);
     return NextResponse.json(
       { error: 'Failed to fetch shopping lists' },
       { status: 500 }
@@ -203,7 +204,7 @@ export async function POST(request: NextRequest) {
       createdAt: newList.createdAt.toISOString(),
     }, { status: 201 });
   } catch (error) {
-    console.error('Error creating shopping list:', error);
+    logError('Error creating shopping list:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
       { error: `Failed to create shopping list: ${errorMessage}` },

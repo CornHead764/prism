@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { calendarSources, settings } from '@/lib/db/schema';
+import { logError } from '@/lib/utils/logError';
 import {
   exchangeCodeForTokens,
   fetchCalendarList,
@@ -36,7 +37,7 @@ export async function GET(request: Request) {
 
     // Check for errors from Google
     if (error) {
-      console.error('Google OAuth error:', error);
+      logError('Google OAuth error:', error);
       return NextResponse.redirect(`${BASE_URL}/settings?section=${earlyReturnSection}&error=google_auth_denied`);
     }
 
@@ -180,7 +181,7 @@ export async function GET(request: Request) {
     // Redirect back to settings with success message
     return NextResponse.redirect(`${BASE_URL}/settings?section=${returnSection}&success=google_connected`);
   } catch (error) {
-    console.error('Google OAuth callback error:', error);
+    logError('Google OAuth callback error:', error);
     // returnSection may not be in scope if parsing failed early; parse state again
     let fallbackSection = 'connections';
     try {

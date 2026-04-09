@@ -29,6 +29,7 @@ import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
+import { logError } from '@/lib/utils/logError';
 import {
   createSession,
   isLoginLockedOut,
@@ -259,7 +260,7 @@ export async function POST(request: NextRequest) {
       message: 'Logged in successfully',
     });
   } catch (error) {
-    console.error('Login error:', error);
+    logError('Login error:', error);
     return NextResponse.json(
       { error: 'Login failed' },
       { status: 500 }

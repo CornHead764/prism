@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { syncOneDriveSource } from '@/lib/services/photo-sync';
+import { logError } from '@/lib/utils/logError';
 
 export async function POST(
   request: NextRequest,
@@ -14,7 +15,7 @@ export async function POST(
     await syncOneDriveSource(id);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error syncing photo source:', error);
+    logError('Error syncing photo source:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Sync failed' },
       { status: 500 }

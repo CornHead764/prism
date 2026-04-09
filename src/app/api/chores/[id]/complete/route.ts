@@ -26,6 +26,7 @@ import { invalidateCache } from '@/lib/cache/redis';
 import { rateLimitGuard } from '@/lib/cache/rateLimit';
 import { calculateNextDue } from '@/lib/utils/calculateNextDue';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * Route params type
@@ -246,7 +247,7 @@ export async function POST(
       message,
     }, { status: 201 });
   } catch (error) {
-    console.error('Error completing chore:', error);
+    logError('Error completing chore:', error);
     return NextResponse.json(
       { error: 'Failed to complete chore' },
       { status: 500 }
@@ -322,7 +323,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error undoing chore completion:', error);
+    logError('Error undoing chore completion:', error);
     return NextResponse.json({ error: 'Failed to undo completion' }, { status: 500 });
   }
 }

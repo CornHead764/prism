@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { truncateAllData, seedDatabase } from '@/lib/utils/backup';
 import { invalidateCache } from '@/lib/cache/redis';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * POST /api/admin/database - Database operations
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   } catch (error) {
-    console.error('Error in database operation:', error);
+    logError('Error in database operation:', error);
     return NextResponse.json(
       { error: 'Failed to perform database operation' },
       { status: 500 }

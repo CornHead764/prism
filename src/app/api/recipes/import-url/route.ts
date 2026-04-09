@@ -4,6 +4,7 @@ import { recipes } from '@/lib/db/schema';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { invalidateCache } from '@/lib/cache/redis';
 import { parseRecipeFromUrl } from '@/lib/utils/recipeParser';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * Validate that a URL doesn't point to a private/internal network address.
@@ -115,7 +116,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newRecipe, { status: 201 });
   } catch (error) {
-    console.error('Error importing recipe from URL:', error);
+    logError('Error importing recipe from URL:', error);
 
     if (error instanceof Error) {
       if (error.message === 'Invalid URL') {

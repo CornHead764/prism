@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { logActivity } from '@/lib/services/auditLog';
 import { invalidateCache } from '@/lib/cache/redis';
 import type { AuthResult } from '@/lib/auth';
+import { logError } from '@/lib/utils/logError';
 
 export async function GET() {
   const auth = await getDisplayAuth();
@@ -19,7 +20,7 @@ export async function GET() {
     }
     return NextResponse.json({ settings: result });
   } catch (error) {
-    console.error('Error fetching settings:', error);
+    logError('Error fetching settings:', error);
     return NextResponse.json(
       { error: 'Failed to fetch settings' },
       { status: 500 }
@@ -81,7 +82,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ key: body.key, value: body.value });
   } catch (error) {
-    console.error('Error updating setting:', error);
+    logError('Error updating setting:', error);
     return NextResponse.json(
       { error: 'Failed to update setting' },
       { status: 500 }

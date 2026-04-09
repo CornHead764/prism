@@ -7,6 +7,7 @@ import { savePhoto } from '@/lib/services/photo-storage';
 import { PHOTO_MAX_SIZE_MB, PHOTO_ALLOWED_TYPES } from '@/lib/constants';
 import { validateMagicBytes } from '@/lib/utils/validateFileType';
 import { rateLimitGuard } from '@/lib/cache/rateLimit';
+import { logError } from '@/lib/utils/logError';
 
 export async function GET(request: NextRequest) {
   const auth = await getDisplayAuth();
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ photos: results, total });
   } catch (error) {
-    console.error('Error fetching photos:', error);
+    logError('Error fetching photos:', error);
     return NextResponse.json({ error: 'Failed to fetch photos' }, { status: 500 });
   }
 }
@@ -148,7 +149,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(photo, { status: 201 });
   } catch (error) {
-    console.error('Error uploading photo:', error);
+    logError('Error uploading photo:', error);
     return NextResponse.json({ error: 'Failed to upload photo' }, { status: 500 });
   }
 }

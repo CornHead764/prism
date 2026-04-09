@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client';
 import { photoSources, photos } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { deletePhoto } from '@/lib/services/photo-storage';
+import { logError } from '@/lib/utils/logError';
 
 export async function PATCH(
   request: NextRequest,
@@ -32,7 +33,7 @@ export async function PATCH(
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error('Error updating photo source:', error);
+    logError('Error updating photo source:', error);
     return NextResponse.json({ error: 'Failed to update photo source' }, { status: 500 });
   }
 }
@@ -62,7 +63,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting photo source:', error);
+    logError('Error deleting photo source:', error);
     return NextResponse.json({ error: 'Failed to delete photo source' }, { status: 500 });
   }
 }

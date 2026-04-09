@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { invalidateCache } from '@/lib/cache/redis';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -45,7 +46,7 @@ export async function GET(
 
     return NextResponse.json(source);
   } catch (error) {
-    console.error('Error fetching task source:', error);
+    logError('Error fetching task source:', error);
     return NextResponse.json(
       { error: 'Failed to fetch task source' },
       { status: 500 }
@@ -152,7 +153,7 @@ export async function PATCH(
       updatedAt: updated.updatedAt,
     });
   } catch (error) {
-    console.error('Error updating task source:', error);
+    logError('Error updating task source:', error);
     return NextResponse.json(
       { error: 'Failed to update task source' },
       { status: 500 }
@@ -206,7 +207,7 @@ export async function DELETE(
       },
     });
   } catch (error) {
-    console.error('Error deleting task source:', error);
+    logError('Error deleting task source:', error);
     return NextResponse.json(
       { error: 'Failed to delete task source' },
       { status: 500 }

@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { photoSources } from '@/lib/db/schema';
 import { sql } from 'drizzle-orm';
+import { logError } from '@/lib/utils/logError';
 
 export async function GET() {
   const auth = await requireAuth();
@@ -26,7 +27,7 @@ export async function GET() {
 
     return NextResponse.json({ sources });
   } catch (error) {
-    console.error('Error fetching photo sources:', error);
+    logError('Error fetching photo sources:', error);
     return NextResponse.json({ error: 'Failed to fetch photo sources' }, { status: 500 });
   }
 }
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(source, { status: 201 });
   } catch (error) {
-    console.error('Error creating photo source:', error);
+    logError('Error creating photo source:', error);
     return NextResponse.json({ error: 'Failed to create photo source' }, { status: 500 });
   }
 }

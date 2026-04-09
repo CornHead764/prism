@@ -6,6 +6,7 @@ import { users } from '@/lib/db/schema';
 import bcrypt from 'bcryptjs';
 import { getCached, invalidateCache } from '@/lib/cache/redis';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 interface FamilyMemberResponse {
   id: string;
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error fetching family members:', error);
+    logError('Error fetching family members:', error);
     return NextResponse.json(
       { error: 'Failed to fetch family members' },
       { status: 500 }
@@ -164,7 +165,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(response, { status: 201 });
   } catch (error) {
-    console.error('Error creating family member:', error);
+    logError('Error creating family member:', error);
     return NextResponse.json(
       { error: 'Failed to create family member' },
       { status: 500 }

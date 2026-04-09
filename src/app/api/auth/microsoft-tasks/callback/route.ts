@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { encrypt } from '@/lib/utils/crypto';
 import { getRedisClient } from '@/lib/cache/getRedisClient';
+import { logError } from '@/lib/utils/logError';
 
 const MICROSOFT_TOKEN_URL = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/token';
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
@@ -140,7 +141,7 @@ export async function GET(request: Request) {
 
     return NextResponse.redirect(redirectUrl);
   } catch (error) {
-    console.error('Microsoft Tasks OAuth callback error:', error);
+    logError('Microsoft Tasks OAuth callback error:', error);
     return NextResponse.redirect(
       `${BASE_URL}/settings?section=${returnSection}&error=microsoft_auth_failed`
     );

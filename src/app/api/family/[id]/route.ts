@@ -6,6 +6,7 @@ import { eq, and } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { invalidateCache } from '@/lib/cache/redis';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 export async function GET(
   request: NextRequest,
@@ -49,7 +50,7 @@ export async function GET(
       createdAt: member.createdAt.toISOString(),
     });
   } catch (error) {
-    console.error('Error fetching family member:', error);
+    logError('Error fetching family member:', error);
     return NextResponse.json(
       { error: 'Failed to fetch family member' },
       { status: 500 }
@@ -212,7 +213,7 @@ export async function PATCH(
       createdAt: updatedMember.createdAt.toISOString(),
     });
   } catch (error) {
-    console.error('Error updating family member:', error);
+    logError('Error updating family member:', error);
     return NextResponse.json(
       { error: 'Failed to update family member' },
       { status: 500 }
@@ -277,7 +278,7 @@ export async function DELETE(
     if (error instanceof Error && error.message === 'Cannot delete the last parent') {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
-    console.error('Error deleting family member:', error);
+    logError('Error deleting family member:', error);
     return NextResponse.json(
       { error: 'Failed to delete family member' },
       { status: 500 }

@@ -16,6 +16,7 @@ import { updateMealSchema, validateRequest } from '@/lib/validations';
 import { formatMealRow } from '@/lib/utils/formatters';
 import { invalidateCache } from '@/lib/cache/redis';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 const cookedByUser = aliasedTable(users, 'cookedByUser');
 
@@ -82,7 +83,7 @@ export async function GET(
 
     return NextResponse.json(formatMealRow(mealWithUser));
   } catch (error) {
-    console.error('Error fetching meal:', error);
+    logError('Error fetching meal:', error);
     return NextResponse.json(
       { error: 'Failed to fetch meal' },
       { status: 500 }
@@ -225,7 +226,7 @@ export async function PATCH(
 
     return NextResponse.json(formatMealRow(updatedMealWithUser));
   } catch (error) {
-    console.error('Error updating meal:', error);
+    logError('Error updating meal:', error);
     return NextResponse.json(
       { error: 'Failed to update meal' },
       { status: 500 }
@@ -283,7 +284,7 @@ export async function DELETE(
       },
     });
   } catch (error) {
-    console.error('Error deleting meal:', error);
+    logError('Error deleting meal:', error);
     return NextResponse.json(
       { error: 'Failed to delete meal' },
       { status: 500 }

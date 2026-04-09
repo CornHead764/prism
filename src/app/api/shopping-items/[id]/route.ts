@@ -14,6 +14,7 @@ import { updateShoppingItemSchema, validateRequest } from '@/lib/validations';
 import { requireAuth } from '@/lib/auth';
 import { invalidateCache } from '@/lib/cache/redis';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * Route params type
@@ -159,7 +160,7 @@ export async function PATCH(
       updatedAt: updatedItem.updatedAt.toISOString(),
     });
   } catch (error) {
-    console.error('Error updating shopping item:', error);
+    logError('Error updating shopping item:', error);
     return NextResponse.json(
       { error: 'Failed to update shopping item' },
       { status: 500 }
@@ -217,7 +218,7 @@ export async function DELETE(
       },
     });
   } catch (error) {
-    console.error('Error deleting shopping item:', error);
+    logError('Error deleting shopping item:', error);
     return NextResponse.json(
       { error: 'Failed to delete shopping item' },
       { status: 500 }

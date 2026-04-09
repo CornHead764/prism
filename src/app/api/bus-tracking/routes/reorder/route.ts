@@ -4,6 +4,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { db } from '@/lib/db/client';
 import { busRoutes } from '@/lib/db/schema';
 import { invalidateCache } from '@/lib/cache/redis';
+import { logError } from '@/lib/utils/logError';
 
 export async function POST(request: NextRequest) {
   return withAuth(async () => {
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
       await invalidateCache('bus:*');
       return NextResponse.json({ success: true });
     } catch (error) {
-      console.error('Failed to reorder bus routes:', error);
+      logError('Failed to reorder bus routes:', error);
       return NextResponse.json({ error: 'Failed to reorder routes' }, { status: 500 });
     }
   }, { permission: 'canModifySettings' });

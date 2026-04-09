@@ -15,6 +15,7 @@ import { eq } from 'drizzle-orm';
 import { updateChoreSchema, validateRequest } from '@/lib/validations';
 import { invalidateCache } from '@/lib/cache/redis';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * Route params type
@@ -104,7 +105,7 @@ export async function GET(
         : null,
     });
   } catch (error) {
-    console.error('Error fetching chore:', error);
+    logError('Error fetching chore:', error);
     return NextResponse.json(
       { error: 'Failed to fetch chore' },
       { status: 500 }
@@ -249,7 +250,7 @@ export async function PATCH(
         : null,
     });
   } catch (error) {
-    console.error('Error updating chore:', error);
+    logError('Error updating chore:', error);
     return NextResponse.json(
       { error: 'Failed to update chore' },
       { status: 500 }
@@ -308,7 +309,7 @@ export async function DELETE(
       },
     });
   } catch (error) {
-    console.error('Error deleting chore:', error);
+    logError('Error deleting chore:', error);
     return NextResponse.json(
       { error: 'Failed to delete chore' },
       { status: 500 }

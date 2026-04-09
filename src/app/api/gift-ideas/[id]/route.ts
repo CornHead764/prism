@@ -12,6 +12,7 @@ import { eq, and } from 'drizzle-orm';
 import { updateGiftIdeaSchema, validateRequest } from '@/lib/validations';
 import { invalidateCache } from '@/lib/cache/redis';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -97,7 +98,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       createdAt: updated.createdAt.toISOString(),
     });
   } catch (error) {
-    console.error('Error updating gift idea:', error);
+    logError('Error updating gift idea:', error);
     return NextResponse.json({ error: 'Failed to update gift idea' }, { status: 500 });
   }
 }
@@ -133,7 +134,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ message: 'Gift idea deleted' });
   } catch (error) {
-    console.error('Error deleting gift idea:', error);
+    logError('Error deleting gift idea:', error);
     return NextResponse.json({ error: 'Failed to delete gift idea' }, { status: 500 });
   }
 }

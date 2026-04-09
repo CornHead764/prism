@@ -8,6 +8,7 @@ import { formatTaskRow } from '@/lib/utils/formatters';
 import { createTaskSchema } from '@/lib/validations';
 import { invalidateCache } from '@/lib/cache/redis';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 
 export async function GET(request: NextRequest) {
@@ -102,7 +103,7 @@ export async function GET(request: NextRequest) {
       offset,
     });
   } catch (error) {
-    console.error('Error fetching tasks:', error);
+    logError('Error fetching tasks:', error);
     return NextResponse.json(
       { error: 'Failed to fetch tasks' },
       { status: 500 }
@@ -191,7 +192,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json(formatTaskRow(taskWithUser), { status: 201 });
     } catch (error) {
-      console.error('Error creating task:', error);
+      logError('Error creating task:', error);
       return NextResponse.json(
         { error: 'Failed to create task' },
         { status: 500 }

@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
+import { logError } from '@/lib/utils/logError';
 import {
   syncAllGoogleCalendars,
   syncGoogleCalendarSource,
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
       errors: result.errors.length > 0 ? result.errors : undefined,
     });
   } catch (error) {
-    console.error('Calendar sync error:', error);
+    logError('Calendar sync error:', error);
     return NextResponse.json(
       { error: 'Failed to sync calendars' },
       { status: 500 }

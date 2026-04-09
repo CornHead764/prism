@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client';
 import { calendarGroups, calendarSources, users } from '@/lib/db/schema';
 import { eq, asc, sql } from 'drizzle-orm';
 import { getCached, invalidateCache } from '@/lib/cache/redis';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * GET /api/calendar-groups
@@ -60,7 +61,7 @@ export async function GET() {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error fetching calendar groups:', error);
+    logError('Error fetching calendar groups:', error);
     return NextResponse.json({ error: 'Failed to fetch calendar groups' }, { status: 500 });
   }
 }
@@ -97,7 +98,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(group, { status: 201 });
   } catch (error) {
-    console.error('Error creating calendar group:', error);
+    logError('Error creating calendar group:', error);
     return NextResponse.json({ error: 'Failed to create calendar group' }, { status: 500 });
   }
 }

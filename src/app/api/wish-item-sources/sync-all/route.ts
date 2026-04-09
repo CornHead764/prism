@@ -6,6 +6,7 @@ import { requireAuth, requireRole } from '@/lib/auth';
 import { invalidateCache } from '@/lib/cache/redis';
 import { logActivity } from '@/lib/services/auditLog';
 import type { SyncResult } from '@/lib/integrations/wish-items/types';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * POST /api/wish-item-sources/sync-all
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
       results,
     });
   } catch (error) {
-    console.error('Wish sync-all error:', error);
+    logError('Wish sync-all error:', error);
     return NextResponse.json(
       { error: 'Sync failed', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

@@ -5,6 +5,7 @@ import { users, choreCompletions, settings } from '@/lib/db/schema';
 import { eq, and, isNotNull } from 'drizzle-orm';
 import { getCached } from '@/lib/cache/redis';
 import { startOfWeek, startOfMonth, startOfYear } from 'date-fns';
+import { logError } from '@/lib/utils/logError';
 
 export async function GET() {
   const auth = await getDisplayAuth();
@@ -72,7 +73,7 @@ export async function GET() {
 
     return NextResponse.json({ points: data });
   } catch (error) {
-    console.error('Error fetching points:', error);
+    logError('Error fetching points:', error);
     return NextResponse.json({ error: 'Failed to fetch points' }, { status: 500 });
   }
 }

@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client';
 import { babysitterInfo } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { invalidateCache } from '@/lib/cache/redis';
+import { logError } from '@/lib/utils/logError';
 
 export async function POST(request: NextRequest) {
   const auth = await requireAuth();
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error reordering babysitter info:', error);
+    logError('Error reordering babysitter info:', error);
     return NextResponse.json(
       { error: 'Failed to reorder babysitter info' },
       { status: 500 }

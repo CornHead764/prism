@@ -6,6 +6,7 @@ import { eq, and } from 'drizzle-orm';
 import { getRedisClient } from '@/lib/cache/getRedisClient';
 import { invalidateCache } from '@/lib/cache/redis';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * POST /api/wish-item-sources/finalize
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error finalizing MS wish connection:', error);
+    logError('Error finalizing MS wish connection:', error);
     return NextResponse.json(
       { error: 'Failed to complete Microsoft To-Do connection' },
       { status: 500 }

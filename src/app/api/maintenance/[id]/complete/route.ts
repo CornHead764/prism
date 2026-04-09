@@ -14,6 +14,7 @@ import { db } from '@/lib/db/client';
 import { maintenanceReminders, maintenanceCompletions } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { completeMaintenanceSchema, validateRequest } from '@/lib/validations';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * Route params type
@@ -153,7 +154,7 @@ export async function POST(
       message: `Maintenance completed! Next due: ${nextDue}`,
     }, { status: 201 });
   } catch (error) {
-    console.error('Error completing maintenance:', error);
+    logError('Error completing maintenance:', error);
     return NextResponse.json(
       { error: 'Failed to complete maintenance' },
       { status: 500 }

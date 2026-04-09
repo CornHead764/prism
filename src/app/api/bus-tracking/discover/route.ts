@@ -10,6 +10,7 @@ import { withAuth } from '@/lib/api/withAuth';
 import { db } from '@/lib/db/client';
 import { apiCredentials, busRoutes } from '@/lib/db/schema';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
+import { logError } from '@/lib/utils/logError';
 import {
   refreshGmailAccessToken,
   fetchEmails,
@@ -163,7 +164,7 @@ export async function POST() {
         message: `Found ${discovered.length} route(s) from ${messageRefs.length} emails.`,
       });
     } catch (error) {
-      console.error('Bus route discovery error:', error);
+      logError('Bus route discovery error:', error);
       return NextResponse.json(
         { error: 'Failed to discover routes from emails' },
         { status: 500 }
@@ -229,7 +230,7 @@ export async function PUT(request: Request) {
         message: `Created ${created.length} route(s), skipped ${skipped.length}.`,
       });
     } catch (error) {
-      console.error('Bus route auto-create error:', error);
+      logError('Bus route auto-create error:', error);
       return NextResponse.json(
         { error: 'Failed to create routes' },
         { status: 500 }

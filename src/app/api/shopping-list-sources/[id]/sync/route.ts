@@ -7,6 +7,7 @@ import { invalidateCache } from '@/lib/cache/redis';
 import { getShoppingProvider } from '@/lib/integrations/shopping';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 import type {
   ShoppingProviderTokens,
   ExternalShoppingItem,
@@ -161,7 +162,7 @@ export async function POST(
       ...result,
     });
   } catch (error) {
-    console.error('Sync error:', error);
+    logError('Sync error:', error);
 
     // Update source with error
     await db

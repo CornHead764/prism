@@ -17,6 +17,7 @@ import { db } from '@/lib/db/client';
 import { maintenanceReminders, users } from '@/lib/db/schema';
 import { eq, and, lte, asc } from 'drizzle-orm';
 import { createMaintenanceSchema, validateRequest } from '@/lib/validations';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * GET /api/maintenance
@@ -97,7 +98,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ reminders: formattedReminders });
   } catch (error) {
-    console.error('Error fetching maintenance reminders:', error);
+    logError('Error fetching maintenance reminders:', error);
     return NextResponse.json(
       { error: 'Failed to fetch maintenance reminders' },
       { status: 500 }
@@ -186,7 +187,7 @@ export async function POST(request: NextRequest) {
       createdAt: newReminder.createdAt.toISOString(),
     }, { status: 201 });
   } catch (error) {
-    console.error('Error creating maintenance reminder:', error);
+    logError('Error creating maintenance reminder:', error);
     return NextResponse.json(
       { error: 'Failed to create maintenance reminder' },
       { status: 500 }

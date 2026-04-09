@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client';
 import { taskSources } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * POST /api/task-sources/sync-all
@@ -110,7 +111,7 @@ export async function POST(request: NextRequest) {
       errors,
     });
   } catch (error) {
-    console.error('Sync all error:', error);
+    logError('Sync all error:', error);
     return NextResponse.json(
       { error: 'Failed to sync sources' },
       { status: 500 }

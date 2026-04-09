@@ -16,6 +16,7 @@ import { db } from '@/lib/db/client';
 import { maintenanceReminders, maintenanceCompletions, users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { createMaintenanceSchema, completeMaintenanceSchema, validateRequest } from '@/lib/validations';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * Route params type
@@ -85,7 +86,7 @@ export async function GET(
       } : null,
     });
   } catch (error) {
-    console.error('Error fetching maintenance reminder:', error);
+    logError('Error fetching maintenance reminder:', error);
     return NextResponse.json(
       { error: 'Failed to fetch maintenance reminder' },
       { status: 500 }
@@ -197,7 +198,7 @@ export async function PATCH(
       } : null,
     });
   } catch (error) {
-    console.error('Error updating maintenance reminder:', error);
+    logError('Error updating maintenance reminder:', error);
     return NextResponse.json(
       { error: 'Failed to update maintenance reminder' },
       { status: 500 }
@@ -245,7 +246,7 @@ export async function DELETE(
       },
     });
   } catch (error) {
-    console.error('Error deleting maintenance reminder:', error);
+    logError('Error deleting maintenance reminder:', error);
     return NextResponse.json(
       { error: 'Failed to delete maintenance reminder' },
       { status: 500 }

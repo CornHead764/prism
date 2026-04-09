@@ -7,6 +7,7 @@ import bcrypt from 'bcryptjs';
 import { createSession, isLoginLockedOut, recordFailedLogin, clearLoginAttempts } from '@/lib/auth/session';
 import { setSettingsVerified } from '@/lib/auth/settingsAuth';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 const appUrl = process.env.APP_URL || process.env.BASE_URL;
 const isSecure = appUrl ? appUrl.startsWith('https://') : process.env.NODE_ENV === 'production';
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error verifying PIN:', error);
+    logError('Error verifying PIN:', error);
     return NextResponse.json(
       { error: 'Failed to verify PIN' },
       { status: 500 }

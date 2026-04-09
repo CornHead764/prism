@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client';
 import { calendarSources } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 export async function POST() {
   const auth = await requireAuth();
@@ -26,7 +27,7 @@ export async function POST() {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error disconnecting Google:', error);
+    logError('Error disconnecting Google:', error);
     return NextResponse.json(
       { error: 'Failed to disconnect Google' },
       { status: 500 }

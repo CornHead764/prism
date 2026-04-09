@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { getRedisClient } from '@/lib/cache/getRedisClient';
 import { googleTasksProvider } from '@/lib/integrations/tasks/google-tasks';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * GET /api/task-sources/google-lists
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ lists });
   } catch (error) {
-    console.error('Error fetching Google Tasks lists:', error);
+    logError('Error fetching Google Tasks lists:', error);
     return NextResponse.json(
       { error: 'Failed to fetch Google Tasks lists' },
       { status: 500 }

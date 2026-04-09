@@ -16,6 +16,7 @@ import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { cookies } from 'next/headers';
 import { validateSession } from '@/lib/auth/session';
+import { logError } from '@/lib/utils/logError';
 
 
 /**
@@ -134,7 +135,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error fetching current user:', error);
+    logError('Error fetching current user:', error);
 
     return NextResponse.json({
       authenticated: false,

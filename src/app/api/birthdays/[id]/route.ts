@@ -13,6 +13,7 @@ import { db } from '@/lib/db/client';
 import { birthdays, users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { createBirthdaySchema, validateRequest } from '@/lib/validations';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * Route params type
@@ -87,7 +88,7 @@ export async function GET(
       } : null,
     });
   } catch (error) {
-    console.error('Error fetching birthday:', error);
+    logError('Error fetching birthday:', error);
     return NextResponse.json(
       { error: 'Failed to fetch birthday' },
       { status: 500 }
@@ -208,7 +209,7 @@ export async function PATCH(
       } : null,
     });
   } catch (error) {
-    console.error('Error updating birthday:', error);
+    logError('Error updating birthday:', error);
     return NextResponse.json(
       { error: 'Failed to update birthday' },
       { status: 500 }
@@ -256,7 +257,7 @@ export async function DELETE(
       },
     });
   } catch (error) {
-    console.error('Error deleting birthday:', error);
+    logError('Error deleting birthday:', error);
     return NextResponse.json(
       { error: 'Failed to delete birthday' },
       { status: 500 }

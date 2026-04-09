@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/api/withAuth';
 import { revokeApiToken } from '@/lib/auth/apiTokens';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * DELETE /api/auth/tokens/[id]
@@ -25,7 +26,7 @@ export async function DELETE(
 
       return NextResponse.json({ success: true });
     } catch (error) {
-      console.error('Error revoking API token:', error);
+      logError('Error revoking API token:', error);
       return NextResponse.json(
         { error: 'Failed to revoke API token' },
         { status: 500 }

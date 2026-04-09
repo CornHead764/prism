@@ -4,6 +4,7 @@ import { taskLists } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { invalidateCache } from '@/lib/cache/redis';
+import { logError } from '@/lib/utils/logError';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -33,7 +34,7 @@ export async function GET(
 
     return NextResponse.json(list);
   } catch (error) {
-    console.error('Error fetching task list:', error);
+    logError('Error fetching task list:', error);
     return NextResponse.json(
       { error: 'Failed to fetch task list' },
       { status: 500 }
@@ -100,7 +101,7 @@ export async function PATCH(
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error('Error updating task list:', error);
+    logError('Error updating task list:', error);
     return NextResponse.json(
       { error: 'Failed to update task list' },
       { status: 500 }
@@ -143,7 +144,7 @@ export async function DELETE(
       deletedList: { id: existing.id, name: existing.name },
     });
   } catch (error) {
-    console.error('Error deleting task list:', error);
+    logError('Error deleting task list:', error);
     return NextResponse.json(
       { error: 'Failed to delete task list' },
       { status: 500 }

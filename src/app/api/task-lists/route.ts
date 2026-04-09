@@ -4,6 +4,7 @@ import { taskLists } from '@/lib/db/schema';
 import { eq, asc } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { invalidateCache, getCached } from '@/lib/cache/redis';
+import { logError } from '@/lib/utils/logError';
 
 export async function GET() {
   const auth = await requireAuth();
@@ -21,7 +22,7 @@ export async function GET() {
 
     return NextResponse.json(lists);
   } catch (error) {
-    console.error('Error fetching task lists:', error);
+    logError('Error fetching task lists:', error);
     return NextResponse.json(
       { error: 'Failed to fetch task lists' },
       { status: 500 }
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newList, { status: 201 });
   } catch (error) {
-    console.error('Error creating task list:', error);
+    logError('Error creating task list:', error);
     return NextResponse.json(
       { error: 'Failed to create task list' },
       { status: 500 }

@@ -8,6 +8,7 @@ import { getCached, invalidateCache } from '@/lib/cache/redis';
 import { rateLimitGuard } from '@/lib/cache/rateLimit';
 import { computeWaterfall, getGoalPeriodKey } from '@/lib/utils/pointWaterfall';
 import { formatGoalRow } from '@/lib/utils/formatters';
+import { logError } from '@/lib/utils/logError';
 
 export async function GET(request: NextRequest) {
   const auth = await getDisplayAuth();
@@ -125,7 +126,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error fetching goals:', error);
+    logError('Error fetching goals:', error);
     return NextResponse.json({ error: 'Failed to fetch goals' }, { status: 500 });
   }
 }
@@ -185,7 +186,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ goal }, { status: 201 });
   } catch (error) {
-    console.error('Error creating goal:', error);
+    logError('Error creating goal:', error);
     return NextResponse.json({ error: 'Failed to create goal' }, { status: 500 });
   }
 }

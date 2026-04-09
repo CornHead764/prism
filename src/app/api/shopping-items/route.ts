@@ -22,6 +22,7 @@ import { createShoppingItemSchema, validateRequest } from '@/lib/validations';
 import { invalidateCache } from '@/lib/cache/redis';
 import { logActivity } from '@/lib/services/auditLog';
 import { formatShoppingItemRow } from '@/lib/utils/formatters';
+import { logError } from '@/lib/utils/logError';
 
 /**
  * GET /api/shopping-items
@@ -76,7 +77,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ items: formattedItems });
   } catch (error) {
-    console.error('Error fetching shopping items:', error);
+    logError('Error fetching shopping items:', error);
     return NextResponse.json(
       { error: 'Failed to fetch shopping items' },
       { status: 500 }
@@ -180,7 +181,7 @@ export async function POST(request: NextRequest) {
       createdAt: newItem.createdAt.toISOString(),
     }, { status: 201 });
   } catch (error) {
-    console.error('Error creating shopping item:', error);
+    logError('Error creating shopping item:', error);
     return NextResponse.json(
       { error: 'Failed to create shopping item' },
       { status: 500 }

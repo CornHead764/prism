@@ -5,6 +5,7 @@ import { eq, and } from 'drizzle-orm';
 import { requireAuth, requireRole } from '@/lib/auth';
 import { invalidateCache, getCached } from '@/lib/cache/redis';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth();
@@ -63,7 +64,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(sources);
   } catch (error) {
-    console.error('Error fetching wish item sources:', error);
+    logError('Error fetching wish item sources:', error);
     return NextResponse.json(
       { error: 'Failed to fetch wish item sources' },
       { status: 500 }
@@ -164,7 +165,7 @@ export async function POST(request: NextRequest) {
       createdAt: newSource.createdAt,
     }, { status: 201 });
   } catch (error) {
-    console.error('Error creating wish item source:', error);
+    logError('Error creating wish item source:', error);
     return NextResponse.json(
       { error: 'Failed to create wish item source' },
       { status: 500 }

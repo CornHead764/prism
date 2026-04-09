@@ -5,6 +5,7 @@ import { goals } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { invalidateCache } from '@/lib/cache/redis';
 import { z } from 'zod';
+import { logError } from '@/lib/utils/logError';
 
 const reorderSchema = z.object({
   order: z.array(z.string().uuid()).min(1),
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ message: 'Goals reordered' });
   } catch (error) {
-    console.error('Error reordering goals:', error);
+    logError('Error reordering goals:', error);
     return NextResponse.json({ error: 'Failed to reorder goals' }, { status: 500 });
   }
 }

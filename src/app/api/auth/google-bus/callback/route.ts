@@ -6,6 +6,7 @@ import { apiCredentials } from '@/lib/db/schema';
 import { exchangeGmailCodeForTokens } from '@/lib/integrations/gmail';
 import { encrypt } from '@/lib/utils/crypto';
 import { logActivity } from '@/lib/services/auditLog';
+import { logError } from '@/lib/utils/logError';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
     const error = searchParams.get('error');
 
     if (error) {
-      console.error('Gmail OAuth error:', error);
+      logError('Gmail OAuth error:', error);
       return NextResponse.redirect(`${BASE_URL}/settings?section=bus&error=gmail_auth_denied`);
     }
 
@@ -67,7 +68,7 @@ export async function GET(request: Request) {
 
     return NextResponse.redirect(`${BASE_URL}/settings?section=bus&success=gmail_connected`);
   } catch (error) {
-    console.error('Gmail OAuth callback error:', error);
+    logError('Gmail OAuth callback error:', error);
     return NextResponse.redirect(`${BASE_URL}/settings?section=bus&error=gmail_auth_failed`);
   }
 }

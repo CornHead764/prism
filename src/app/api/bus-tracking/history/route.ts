@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth';
 import { eq, and, gte, lte, desc } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { busGeofenceLog } from '@/lib/db/schema';
+import { logError } from '@/lib/utils/logError';
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth();
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(events);
   } catch (error) {
-    console.error('Failed to fetch bus history:', error);
+    logError('Failed to fetch bus history:', error);
     return NextResponse.json({ error: 'Failed to fetch history' }, { status: 500 });
   }
 }
