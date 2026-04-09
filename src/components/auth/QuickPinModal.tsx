@@ -207,10 +207,11 @@ export function QuickPinModal({
           </Button>
         </div>
 
-        {/* Content */}
+        {/* Content — min-h matches PIN view height so the card never resizes on switch */}
+        <div className="min-h-[380px] flex flex-col">
         {!selectedMember ? (
           // Member selection
-          <div className="text-center">
+          <div className="text-center flex-1 flex flex-col justify-center">
             <p className="text-sm text-muted-foreground mb-4">{description}</p>
             {loadingMembers ? (
               <div className="flex justify-center py-8">
@@ -220,7 +221,7 @@ export function QuickPinModal({
               <div className="grid grid-cols-2 gap-3">
                 {members.map((member) => (
                   <button
-                    key={member.id}
+                    key={member.id || member.loginIndex}
                     onClick={() => setSelectedMember(member)}
                     className={cn(
                       'flex flex-col items-center p-3 rounded-xl',
@@ -364,6 +365,7 @@ export function QuickPinModal({
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>,
     document.body
