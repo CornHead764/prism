@@ -17,6 +17,7 @@ import {
   getMonth,
 } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useWidgetBgOverride } from '@/components/widgets/WidgetContainer';
 import { useOrientation } from '@/lib/hooks/useOrientation';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import type { CalendarEvent } from '@/types/calendar';
@@ -56,6 +57,8 @@ function MiniMonth({
 }) {
   const { weekStartsOn } = useWeekStartsOn();
   const dayNames = [...ALL_DAY_NAMES.slice(weekStartsOn), ...ALL_DAY_NAMES.slice(0, weekStartsOn)];
+  const bgOverride = useWidgetBgOverride();
+  const transparentMode = bgOverride?.hasCustomBg === true;
   const monthStart = startOfMonth(month);
   const monthEnd = endOfMonth(month);
   const calendarStart = startOfWeek(monthStart, { weekStartsOn });
@@ -76,7 +79,8 @@ function MiniMonth({
 
   return (
     <div className={cn(
-      'flex flex-col flex-1 bg-card/85 backdrop-blur-sm rounded-lg overflow-hidden',
+      'flex flex-col flex-1 rounded-lg overflow-hidden',
+      !transparentMode && 'bg-card/85 backdrop-blur-sm',
       isCenter && 'ring-2 ring-primary/30'
     )}>
       {/* Month header with themed color */}
@@ -125,7 +129,7 @@ function MiniMonth({
                     'flex flex-col rounded text-xs cursor-pointer overflow-hidden p-0.5',
                     bordered && 'border border-border',
                     !inMonth && 'text-muted-foreground/40',
-                    isPast && inMonth && 'bg-gray-200 text-gray-600 dark:bg-muted/30 dark:text-muted-foreground',
+                    !transparentMode && isPast && inMonth && 'bg-muted/30 text-muted-foreground',
                     today && 'bg-seasonal-highlight/20',
                   )}
                 >

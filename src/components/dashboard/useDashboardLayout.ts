@@ -83,16 +83,21 @@ export function useDashboardLayout(layouts: LayoutsData, slug?: string) {
   }, [activeLayout]);
 
   const handleSave = useCallback(async (name?: string) => {
-    const saveData: Partial<Layout> & { name: string; widgets: WidgetConfig[] } = {
-      ...(activeLayout ? { id: activeLayout.id } : {}),
-      name: name || activeLayout?.name || 'My Layout',
-      widgets: editingWidgets,
-      isDefault: activeLayout?.isDefault ?? true,
-      screensaverWidgets: ssLayout,
-      orientation: activeLayout?.orientation || 'landscape',
-    };
-    await layouts.saveLayout(saveData);
-    setIsEditing(false);
+    try {
+      const saveData: Partial<Layout> & { name: string; widgets: WidgetConfig[] } = {
+        ...(activeLayout ? { id: activeLayout.id } : {}),
+        name: name || activeLayout?.name || 'My Layout',
+        widgets: editingWidgets,
+        isDefault: activeLayout?.isDefault ?? true,
+        screensaverWidgets: ssLayout,
+        orientation: activeLayout?.orientation || 'landscape',
+      };
+      await layouts.saveLayout(saveData);
+    } catch (err) {
+      console.error('Failed to save layout:', err);
+    } finally {
+      setIsEditing(false);
+    }
   }, [activeLayout, editingWidgets, ssLayout, layouts]);
 
   const handleSaveAs = useCallback(async (defaultName?: string) => {

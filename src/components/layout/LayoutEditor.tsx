@@ -145,9 +145,11 @@ export function LayoutEditor({
   const [activePopover, setActivePopover] = useState<ActivePopover>(null);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [exportFeedback, setExportFeedback] = useState('');
-  const [saveFeedback, setSaveFeedback] = useState('');
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showRenameDialog, setShowRenameDialog] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
+  const [saveFeedback, setSaveFeedback] = useState('');
   const [focusedWidget, setFocusedWidget] = useState<string | null>(null);
   const [measureMode, setMeasureMode] = useState(false);
   const [measureHideNav, setMeasureHideNav] = useState(true);
@@ -361,12 +363,18 @@ export function LayoutEditor({
     setActivePopover(null);
   };
 
-  const handleRename = () => {
-    const newName = window.prompt('Rename dashboard:', layoutName || '');
-    if (newName && newName !== layoutName) {
-      onRenameDashboard?.(newName);
-    }
+  const handleRenameOpen = () => {
+    setRenameValue(layoutName || '');
+    setShowRenameDialog(true);
     setActivePopover(null);
+  };
+
+  const handleRenameSubmit = () => {
+    const trimmed = renameValue.trim();
+    if (trimmed && trimmed !== layoutName) {
+      onRenameDashboard?.(trimmed);
+    }
+    setShowRenameDialog(false);
   };
 
   const handleDelete = async () => {
@@ -422,7 +430,17 @@ export function LayoutEditor({
         <div className="flex items-center justify-between gap-2 flex-wrap">
           {/* Left group */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            <EditIcon />
+            {!editingScreensaver && onRenameDashboard ? (
+              <button
+                onClick={handleRenameOpen}
+                className="p-1 rounded hover:bg-accent transition-colors"
+                title="Rename dashboard"
+              >
+                <EditIcon />
+              </button>
+            ) : (
+              <EditIcon />
+            )}
 
             {/* Dashboard name dropdown */}
             {editingScreensaver ? (
@@ -654,7 +672,7 @@ export function LayoutEditor({
                 onClick={handleSave}
                 className="px-2 py-1.5 text-xs rounded-md whitespace-nowrap bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
               >
-                {saveFeedback || saveLabel}
+                {saveLabel}
               </button>
             ) : (
               <div className="relative flex">
@@ -693,11 +711,6 @@ export function LayoutEditor({
               align="right"
             >
               <div className="py-1">
-                {!editingScreensaver && onRenameDashboard && (
-                  <button onClick={handleRename} className={moreItemClass}>
-                    Rename Dashboard...
-                  </button>
-                )}
                 {!editingScreensaver && onDeleteDashboard && (
                   <button
                     onClick={handleDelete}
@@ -707,7 +720,7 @@ export function LayoutEditor({
                     Delete Dashboard
                   </button>
                 )}
-                {!editingScreensaver && (onRenameDashboard || onDeleteDashboard) && (
+                {!editingScreensaver && onDeleteDashboard && (
                   <div className="border-t border-border my-1" />
                 )}
                 <button onClick={() => { if (editingScreensaver) { onScreensaverReset?.(); } else { onReset(); } setActivePopover(null); }} className={moreItemClass}>
@@ -741,6 +754,42 @@ export function LayoutEditor({
         onClose={() => setShowCreateDialog(false)}
         onCreate={(name, startFrom) => { onCreateDashboard?.(name, startFrom); setShowCreateDialog(false); }}
       />
+
+      {/* Rename Dashboard modal */}
+      {showRenameDialog && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => setShowRenameDialog(false)}>
+          <div className="bg-popover border border-border rounded-lg shadow-xl p-4 max-w-sm w-full mx-4 space-y-3" onClick={e => e.stopPropagation()}>
+            <div className="text-sm font-medium">Rename Dashboard</div>
+            <div>
+              <label className="text-xs text-muted-foreground">Name</label>
+              <input
+                type="text"
+                value={renameValue}
+                onChange={e => setRenameValue(e.target.value)}
+                className="w-full px-2 py-1.5 text-sm bg-muted border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                maxLength={100}
+                autoFocus
+                onKeyDown={e => { if (e.key === 'Enter') handleRenameSubmit(); }}
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setShowRenameDialog(false)}
+                className="px-3 py-1.5 text-sm rounded-md bg-muted hover:bg-accent transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRenameSubmit}
+                disabled={!renameValue.trim() || renameValue.trim() === layoutName}
+                className="px-3 py-1.5 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              >
+                Rename
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <LayoutEditorImportDialog
         open={showImportDialog}

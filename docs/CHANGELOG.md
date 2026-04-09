@@ -282,6 +282,35 @@ All notable changes to Prism are documented in this file.
 - **Task Creation**: Fixed "Failed to create task" error when using + button with list filter set to "none"
 - **Day View Hidden Hours**: Hour rows now expand to fill available space when hidden hours are enabled, instead of leaving blank space at the bottom
 
+## [1.0.2] - 2026-02-22
+
+### Added
+- **Transparent widget background**: New "Transparent" swatch (checkerboard icon) in Fill palette strips the Card background entirely, letting wallpaper show through
+- **Widget text color**: New "Text" section in properties bar lets you override text/icon color per widget (Auto mode uses luminance detection or theme default)
+- **Calendar transparent mode**: When calendar widget has custom/transparent background, day cell backgrounds are removed so wallpaper shows through the entire widget
+
+### Fixed
+- **Text color persistence**: Widget text color now saves to database (was being stripped by API validation)
+- **Text color coverage**: Overrides CSS custom properties (`--foreground`, `--card-foreground`, `--muted-foreground`, `--primary`, `--seasonal-accent`) so all text, icons, and accents in the widget pick up the chosen color
+- **Day view transparency**: DayViewSideBySide calendar now strips `bg-card/85` in transparent widget mode
+- **Calendar dropdown**: Select trigger and filter chips go transparent with the widget
+- **iPad properties bar**: Added `onPointerDown` + `touch-manipulation` to all swatch buttons for reliable iPad touch
+
+### Added
+- **Custom color picker**: Rainbow swatch in Fill, Outline, and Text sections opens native color picker for full color gamut
+
+### Improved
+- **Calendar dark mode**: Replaced hardcoded `bg-gray-200` past-day backgrounds with theme-aware `bg-muted` variants that adapt to light/dark mode
+- **Properties bar UX**: Opacity buttons only appear when a color fill is selected (not for None or Transparent); Fill palette uses 9-column grid to accommodate Transparent swatch
+
+## [1.0.1] - 2026-02-22
+
+### Fixed
+- **Background opacity**: Widget background opacity no longer makes text/icons transparent — uses rgba background color instead of CSS opacity
+- **Color picker touch targets**: Increased button sizes to meet 44px HIG minimum, prevented RGL drag from intercepting touch events on color picker
+- **Pencil icon**: Edit icon in dashboard toolbar now opens rename dialog on click
+- **Rename dialog**: Replaced browser `window.prompt()` with styled modal dialog (consistent with v1.0 polish)
+
 ## [1.0.0] - 2026-02-22
 
 ### Changed
