@@ -104,7 +104,7 @@ const MEMBERS: FamilyMember[] = [
   { id: 'user-bob',   name: 'Bob',   color: '#EC4899', role: 'child'  },
 ];
 
-const ALICE = MEMBERS[0];
+const ALICE = MEMBERS[0]!;
 
 /** Helper — click a member to move into PIN entry mode */
 function selectMember(name: string) {

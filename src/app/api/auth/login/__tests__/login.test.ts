@@ -63,7 +63,8 @@ jest.mock('drizzle-orm', () => ({ eq: jest.fn(), asc: jest.fn() }));
 import { POST } from '../route';
 
 const SESSION_MOCK = { token: 'tok123', expiresAt: new Date(Date.now() + 3600_000) };
-const PARENT_USER = { id: 'parent-1', name: 'Alice', role: 'parent', color: '#3B82F6', avatarUrl: null, pin: '$2a$hash' };
+// pin is string | null — guest users have no PIN
+const PARENT_USER = { id: 'parent-1', name: 'Alice', role: 'parent', color: '#3B82F6', avatarUrl: null, pin: '$2a$hash' as string | null };
 
 function makeRequest(body: object) {
   return new NextRequest('http://localhost:3000/api/auth/login', {

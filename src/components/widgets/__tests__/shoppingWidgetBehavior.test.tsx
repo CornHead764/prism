@@ -127,7 +127,7 @@ describe('ShoppingWidget — behavioral', () => {
 
       // Apples (i1) is unchecked — it's the first checkbox
       const checkboxes = getCheckboxes();
-      const applesCheckbox = checkboxes[0]; // i1 — unchecked
+      const applesCheckbox = checkboxes[0]!; // i1 — unchecked
       expect(applesCheckbox.checked).toBe(false);
 
       fireEvent.click(applesCheckbox);
@@ -144,7 +144,7 @@ describe('ShoppingWidget — behavioral', () => {
 
       // Milk (i2) is checked — it's the second checkbox
       const checkboxes = getCheckboxes();
-      const milkCheckbox = checkboxes[1]; // i2 — checked
+      const milkCheckbox = checkboxes[1]!; // i2 — checked
       expect(milkCheckbox.checked).toBe(true);
 
       fireEvent.click(milkCheckbox);
@@ -161,14 +161,14 @@ describe('ShoppingWidget — behavioral', () => {
       render(<ShoppingWidget lists={[makeList()]} onItemToggle={slowToggle} />);
 
       const checkboxes = getCheckboxes();
-      const applesCheckbox = checkboxes[0]; // i1 starts unchecked
+      const applesCheckbox = checkboxes[0]!; // i1 starts unchecked
       expect(applesCheckbox.checked).toBe(false);
 
       fireEvent.click(applesCheckbox);
 
       // The UI should reflect the new checked state immediately (optimistic)
       const updatedCheckboxes = getCheckboxes();
-      expect(updatedCheckboxes[0].checked).toBe(true);
+      expect(updatedCheckboxes[0]!.checked).toBe(true);
     });
   });
 
@@ -198,7 +198,7 @@ describe('ShoppingWidget — behavioral', () => {
       expect(progressBefore).toBeCloseTo(0, 0);
 
       // Check the first item → 1/2 = 50%
-      fireEvent.click(getCheckboxes()[0]);
+      fireEvent.click(getCheckboxes()[0]!);
 
       const progressAfter = Number(
         screen.getByRole('progressbar').getAttribute('aria-valuenow')
