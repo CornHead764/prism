@@ -1,5 +1,7 @@
 # Prism
 
+> **If you installed Prism before April 11, 2025:** database migrations now run automatically on container startup. Run `./scripts/update.sh` (or `git pull && docker-compose up -d --build`) to update — your database will be brought up to date automatically. No manual steps required.
+
 **A subscription-free, self-hosted family dashboard that integrates with the tools you already use without becoming yet another system of record.**
 
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
