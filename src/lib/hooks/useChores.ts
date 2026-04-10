@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useVisibilityPolling } from './useVisibilityPolling';
+import { navCacheGet, navCacheSet } from '@/lib/utils/navCache';
 
 // Re-export Chore type from shared types for consumers that import from this hook
 export type { Chore } from '@/types';
@@ -64,14 +65,17 @@ export function useChores(options: UseChoresOptions = {}): UseChoresResult {
     enabled = true,
   } = options;
 
-  const [chores, setChores] = useState<Chore[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = `/api/chores?${new URLSearchParams({ ...(assignedTo ? { assignedTo } : {}), ...(!showDisabled ? { enabled: 'true' } : {}) }).toString()}`;
+  const cached = navCacheGet<Chore[]>(cacheKey);
+  const [chores, setChores] = useState<Chore[]>(() => cached ?? []);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState<string | null>(null);
 
   /**
    * Fetch chores from the API
    */
   const fetchChores = useCallback(async () => {
+    if (!navCacheGet(cacheKey)) setLoading(true);
     try {
       setError(null);
 
@@ -134,6 +138,7 @@ export function useChores(options: UseChoresOptions = {}): UseChoresResult {
         })
       );
 
+      navCacheSet(cacheKey, transformedChores);
       setChores(transformedChores);
     } catch (err) {
       console.error('Error fetching chores:', err);
@@ -141,7 +146,7 @@ export function useChores(options: UseChoresOptions = {}): UseChoresResult {
     } finally {
       setLoading(false);
     }
-  }, [assignedTo, showDisabled]);
+  }, [assignedTo, showDisabled, cacheKey]);
 
   /**
    * Mark a chore as completed

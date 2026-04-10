@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import { useVisibilityPolling } from './useVisibilityPolling';
+import { navCacheGet, navCacheSet } from '@/lib/utils/navCache';
 
 interface UseFetchOptions<T> {
   url: string;
@@ -24,22 +25,29 @@ interface UseFetchResult<T> {
 export function useFetch<T>(options: UseFetchOptions<T>): UseFetchResult<T> {
   const { url, initialData, transform, refreshInterval = 0, label = 'data', enabled = true } = options;
 
-  const [data, setData] = useState<T>(initialData);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
   const transformRef = useRef(transform);
   transformRef.current = transform;
   const labelRef = useRef(label);
   labelRef.current = label;
 
+  // Seed state from navigation cache so the page renders immediately on revisit
+  const cached = navCacheGet<T>(url);
+  const [data, setData] = useState<T>(() => cached ?? initialData);
+  // Only show loading spinner on true cold fetches (no cached data available)
+  const [loading, setLoading] = useState(!cached);
+  const [error, setError] = useState<string | null>(null);
+
   const fetchData = useCallback(async () => {
+    // Don't flash a spinner if we already have something to show (SWR)
+    if (!navCacheGet(url)) setLoading(true);
     try {
       setError(null);
       const response = await fetch(url);
       if (!response.ok) throw new Error(`Failed to fetch ${labelRef.current}`);
       const json = await response.json();
-      setData(transformRef.current ? transformRef.current(json) : json);
+      const result = transformRef.current ? transformRef.current(json) : (json as T);
+      navCacheSet(url, result);
+      setData(result);
     } catch (err) {
       console.error(`Error fetching ${labelRef.current}:`, err);
       setError(err instanceof Error ? err.message : `Failed to fetch ${labelRef.current}`);

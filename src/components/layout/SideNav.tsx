@@ -123,11 +123,11 @@ export function SideNav({ user, onLogout, onLogin, uiHidden, className }: SideNa
         onClick={handleAsideClick}
         className={cn(
           'fixed left-0 top-0 z-40 h-screen',
-          'bg-card/85 backdrop-blur-sm',
+          'bg-card/95',
           'flex flex-col',
-          'transition-all duration-500 ease-in-out',
+          'transition-[transform,opacity,width] duration-300 ease-in-out',
           expanded ? 'w-60 shadow-xl' : 'w-16',
-          uiHidden ? '-translate-x-full opacity-0 delay-200' : 'translate-x-0 opacity-100 delay-0',
+          uiHidden ? '-translate-x-full opacity-0 delay-100' : 'translate-x-0 opacity-100 delay-0',
           className
         )}
       >

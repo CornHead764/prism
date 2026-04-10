@@ -6,10 +6,11 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { addDays, subDays, startOfDay, endOfDay } from 'date-fns';
 import type { CalendarEvent } from '@/types/calendar';
 import { useVisibilityPolling } from '@/lib/hooks/useVisibilityPolling';
+import { navCacheGet, navCacheSet } from '@/lib/utils/navCache';
 
 interface UseCalendarEventsOptions {
   /** Number of days to fetch events for */
@@ -40,8 +41,17 @@ export function useCalendarEvents(
 ): UseCalendarEventsResult {
   const { daysToShow = 7, refreshInterval = 5 * 60 * 1000, useDemoFallback = true, autoSyncMinutes = 10, enabled = true } = options;
 
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Stable cache key for today's date range — same across remounts within the same day
+  const cacheKey = useMemo(() => {
+    const today = startOfDay(new Date());
+    const startDate = startOfDay(subDays(today, 30));
+    const endDate = endOfDay(addDays(today, daysToShow));
+    return `/api/events?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&limit=500`;
+  }, [daysToShow]);
+
+  const cached = navCacheGet<CalendarEvent[]>(cacheKey);
+  const [events, setEvents] = useState<CalendarEvent[]>(() => cached ?? []);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState<string | null>(null);
   const [lastSyncCheck, setLastSyncCheck] = useState<Date | null>(null);
 
@@ -49,6 +59,7 @@ export function useCalendarEvents(
    * Fetch events from the API
    */
   const fetchEvents = useCallback(async () => {
+    if (!navCacheGet(cacheKey)) setLoading(true);
     try {
       setError(null);
 
@@ -99,15 +110,15 @@ export function useCalendarEvents(
         })
       );
 
+      navCacheSet(cacheKey, transformedEvents);
       setEvents(transformedEvents);
     } catch (err) {
       console.error('Error fetching events:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch events');
-
     } finally {
       setLoading(false);
     }
-  }, [daysToShow, useDemoFallback]);
+  }, [daysToShow, useDemoFallback, cacheKey]);
 
   /**
    * Trigger calendar sync

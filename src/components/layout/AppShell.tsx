@@ -134,12 +134,11 @@ export function AppShell({
       <main
         className={cn(
           'min-h-screen',
-          // Animate margin in sync with SideNav slide (duration-500 ease-in-out).
-          // Remove ml-16 when nav is auto-hidden so content fills the freed space.
-          !hideNav && showSideNav && !measureHideNav && 'transition-[margin-left] duration-500 ease-in-out',
+          // Snap margin/padding when nav hides — animating layout properties causes
+          // layout reflow on every frame, which is expensive on weak CPUs (Atom).
+          // The nav itself slides smoothly via GPU-composited transform; the content
+          // just needs to reflow once when the class changes.
           !hideNav && showSideNav && !measureHideNav && !uiHidden && 'ml-16',
-          // Animate bottom padding in sync with PortraitNav
-          !hideNav && showPortraitNav && !measureHideNav && 'transition-[padding-bottom] duration-500 ease-in-out',
           !hideNav && showPortraitNav && !measureHideNav && !uiHidden && 'pb-24',
           className
         )}
