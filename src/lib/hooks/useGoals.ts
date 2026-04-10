@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useVisibilityPolling } from './useVisibilityPolling';
+import { navCacheGet, navCacheSet } from '@/lib/utils/navCache';
 
 export interface Goal {
   id: string;
@@ -67,19 +68,22 @@ interface UseGoalsResult {
 
 export function useGoals(options: { refreshInterval?: number; enabled?: boolean } = {}): UseGoalsResult {
   const { refreshInterval = 2 * 60 * 1000, enabled = true } = options;
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [progress, setProgress] = useState<Record<string, Record<string, ChildProgress>>>({});
-  const [goalChildren, setGoalChildren] = useState<GoalChild[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cached = navCacheGet<GoalsResponse>('/api/goals');
+  const [goals, setGoals] = useState<Goal[]>(() => cached?.goals ?? []);
+  const [progress, setProgress] = useState<Record<string, Record<string, ChildProgress>>>(() => cached?.progress ?? {});
+  const [goalChildren, setGoalChildren] = useState<GoalChild[]>(() => cached?.children ?? []);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState<string | null>(null);
 
   const fetchGoals = useCallback(async () => {
+    if (!navCacheGet('/api/goals')) setLoading(true);
     try {
       setError(null);
       const response = await fetch('/api/goals');
       if (!response.ok) throw new Error('Failed to fetch goals');
 
       const data: GoalsResponse = await response.json();
+      navCacheSet('/api/goals', data);
       setGoals(data.goals);
       setProgress(data.progress);
       setGoalChildren(data.children);

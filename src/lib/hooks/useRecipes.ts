@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import { navCacheGet, navCacheSet } from '@/lib/utils/navCache';
 
 interface RecipeIngredient {
   text: string;
@@ -76,32 +77,36 @@ interface UpdateRecipeInput extends Partial<CreateRecipeInput> {
 }
 
 export function useRecipes(options: UseRecipesOptions = {}) {
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = useMemo(() => {
+    const params = new URLSearchParams();
+    if (options.search) params.set('search', options.search);
+    if (options.category) params.set('category', options.category);
+    if (options.cuisine) params.set('cuisine', options.cuisine);
+    if (options.favorite) params.set('favorite', 'true');
+    if (options.limit) params.set('limit', options.limit.toString());
+    if (options.offset) params.set('offset', options.offset.toString());
+    return `/api/recipes${params.toString() ? `?${params}` : ''}`;
+  }, [options.search, options.category, options.cuisine, options.favorite, options.limit, options.offset]);
+
+  const cached = navCacheGet<{ recipes: Recipe[]; total: number }>(cacheKey);
+  const [recipes, setRecipes] = useState<Recipe[]>(() => cached?.recipes ?? []);
+  const [total, setTotal] = useState(() => cached?.total ?? 0);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState<string | null>(null);
 
   const fetchRecipes = useCallback(async () => {
+    if (!navCacheGet(cacheKey)) setLoading(true);
     try {
-      setLoading(true);
       setError(null);
 
-      const params = new URLSearchParams();
-      if (options.search) params.set('search', options.search);
-      if (options.category) params.set('category', options.category);
-      if (options.cuisine) params.set('cuisine', options.cuisine);
-      if (options.favorite) params.set('favorite', 'true');
-      if (options.limit) params.set('limit', options.limit.toString());
-      if (options.offset) params.set('offset', options.offset.toString());
-
-      const url = `/api/recipes${params.toString() ? `?${params}` : ''}`;
-      const res = await fetch(url);
+      const res = await fetch(cacheKey);
 
       if (!res.ok) {
         throw new Error('Failed to fetch recipes');
       }
 
       const data: RecipesResponse = await res.json();
+      navCacheSet(cacheKey, { recipes: data.recipes, total: data.total });
       setRecipes(data.recipes);
       setTotal(data.total);
     } catch (err) {
@@ -109,7 +114,7 @@ export function useRecipes(options: UseRecipesOptions = {}) {
     } finally {
       setLoading(false);
     }
-  }, [options.search, options.category, options.cuisine, options.favorite, options.limit, options.offset]);
+  }, [cacheKey]);
 
   useEffect(() => {
     fetchRecipes();

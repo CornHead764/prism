@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useVisibilityPolling } from './useVisibilityPolling';
+import { navCacheGet, navCacheSet } from '@/lib/utils/navCache';
 
 // Re-export types from shared types for consumers that import from this hook
 export type { ShoppingItem, ShoppingList } from '@/types';
@@ -46,14 +47,17 @@ export function useShoppingLists(options: UseShoppingListsOptions = {}): UseShop
     enabled = true,
   } = options;
 
-  const [lists, setLists] = useState<ShoppingList[]>([]);
-  const [loading, setLoading] = useState(true);
+  const CACHE_KEY = '/api/shopping-lists?includeItems=true';
+  const cached = navCacheGet<ShoppingList[]>(CACHE_KEY);
+  const [lists, setLists] = useState<ShoppingList[]>(() => cached ?? []);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState<string | null>(null);
 
   /**
    * Fetch shopping lists from the API
    */
   const fetchLists = useCallback(async () => {
+    if (!navCacheGet(CACHE_KEY)) setLoading(true);
     try {
       setError(null);
 
@@ -122,6 +126,7 @@ export function useShoppingLists(options: UseShoppingListsOptions = {}): UseShop
         createdAt: new Date(list.createdAt),
       }));
 
+      navCacheSet(CACHE_KEY, listsWithItems);
       setLists(listsWithItems);
     } catch (err) {
       console.error('Error fetching shopping lists:', err);

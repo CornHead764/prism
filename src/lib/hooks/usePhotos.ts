@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useVisibilityPolling } from '@/lib/hooks/useVisibilityPolling';
+import { navCacheGet, navCacheSet } from '@/lib/utils/navCache';
 
 export type PhotoOrientation = 'landscape' | 'portrait' | 'square';
 export type PhotoUsageTag = 'wallpaper' | 'gallery' | 'screensaver';
@@ -86,16 +87,31 @@ export function usePhotos(options: UsePhotosOptions = {}): UsePhotosResult {
     refreshInterval = 0,
   } = options;
 
-  const [photos, setPhotos] = useState<Photo[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Cache key for page-0 fetch — used to seed initial state on revisit
+  const cacheKey = useMemo(() => {
+    const params = new URLSearchParams();
+    if (sourceId) params.set('sourceId', sourceId);
+    if (favorite !== undefined) params.set('favorite', String(favorite));
+    if (usage) params.set('usage', usage);
+    if (orientation) params.set('orientation', orientation);
+    params.set('sort', sort);
+    params.set('limit', String(limit));
+    params.set('offset', '0');
+    return `/api/photos?${params}`;
+  }, [sourceId, favorite, usage, orientation, sort, limit]);
+
+  const cached = navCacheGet<{ photos: Photo[]; total: number }>(cacheKey);
+  const [photos, setPhotos] = useState<Photo[]>(() => cached?.photos ?? []);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState<string | null>(null);
-  const [total, setTotal] = useState(0);
+  const [total, setTotal] = useState(() => cached?.total ?? 0);
   const offsetRef = useRef(0);
 
   const fetchPhotos = useCallback(async (requestOffset = 0, append = false) => {
     try {
       setError(null);
-      if (!append) setLoading(true);
+      // Only show spinner on true cache misses — skip for SWR background refresh
+      if (!append && !navCacheGet(cacheKey)) setLoading(true);
       const params = new URLSearchParams();
       if (sourceId) params.set('sourceId', sourceId);
       if (favorite !== undefined) params.set('favorite', String(favorite));
@@ -112,6 +128,7 @@ export function usePhotos(options: UsePhotosOptions = {}): UsePhotosResult {
       if (append) {
         setPhotos((prev) => [...prev, ...data.photos]);
       } else {
+        navCacheSet(cacheKey, { photos: data.photos, total: data.total });
         setPhotos(data.photos);
       }
       setTotal(data.total);
@@ -120,7 +137,7 @@ export function usePhotos(options: UsePhotosOptions = {}): UsePhotosResult {
     } finally {
       setLoading(false);
     }
-  }, [sourceId, favorite, usage, orientation, sort, limit]);
+  }, [sourceId, favorite, usage, orientation, sort, limit, cacheKey]);
 
   const loadMore = useCallback(() => {
     const newOffset = offsetRef.current + limit;

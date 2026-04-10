@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useVisibilityPolling } from './useVisibilityPolling';
+import { navCacheGet, navCacheSet } from '@/lib/utils/navCache';
 import type { WishItem } from '@/types';
 
 interface UseWishItemsOptions {
@@ -32,11 +33,20 @@ export function useWishItems(
 ): UseWishItemsResult {
   const { refreshInterval = 5 * 60 * 1000 } = options;
 
-  const [items, setItems] = useState<WishItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = useMemo(() => {
+    const params = new URLSearchParams();
+    if (memberId && memberId !== 'all') params.set('memberId', memberId);
+    if (viewerId) params.set('viewerId', viewerId);
+    return `/api/wish-items?${params.toString()}`;
+  }, [memberId, viewerId]);
+
+  const cached = navCacheGet<WishItem[]>(cacheKey);
+  const [items, setItems] = useState<WishItem[]>(() => cached ?? []);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState<string | null>(null);
 
   const fetchItems = useCallback(async () => {
+    if (!navCacheGet(cacheKey)) setLoading(true);
     try {
       setError(null);
       const params = new URLSearchParams();
@@ -52,6 +62,7 @@ export function useWishItems(
       }
 
       const data = await response.json();
+      navCacheSet(cacheKey, data.items || []);
       setItems(data.items || []);
     } catch (err) {
       console.error('Error fetching wish items:', err);
@@ -59,7 +70,7 @@ export function useWishItems(
     } finally {
       setLoading(false);
     }
-  }, [memberId, viewerId]);
+  }, [memberId, viewerId, cacheKey]);
 
   const addItem = useCallback(async (data: {
     memberId: string;
