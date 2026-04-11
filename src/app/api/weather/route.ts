@@ -62,7 +62,10 @@ export async function GET(request: NextRequest) {
     const location = await resolveLocation(searchParams.get('location'));
 
     // Create a cache key based on location
-    const cacheKey = `weather:${location.toLowerCase().replace(/\s+/g, '-')}`;
+    const locationKey = typeof location === 'string'
+      ? location.toLowerCase().replace(/\s+/g, '-')
+      : `${location.lat.toFixed(2)},${location.lon.toFixed(2)}`;
+    const cacheKey = `weather:${locationKey}`;
 
     // Get from cache or fetch fresh
     const weatherData = await getCached(

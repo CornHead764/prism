@@ -28,6 +28,7 @@ import * as React from 'react';
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { QuickPinModal, type QuickPinMember } from '@/components/auth';
 import { useVisibilityPolling } from '@/lib/hooks/useVisibilityPolling';
+import { toast } from '@/components/ui/use-toast';
 
 /**
  * AUTH CONTEXT TYPE
@@ -148,7 +149,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
       }
 
-      // No active session - show modal and wait for authentication
+      // No active session — briefly remind the user why the sign-in modal is appearing,
+      // then show it. The toast gives context before the modal takes focus.
+      toast({
+        title: 'Sign in required',
+        description: 'Enter your PIN to make changes.',
+        duration: 3000,
+      });
+
       return new Promise((resolve) => {
         setModalTitle(title || "Who's there?");
         setModalDescription(description || 'Enter your PIN to continue');
