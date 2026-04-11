@@ -83,6 +83,7 @@ data/
 uploads/
 /backups/
 config/rclone.conf
+config/certs/
 
 # Misc
 .vercel
