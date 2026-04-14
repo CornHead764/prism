@@ -70,6 +70,7 @@ export function PinForm({ pin, initialLatLng, parentId, pinType = 'location', ch
   const [visitedEndDate, setVisitedEndDate] = useState(pin?.visitedEndDate ?? '');
   const [tagInput, setTagInput] = useState((pin?.tags ?? []).join(', '));
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Pending stops — geocode-backed
   const [pendingStops, setPendingStops] = useState<PendingStop[]>([]);
@@ -214,6 +215,7 @@ export function PinForm({ pin, initialLatLng, parentId, pinType = 'location', ch
     if (!nameToSave) return;
     if (isNP && !selectedPark && !pin) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const tags = tagInput.split(',').map((t) => t.trim()).filter(Boolean);
       await onSave(
@@ -237,6 +239,10 @@ export function PinForm({ pin, initialLatLng, parentId, pinType = 'location', ch
         },
         (pendingStops.length > 0 || pendingParks.length > 0) ? { stops: pendingStops, parks: pendingParks } : undefined
       );
+    } catch (err) {
+      setSaveError(err instanceof Error && err.name === 'TravelAuthError'
+        ? 'Log in to make changes'
+        : 'Something went wrong — please try again');
     } finally {
       setSaving(false);
     }
@@ -592,11 +598,16 @@ export function PinForm({ pin, initialLatLng, parentId, pinType = 'location', ch
       </div>
 
       {/* ── Footer ── */}
-      <div className="px-4 py-3 border-t border-border flex gap-2 shrink-0">
-        <Button type="button" variant="outline" onClick={onCancel} className="flex-1">Cancel</Button>
-        <Button type="submit" disabled={saving || !inputValue.trim() || (isNP && !selectedPark && !pin)} className="flex-1">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : (pin ? 'Save' : 'Add')}
-        </Button>
+      <div className="px-4 py-3 border-t border-border flex flex-col gap-2 shrink-0">
+        {saveError && (
+          <p className="text-xs text-destructive text-center">{saveError}</p>
+        )}
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" onClick={onCancel} className="flex-1">Cancel</Button>
+          <Button type="submit" disabled={saving || !inputValue.trim() || (isNP && !selectedPark && !pin)} className="flex-1">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : (pin ? 'Save' : 'Add')}
+          </Button>
+        </div>
       </div>
     </form>
   );

@@ -5,7 +5,8 @@ import dynamic from 'next/dynamic';
 import { Globe, List, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PageWrapper } from '@/components/layout/PageWrapper';
-import { useTravelData } from './useTravelData';
+import { useTravelData, TravelAuthError } from './useTravelData';
+import { useToast } from '@/components/ui/use-toast';
 import { PinList } from './components/PinList';
 import { PinDetail } from './components/PinDetail';
 import { PinForm } from './components/PinForm';
@@ -33,6 +34,15 @@ type Overlay =
 
 export function TravelView() {
   const { pins, loading, addPin, updatePin, deletePin } = useTravelData();
+  const { toast } = useToast();
+
+  const handleMutationError = useCallback((err: unknown) => {
+    if (err instanceof TravelAuthError) {
+      toast({ title: 'Log in to make changes', description: 'Enter your PIN to add, edit, or delete places.', variant: 'destructive' });
+    } else {
+      toast({ title: 'Something went wrong', description: 'Please try again.', variant: 'destructive' });
+    }
+  }, [toast]);
   const [activeTab, setActiveTab] = useState<ActiveTab>('globe');
   const [selectedPinId, setSelectedPinId] = useState<string | null>(null);
   const [overlay, setOverlay] = useState<Overlay>({ mode: 'none' });
@@ -73,7 +83,13 @@ export function TravelView() {
   }, []);
 
   const handleSaveNew = useCallback(async (data: Partial<TravelPin>, pendingChildren?: PinPendingChildren) => {
-    const newPin = await addPin(data as Omit<TravelPin, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>);
+    let newPin: TravelPin;
+    try {
+      newPin = await addPin(data as Omit<TravelPin, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>);
+    } catch (err) {
+      handleMutationError(err);
+      throw err; // re-throw so PinForm stays open
+    }
 
     // If it's a child pin, return to parent detail
     if (newPin.parentId) {
@@ -99,7 +115,13 @@ export function TravelView() {
   }, [addPin, pins]);
 
   const handleUpdate = useCallback(async (id: string, data: Partial<TravelPin>, pendingChildren?: PinPendingChildren) => {
-    const updated = await updatePin(id, data);
+    let updated: TravelPin;
+    try {
+      updated = await updatePin(id, data);
+    } catch (err) {
+      handleMutationError(err);
+      throw err;
+    }
     // Create any new pending child stops/parks added during edit
     const base = { status: 'want_to_go' as const, isBucketList: false, tags: [], stops: [], nationalParks: [], sortOrder: 0, photoRadiusKm: 50 };
     for (const stop of pendingChildren?.stops ?? []) {
@@ -114,11 +136,14 @@ export function TravelView() {
   }, [updatePin, addPin]);
 
   const handleDelete = useCallback(async (id: string) => {
-    // If deleting a child pin, return to parent's detail
     const pin = pins.find((p) => p.id === id);
     const parentId = pin?.parentId;
-
-    await deletePin(id);
+    try {
+      await deletePin(id);
+    } catch (err) {
+      handleMutationError(err);
+      return;
+    }
     setSelectedPinId(null);
 
     if (parentId) {
@@ -133,9 +158,12 @@ export function TravelView() {
   }, [deletePin, pins]);
 
   const handleDeleteChild = useCallback(async (childId: string) => {
-    await deletePin(childId);
-    // Stay on the parent detail — the useEffect will refresh childPins via pins state
-  }, [deletePin]);
+    try {
+      await deletePin(childId);
+    } catch (err) {
+      handleMutationError(err);
+    }
+  }, [deletePin, handleMutationError]);
 
   const closeOverlay = useCallback(() => {
     setOverlay({ mode: 'none' });

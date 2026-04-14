@@ -39,7 +39,7 @@ export function PinDetail({ pin, childPins, photoCount, onUpdate, onDelete, onDe
         parentId={pin.parentId ?? undefined}
         childPins={childPins}
         onSave={async (data, pendingChildren) => {
-          await onUpdate(data, pendingChildren);
+          await onUpdate(data, pendingChildren); // throws on auth/error — form stays open
           setEditing(false);
         }}
         onCancel={() => setEditing(false)}

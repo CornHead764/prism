@@ -4,6 +4,17 @@ import { useState, useCallback, useEffect } from 'react';
 import { useVisibilityPolling } from '@/lib/hooks/useVisibilityPolling';
 import type { TravelPin } from './types';
 
+export class TravelAuthError extends Error {
+  constructor() { super('Not logged in'); this.name = 'TravelAuthError'; }
+}
+
+function checkResponse(res: Response, action: string): void {
+  if (!res.ok) {
+    if (res.status === 401 || res.status === 403) throw new TravelAuthError();
+    throw new Error(`Failed to ${action}`);
+  }
+}
+
 async function fetchPins(): Promise<TravelPin[]> {
   const res = await fetch('/api/travel/pins');
   if (!res.ok) return [];
@@ -21,9 +32,7 @@ export function useTravelData() {
     setLoading(false);
   }, []);
 
-  // Load immediately on mount
   useEffect(() => { load(); }, [load]);
-  // Then poll every 5 minutes while visible
   useVisibilityPolling(load, 300_000);
 
   const addPin = useCallback(async (payload: Omit<TravelPin, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>) => {
@@ -32,7 +41,7 @@ export function useTravelData() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error('Failed to create pin');
+    checkResponse(res, 'create pin');
     const pin = await res.json();
     setPins((prev) => [pin, ...prev]);
     return pin as TravelPin;
@@ -44,7 +53,7 @@ export function useTravelData() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw new Error('Failed to update pin');
+    checkResponse(res, 'update pin');
     const updated = await res.json();
     setPins((prev) => prev.map((p) => (p.id === id ? { ...p, ...updated } : p)));
     return updated as TravelPin;
@@ -52,8 +61,7 @@ export function useTravelData() {
 
   const deletePin = useCallback(async (id: string) => {
     const res = await fetch(`/api/travel/pins/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error('Failed to delete pin');
-    // Also remove any child pins (DB cascade handles DB side, we mirror locally)
+    checkResponse(res, 'delete pin');
     setPins((prev) => prev.filter((p) => p.id !== id && p.parentId !== id));
   }, []);
 
