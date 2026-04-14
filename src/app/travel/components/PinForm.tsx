@@ -317,7 +317,7 @@ export function PinForm({ pin, initialLatLng, parentId, pinType = 'location', ch
                       className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors"
                     >
                       <div className="font-medium">{r.displayName.split(',')[0]?.trim()}</div>
-                      <div className="text-xs text-muted-foreground truncate">{r.displayName}</div>
+                      <div className="text-xs text-muted-foreground truncate">{r.fullName}</div>
                     </button>
                   </li>
                 ))}
@@ -432,7 +432,7 @@ export function PinForm({ pin, initialLatLng, parentId, pinType = 'location', ch
                             className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors"
                           >
                             <div className="font-medium">{r.displayName.split(',')[0]?.trim()}</div>
-                            <div className="text-xs text-muted-foreground truncate">{r.displayName}</div>
+                            <div className="text-xs text-muted-foreground truncate">{r.fullName}</div>
                           </button>
                         </li>
                       ))}

@@ -55,10 +55,15 @@ export async function GET(request: NextRequest) {
 
   // Normalize special characters and common colloquial aliases
   const ALIASES: Record<string, string> = {
-    'big island': 'Hawaii Island',
-    'big island hawaii': 'Hawaii Island Hawaii',
-    'big island hi': 'Hawaii Island Hawaii',
-    'the big island': 'Hawaii Island',
+    'big island':         'Hawaii Island, Hawaii, United States',
+    'big island hawaii':  'Hawaii Island, Hawaii, United States',
+    'big island hi':      'Hawaii Island, Hawaii, United States',
+    'the big island':     'Hawaii Island, Hawaii, United States',
+    'hawaii island':      'Hawaii Island, Hawaii, United States',
+    'island of hawaii':   'Hawaii Island, Hawaii, United States',
+    'maui island':        'Maui, Hawaii, United States',
+    'oahu':               'Oahu, Hawaii, United States',
+    'the big island of hawaii': 'Hawaii Island, Hawaii, United States',
   };
   const normalized = rawQ
     .trim()
