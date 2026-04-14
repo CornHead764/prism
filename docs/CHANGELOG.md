@@ -4,6 +4,13 @@ All notable changes to Prism are documented in this file.
 
 ## [Unreleased]
 
+### Features
+- **Travel Map**: Interactive globe (MapLibre GL + OpenFreeMap tiles, globe projection) for tracking family travel — visited places, want-to-go list, and bucket list destinations. Pins support trip dates, labels, tags, stops, national parks, and parent/child sub-location model. Full CRUD with Nominatim geocode search. Accessible at `/travel` via the side nav.
+
+### Bug Fixes
+- **Microsoft OAuth callback**: Removed `requireAuth` requirement on the callback route — Microsoft redirects without a Prism session cookie, causing the connection flow to fail silently. Success/error toasts now display in Settings → Connected Accounts.
+- **Performance mode**: Removed animation stripping (transitions run on the compositor thread and don't cause CPU overhead); caps transitions at 150ms so the UI remains responsive without looking broken. Fixes washed-out surfaces when backdrop-blur is disabled.
+
 ### Infrastructure
 - **Automatic database migrations**: Schema changes now apply automatically on container startup via `scripts/migrate.js`. Users update by running `./scripts/update.sh` (or `git pull && docker-compose up -d --build`) — no manual database commands required. `drizzle/0000_upgrade.sql` brings any existing installation (regardless of age) to the current schema; future changes go in numbered `drizzle/NNNN_description.sql` files.
 
