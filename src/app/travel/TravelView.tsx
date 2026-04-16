@@ -327,7 +327,6 @@ export function TravelView() {
                 <PinDetail
                   pin={overlay.pin}
                   childPins={pins.filter((p) => p.parentId === overlay.pin.id)}
-                  photoCount={photoCounts[overlay.pin.id] ?? 0}
                   onUpdate={(data, pendingChildren) => handleUpdate(overlay.pin.id, data, pendingChildren)}
                   onDelete={() => handleDelete(overlay.pin.id)}
                   onDeleteChild={handleDeleteChild}

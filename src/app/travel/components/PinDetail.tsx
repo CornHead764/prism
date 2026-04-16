@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
-import { Trash2, X, Image as ImageIcon, MapPin, Star, TreePine, GripVertical, Check } from 'lucide-react';
+import { Trash2, X, MapPin, Star, TreePine, GripVertical, Check } from 'lucide-react';
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
   useSensor, useSensors, type DragEndEvent,
@@ -21,11 +21,11 @@ import type { TravelPin, PinType, PinStatus } from '../types';
 import { STATUS_CONFIG, NPS_COLOR } from '../types';
 import type { PinPendingChildren } from './PinForm';
 import { InlineChildAdd } from './InlineChildAdd';
+import { PinPhotoGrid } from './PinPhotoGrid';
 
 interface PinDetailProps {
   pin: TravelPin;
   childPins: TravelPin[];
-  photoCount: number;
   onUpdate: (data: Partial<TravelPin>, pendingChildren?: PinPendingChildren) => Promise<void>;
   onDelete: () => void;
   onDeleteChild: (id: string) => void;
@@ -63,7 +63,7 @@ function SortableChildItem({ child, idx, onSelect, onDelete }: {
   );
 }
 
-export function PinDetail({ pin, childPins, photoCount, onUpdate, onDelete, onDeleteChild, onClose, onAddChildDirect, onSelectChild, onReorderChildren }: PinDetailProps) {
+export function PinDetail({ pin, childPins, onUpdate, onDelete, onDeleteChild, onClose, onAddChildDirect, onSelectChild, onReorderChildren }: PinDetailProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -276,13 +276,13 @@ export function PinDetail({ pin, childPins, photoCount, onUpdate, onDelete, onDe
           className="text-sm"
         />
 
-        {/* Photos placeholder */}
-        <div className="rounded-lg border-2 border-dashed border-border p-3 text-center">
-          <ImageIcon className="h-5 w-5 mx-auto mb-1 text-muted-foreground/50" />
-          {photoCount > 0
-            ? <p className="text-sm font-medium">{photoCount} photo{photoCount !== 1 ? 's' : ''}</p>
-            : <p className="text-xs text-muted-foreground">No photos linked · GPS linking in Phase 2</p>}
-        </div>
+        {/* Nearby photos (GPS-linked from OneDrive) */}
+        {!isChildPin && (
+          <PinPhotoGrid
+            pinId={pin.id}
+            radiusKm={pin.photoRadiusKm ?? 50}
+          />
+        )}
 
         {/* Coordinates */}
         {(pin.latitude !== 0 || pin.longitude !== 0) && (

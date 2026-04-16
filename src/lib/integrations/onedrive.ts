@@ -23,6 +23,7 @@ export interface OneDriveItem {
   image?: { width: number; height: number };
   size: number;
   photo?: { takenDateTime?: string };
+  location?: { latitude?: number; longitude?: number; altitude?: number };
   folder?: { childCount: number };
   '@microsoft.graph.downloadUrl'?: string;
 }

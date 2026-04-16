@@ -1,6 +1,6 @@
 import { db } from '@/lib/db/client';
 import { photos, photoSources } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, isNull, and } from 'drizzle-orm';
 import {
   listPhotosInFolder,
   downloadPhoto,
@@ -81,9 +81,28 @@ export async function syncOneDriveSource(sourceId: string) {
           : null,
         externalId: remotePhoto.id,
         thumbnailPath: result.thumbnailPath,
+        latitude: remotePhoto.location?.latitude?.toString() ?? null,
+        longitude: remotePhoto.location?.longitude?.toString() ?? null,
       });
     } catch (err) {
       console.error(`Failed to sync photo ${remotePhoto.name}:`, err);
+    }
+  }
+
+  // Backfill GPS for existing photos that have location in OneDrive but not yet in DB
+  const photosWithoutGps = existingPhotos.filter(
+    (p) => p.latitude === null && p.longitude === null && p.externalId
+  );
+  for (const existing of photosWithoutGps) {
+    const remote = remotePhotos.find((r) => r.id === existing.externalId);
+    if (remote?.location?.latitude != null && remote?.location?.longitude != null) {
+      await db
+        .update(photos)
+        .set({
+          latitude: remote.location.latitude.toString(),
+          longitude: remote.location.longitude.toString(),
+        })
+        .where(eq(photos.id, existing.id));
     }
   }
 
