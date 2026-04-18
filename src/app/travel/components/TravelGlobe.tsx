@@ -126,7 +126,7 @@ function createPinElement(
   pin: TravelPin,
   selected: boolean,
   zoom: number,
-  tripContext?: { style: 'route' | 'loop' | 'hub'; stopNumber?: number; color: string }
+  tripContext?: { style: 'route' | 'loop' | 'hub'; stopNumber?: number; color: string; active: boolean }
 ): { el: HTMLElement; anchor: maplibregl.PositionAnchor } {
   const isChild = !!pin.parentId;
   const isNP = pin.pinType === 'national_park';
@@ -141,7 +141,16 @@ function createPinElement(
     return { el: wrapper, anchor: 'center' };
   }
 
-  // Trip stop markers
+  // Inactive trip stop — small faded dot, always visible
+  if (tripContext && !tripContext.active) {
+    const dotSize = Math.max(7, Math.round(size * 0.65));
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = `cursor: pointer; width: ${dotSize}px; height: ${dotSize}px; border-radius: 50%; background: ${tripContext.color}; opacity: 0.45; border: 1.5px solid rgba(255,255,255,0.8); box-shadow: 0 1px 4px rgba(0,0,0,0.2);`;
+    wrapper.title = pin.name;
+    return { el: wrapper, anchor: 'center' };
+  }
+
+  // Active trip stop markers
   if (tripContext) {
     const { style, stopNumber, color } = tripContext;
 
@@ -237,17 +246,27 @@ function buildTooltipHTML(pin: TravelPin, tripContext?: { style: 'route' | 'loop
 function addTripLinesLayer(map: maplibregl.Map) {
   if (map.getSource('trip-lines')) return;
   map.addSource('trip-lines', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+  // Inactive trips — thin, low opacity
+  map.addLayer({
+    id: 'trip-lines-bg', type: 'line', source: 'trip-lines',
+    filter: ['!', ['get', 'active']],
+    layout: { 'line-join': 'round', 'line-cap': 'round' },
+    paint: { 'line-color': ['get', 'color'], 'line-width': 1.5, 'line-opacity': 0.28 },
+  });
+  // Active trip — dashed, full opacity
   map.addLayer({
     id: 'trip-lines', type: 'line', source: 'trip-lines',
+    filter: ['==', ['get', 'active'], true],
     layout: { 'line-join': 'round', 'line-cap': 'round' },
-    paint: { 'line-color': ['get', 'color'], 'line-width': 2, 'line-opacity': 0.65, 'line-dasharray': [3, 2] },
+    paint: { 'line-color': ['get', 'color'], 'line-width': 2.5, 'line-opacity': 0.75, 'line-dasharray': [3, 2] },
   });
 }
 
 function buildTripFeatures(
   tripStops: TravelPin[],
   tripStyle: 'route' | 'loop' | 'hub',
-  color: string
+  color: string,
+  active: boolean
 ): GeoJSON.Feature[] {
   const validStops = tripStops.filter((p) => p.latitude !== 0 || p.longitude !== 0);
   if (validStops.length < 2) return [];
@@ -259,7 +278,7 @@ function buildTripFeatures(
       .filter((p) => p.id !== hub.id)
       .map((spoke) => ({
         type: 'Feature' as const,
-        properties: { color },
+        properties: { color, active },
         geometry: {
           type: 'LineString' as const,
           coordinates: [[hub.longitude, hub.latitude], [spoke.longitude, spoke.latitude]],
@@ -267,7 +286,6 @@ function buildTripFeatures(
       }));
   }
 
-  // route or loop — single polyline through stops in order
   const sorted = [...validStops].sort((a, b) => a.sortOrder - b.sortOrder);
   const first = sorted[0];
   const coords: [number, number][] = sorted.map((p) => [p.longitude, p.latitude]);
@@ -276,7 +294,7 @@ function buildTripFeatures(
   }
   return [{
     type: 'Feature' as const,
-    properties: { color },
+    properties: { color, active },
     geometry: { type: 'LineString' as const, coordinates: coords },
   }];
 }
@@ -318,12 +336,13 @@ export function TravelGlobe({
     if (zoom < 7) return 2; if (zoom < 9) return 3; return 4;
   }
 
-  // Build a lookup: pinId → { style, stopNumber, color } for trip stops
-  function buildTripContextMap(currentPins: TravelPin[], currentTrips: TravelTrip[]) {
-    const ctx = new Map<string, { style: 'route' | 'loop' | 'hub'; stopNumber?: number; color: string }>();
+  // Build a lookup: pinId → { style, stopNumber, color, active } for trip stops
+  function buildTripContextMap(currentPins: TravelPin[], currentTrips: TravelTrip[], activeTripId: string | null) {
+    const ctx = new Map<string, { style: 'route' | 'loop' | 'hub'; stopNumber?: number; color: string; active: boolean }>();
     for (const trip of currentTrips) {
       const tripColor = trip.color || STATUS_CONFIG[trip.status].color;
       const tripStyle = trip.tripStyle;
+      const active = trip.id === activeTripId;
       const stops = currentPins
         .filter((p) => p.tripId === trip.id)
         .sort((a, b) => a.sortOrder - b.sortOrder);
@@ -333,6 +352,7 @@ export function TravelGlobe({
           style: tripStyle,
           stopNumber: (tripStyle === 'route' || tripStyle === 'loop') ? idx + 1 : undefined,
           color: tripColor,
+          active,
         });
       });
     }
@@ -379,7 +399,7 @@ export function TravelGlobe({
     const map = mapRef.current;
     if (!map) return;
     const zoom = map.getZoom();
-    const tripCtx = buildTripContextMap(pins, trips);
+    const tripCtx = buildTripContextMap(pins, trips, selectedTripId);
     const currentIds = new Set(pins.map((p) => p.id));
 
     for (const [id, marker] of markersRef.current) {
@@ -421,45 +441,38 @@ export function TravelGlobe({
     }
   }, [pins, trips, selectedPinId, zoomTier]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Trip lines
+  // Trip lines — always render all trips; active trip gets full style, others get faded
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
     const source = map.getSource('trip-lines') as maplibregl.GeoJSONSource | undefined;
     if (!source) return;
 
-    // If a trip is selected, draw its lines
-    if (selectedTripId) {
-      const trip = trips.find((t) => t.id === selectedTripId);
-      if (trip) {
-        const tripStops = pins.filter((p) => p.tripId === selectedTripId && (p.latitude !== 0 || p.longitude !== 0));
-        const color = trip.color || STATUS_CONFIG[trip.status].color;
-        const features = buildTripFeatures(tripStops, trip.tripStyle, color);
-        source.setData({ type: 'FeatureCollection', features });
-        return;
-      }
-    }
+    // Build features for every trip
+    const tripFeatures: GeoJSON.Feature[] = trips.flatMap((trip) => {
+      const tripStops = pins.filter((p) => p.tripId === trip.id);
+      const color = trip.color || STATUS_CONFIG[trip.status].color;
+      const active = trip.id === selectedTripId;
+      return buildTripFeatures(tripStops, trip.tripStyle, color, active);
+    });
 
-    // If a standalone pin with children is selected, draw spokes (existing behavior)
+    // Also draw spokes for a selected standalone pin with children
+    const spokeFeatures: GeoJSON.Feature[] = [];
     if (selectedPinId) {
       const parent = pins.find((p) => p.id === selectedPinId);
       if (parent && !parent.tripId && (parent.latitude !== 0 || parent.longitude !== 0)) {
         const children = pins.filter((p) => p.parentId === selectedPinId && (p.latitude !== 0 || p.longitude !== 0));
-        if (children.length > 0) {
-          source.setData({
-            type: 'FeatureCollection',
-            features: children.map((c) => ({
-              type: 'Feature' as const,
-              properties: { color: c.pinType === 'national_park' ? NPS_COLOR : '#8B5CF6' },
-              geometry: { type: 'LineString' as const, coordinates: [[parent.longitude, parent.latitude], [c.longitude, c.latitude]] },
-            })),
+        children.forEach((c) => {
+          spokeFeatures.push({
+            type: 'Feature' as const,
+            properties: { color: c.pinType === 'national_park' ? NPS_COLOR : '#8B5CF6', active: true },
+            geometry: { type: 'LineString' as const, coordinates: [[parent.longitude, parent.latitude], [c.longitude, c.latitude]] },
           });
-          return;
-        }
+        });
       }
     }
 
-    source.setData({ type: 'FeatureCollection', features: [] });
+    source.setData({ type: 'FeatureCollection', features: [...tripFeatures, ...spokeFeatures] });
   }, [pins, trips, selectedPinId, selectedTripId]);
 
   // Fly to selected trip (center on its stops) or selected pin

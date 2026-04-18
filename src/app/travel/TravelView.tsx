@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { Globe, List, Loader2, Moon, Sun } from 'lucide-react';
+import { Globe, List, Loader2, Moon, Sun, Route, MapPin, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PageWrapper } from '@/components/layout/PageWrapper';
 import { useTravelData, TravelAuthError } from './useTravelData';
@@ -118,17 +118,17 @@ export function TravelView() {
 
   // Add a stop to a trip
   const handleAddTripStop = useCallback(async (
-    tripId: string, name: string, lat: number, lng: number, placeName: string | null
+    tripId: string, name: string, lat: number, lng: number, placeName: string | null, pinType: PinType = 'stop'
   ) => {
     const tripStops = pins.filter((p) => p.tripId === tripId);
     const isFirstStop = tripStops.length === 0;
     const trip = trips.find((t) => t.id === tripId);
-    // First stop of a hub trip is the home base
-    const isHub = isFirstStop && trip?.tripStyle === 'hub';
+    // First stop of a hub trip is the home base (only for regular stops, not NPs)
+    const isHub = isFirstStop && trip?.tripStyle === 'hub' && pinType === 'stop';
     try {
       await addPin({
         name, latitude: lat, longitude: lng, placeName,
-        pinType: 'stop', tripId, isHub,
+        pinType, tripId, isHub,
         status: 'want_to_go', isBucketList: false,
         tags: [], stops: [], nationalParks: [], sortOrder: tripStops.length, photoRadiusKm: 50,
       } as Omit<TravelPin, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>);
@@ -283,11 +283,7 @@ export function TravelView() {
   }
 
   const visiblePins = pins.filter((p) => {
-    if (p.tripId) {
-      // Show trip stops when their trip is selected, or when showAllChildren
-      return showAllChildren || p.tripId === selectedTripId;
-    }
-    // Standalone: always show root pins; show children if parent selected or showAllChildren
+    if (p.tripId) return true; // trip stops always visible (globe dims inactive ones)
     return !p.parentId || visibleChildParentIds.has(p.parentId);
   });
 
@@ -383,20 +379,54 @@ export function TravelView() {
               'absolute top-4 right-4 bottom-4 w-96 bg-card border border-border rounded-lg shadow-xl flex flex-col transition-transform duration-200',
               overlay.mode === 'none' ? 'translate-x-[calc(100%+2rem)]' : 'translate-x-0'
             )}>
-              {overlay.mode === 'add' ? (
-                <PinForm
-                  initialLatLng={overlay.latLng}
-                  parentId={overlay.parentId}
-                  pinType={overlay.pinType ?? 'location'}
-                  onSave={handleSaveNew}
-                  onCancel={() => {
-                    if (overlay.parentId) {
-                      const parent = pins.find((p) => p.id === overlay.parentId);
-                      if (parent) { setOverlay({ mode: 'detail', pin: parent }); setSelectedPinId(parent.id); return; }
-                    }
-                    closeOverlay();
-                  }}
-                />
+              {overlay.mode === 'add' || overlay.mode === 'trip-add' ? (
+                <div className="flex flex-col h-full">
+                  {/* Place / Trip toggle header */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
+                    <div className="flex items-center gap-0.5 bg-muted rounded-lg p-0.5">
+                      <button
+                        onClick={() => setOverlay({ mode: 'add', latLng: overlay.mode === 'add' ? overlay.latLng : undefined })}
+                        className={cn(
+                          'flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors',
+                          overlay.mode === 'add' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
+                        )}
+                      >
+                        <MapPin className="h-3 w-3" />Place
+                      </button>
+                      <button
+                        onClick={() => setOverlay({ mode: 'trip-add' })}
+                        className={cn(
+                          'flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors',
+                          overlay.mode === 'trip-add' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
+                        )}
+                      >
+                        <Route className="h-3 w-3" />Trip
+                      </button>
+                    </div>
+                    <button onClick={closeOverlay} className="text-muted-foreground hover:text-foreground transition-colors p-1">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {overlay.mode === 'add' ? (
+                    <PinForm
+                      hideHeader
+                      initialLatLng={overlay.latLng}
+                      parentId={overlay.parentId}
+                      pinType={overlay.pinType ?? 'location'}
+                      onSave={handleSaveNew}
+                      onCancel={() => {
+                        if (overlay.parentId) {
+                          const parent = pins.find((p) => p.id === overlay.parentId);
+                          if (parent) { setOverlay({ mode: 'detail', pin: parent }); setSelectedPinId(parent.id); return; }
+                        }
+                        closeOverlay();
+                      }}
+                    />
+                  ) : (
+                    <TripForm hideHeader onSave={handleSaveTrip} onCancel={closeOverlay} />
+                  )}
+                </div>
               ) : overlay.mode === 'detail' ? (
                 <PinDetail
                   pin={overlay.pin}
@@ -414,11 +444,6 @@ export function TravelView() {
                     setOverlay({ mode: 'detail', pin: child });
                   }}
                 />
-              ) : overlay.mode === 'trip-add' ? (
-                <TripForm
-                  onSave={handleSaveTrip}
-                  onCancel={closeOverlay}
-                />
               ) : overlay.mode === 'trip-edit' ? (
                 <TripForm
                   initialData={overlay.trip}
@@ -432,7 +457,7 @@ export function TravelView() {
                   onUpdate={(data) => handleUpdateTrip(overlay.trip.id, data)}
                   onDelete={() => handleDeleteTrip(overlay.trip.id)}
                   onClose={closeOverlay}
-                  onAddStop={(name, lat, lng, placeName) => handleAddTripStop(overlay.trip.id, name, lat, lng, placeName)}
+                  onAddStop={(name, lat, lng, placeName, pinType) => handleAddTripStop(overlay.trip.id, name, lat, lng, placeName, pinType)}
                   onDeleteStop={(stopId) => deletePin(stopId)}
                   onReorderStops={handleReorderTripStops}
                   onSelectStop={(stop) => {
@@ -463,7 +488,7 @@ export function TravelView() {
                 onSelectPin={handleListSelectPin}
                 onSelectTrip={handleListSelectTrip}
                 onAddPin={handleAddFromList}
-                onAddTrip={() => setOverlay({ mode: 'trip-add' })}
+                onAddTrip={() => { setOverlay({ mode: 'trip-add' }); setActiveTab('globe'); }}
               />
             )}
           </div>

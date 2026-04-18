@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { X, Trash2, Plus, GripVertical, MapPin, Pencil } from 'lucide-react';
+import { X, Trash2, Plus, GripVertical, MapPin, Pencil, TreePine } from 'lucide-react';
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
   useSensor, useSensors, type DragEndEvent,
@@ -14,8 +14,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
-import type { TravelTrip, TravelPin } from '../types';
-import { TRIP_STYLE_CONFIG, STATUS_CONFIG } from '../types';
+import type { TravelTrip, TravelPin, PinType } from '../types';
+import { TRIP_STYLE_CONFIG, STATUS_CONFIG, NPS_COLOR } from '../types';
 import { InlineChildAdd } from './InlineChildAdd';
 
 interface TripDetailProps {
@@ -24,7 +24,7 @@ interface TripDetailProps {
   onUpdate: (data: Partial<TravelTrip>) => Promise<void>;
   onDelete: () => void;
   onClose: () => void;
-  onAddStop: (name: string, lat: number, lng: number, placeName: string | null) => Promise<void>;
+  onAddStop: (name: string, lat: number, lng: number, placeName: string | null, pinType?: PinType) => Promise<void>;
   onDeleteStop: (stopId: string) => void;
   onReorderStops: (stopIds: string[]) => Promise<void>;
   onSelectStop: (stop: TravelPin) => void;
@@ -42,6 +42,7 @@ function SortableStopItem({
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: stop.id });
   const isHub = stop.isHub;
+  const isNP = stop.pinType === 'national_park';
 
   return (
     <div
@@ -53,11 +54,15 @@ function SortableStopItem({
         <GripVertical className="h-3.5 w-3.5" />
       </button>
 
-      {/* Stop number / hub indicator */}
-      <div className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-        style={{ background: isHub ? '#F59E0B' : tripStyle === 'hub' ? '#6B7280' : '#8B5CF6' }}>
-        {isHub ? '⌂' : tripStyle === 'hub' ? '·' : stopNumber}
-      </div>
+      {/* Stop number / hub / NP indicator */}
+      {isNP ? (
+        <TreePine className="h-4 w-4 shrink-0" style={{ color: NPS_COLOR }} />
+      ) : (
+        <div className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+          style={{ background: isHub ? '#F59E0B' : tripStyle === 'hub' ? '#6B7280' : '#8B5CF6' }}>
+          {isHub ? '⌂' : tripStyle === 'hub' ? '·' : stopNumber}
+        </div>
+      )}
 
       <button onClick={onSelect} className="flex-1 min-w-0 text-left">
         <p className="text-xs font-medium truncate">{stop.name}</p>
@@ -191,11 +196,17 @@ export function TripDetail({
             </DndContext>
           )}
 
-          {/* Add stop */}
-          <InlineChildAdd
-            childType="stop"
-            onAdd={(name, lat, lng, placeName) => onAddStop(name, lat, lng, placeName)}
-          />
+          {/* Add stop / NP */}
+          <div className="flex gap-3 pt-0.5">
+            <InlineChildAdd
+              childType="stop"
+              onAdd={(name, lat, lng, placeName) => onAddStop(name, lat, lng, placeName, 'stop')}
+            />
+            <InlineChildAdd
+              childType="national_park"
+              onAdd={(name, lat, lng, placeName) => onAddStop(name, lat, lng, placeName, 'national_park')}
+            />
+          </div>
         </div>
 
         {/* Hub tip */}

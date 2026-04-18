@@ -11,11 +11,12 @@ import { TRIP_STYLE_CONFIG } from '../types';
 
 interface TripFormProps {
   initialData?: Partial<TravelTrip>;
+  hideHeader?: boolean;
   onSave: (data: Omit<TravelTrip, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'stops'>) => Promise<void>;
   onCancel: () => void;
 }
 
-export function TripForm({ initialData, onSave, onCancel }: TripFormProps) {
+export function TripForm({ initialData, hideHeader, onSave, onCancel }: TripFormProps) {
   const [name, setName] = React.useState(initialData?.name ?? '');
   const [description, setDescription] = React.useState(initialData?.description ?? '');
   const [tripStyle, setTripStyle] = React.useState<TripStyle>(initialData?.tripStyle ?? 'route');
@@ -52,12 +53,14 @@ export function TripForm({ initialData, onSave, onCancel }: TripFormProps) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-        <h2 className="font-semibold text-sm">{initialData?.id ? 'Edit Trip' : 'New Trip'}</h2>
-        <button type="button" onClick={onCancel} className="text-muted-foreground hover:text-foreground transition-colors">
-          <X className="h-4 w-4" />
-        </button>
-      </div>
+      {!hideHeader && (
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
+          <h2 className="font-semibold text-sm">{initialData?.id ? 'Edit Trip' : 'New Trip'}</h2>
+          <button type="button" onClick={onCancel} className="text-muted-foreground hover:text-foreground transition-colors">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">

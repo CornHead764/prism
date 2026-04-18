@@ -4,6 +4,19 @@ All notable changes to Prism are documented in this file.
 
 ## [Unreleased]
 
+## [1.4.0] – 2026-04-18
+
+### Features
+- **Travel Map — Trips**: Multi-stop trip system with three styles — **Route** (A→B→C polyline), **Loop** (closed polyline returning to start), and **Hub** (home base + day-trip spokes). Trips are a first-class object separate from standalone place pins.
+- **Travel Map — trip globe rendering**: All trips are always visible on the globe. Inactive trips render as small faded colored dots + thin low-opacity connecting lines. The active (selected) trip shows full numbered markers and a bright dashed line. Clicking any faint dot selects that trip.
+- **Travel Map — national parks in trips**: Trips support national park stops alongside regular stops. NP stops display a green tree icon in the stop list instead of a number badge.
+- **Travel Map — Place/Trip toggle**: The slide-out panel now shows a segmented Place/Trip toggle when adding something new, so you can switch between adding a standalone place and creating a trip without leaving the panel.
+- **OneDrive photo sync — folder picker**: Settings now includes a folder picker so you can select which OneDrive folder to sync photos from, rather than defaulting to the root.
+- **Photos — GPS backfill**: New `/api/photos/backfill-gps` endpoint reads GPS EXIF from already-synced photos and writes coordinates back to the database without re-downloading files.
+
+### Bug Fixes
+- **OneDrive OAuth callback**: Fixed "fetch failed" error caused by Docker's bridge network not routing IPv6. A `undici` global dispatcher now forces IPv4 for all `fetch()` calls inside the container.
+
 ## [1.3.0] – 2026-04-16
 
 ### Features

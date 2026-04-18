@@ -37,11 +37,12 @@ interface PinFormProps {
   parentId?: string;
   pinType?: PinType;
   childPins?: TravelPin[]; // existing children when editing
+  hideHeader?: boolean;
   onSave: (data: Partial<TravelPin>, pendingChildren?: PinPendingChildren) => Promise<void>;
   onCancel: () => void;
 }
 
-export function PinForm({ pin, initialLatLng, parentId, pinType = 'location', childPins = [], onSave, onCancel }: PinFormProps) {
+export function PinForm({ pin, initialLatLng, parentId, pinType = 'location', childPins = [], hideHeader, onSave, onCancel }: PinFormProps) {
   const isChildPin = !!(parentId || pin?.parentId);
   const effectivePinType = pin?.pinType ?? pinType;
   const isNP = effectivePinType === 'national_park';
@@ -256,12 +257,14 @@ export function PinForm({ pin, initialLatLng, parentId, pinType = 'location', ch
     <form onSubmit={handleSubmit} className="flex flex-col h-full">
       {/* ── Non-scrolling header ── */}
       <div className="px-4 pt-4 pb-3 border-b border-border shrink-0 flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold">{title}</h3>
-          <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={onCancel}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+        {!hideHeader && (
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold">{title}</h3>
+            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={onCancel}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
 
         {/* NPS picker (NP type only) */}
         {isNP && (

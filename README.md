@@ -14,6 +14,16 @@ Prism is a configurable family dashboard designed for large wall-mounted screens
 
 ---
 
+## What's New in v1.4.0
+
+> **Travel Map — Trips** · **Globe always-on trip visualization** · **OneDrive folder picker** · **GPS photo backfill**
+
+The Travel Map now supports multi-stop **trips** in three styles: Route (numbered stops connected by a polyline), Loop (route that closes back to the start), and Hub (home base with day-trip spokes). All trips are always visible on the globe as faint colored dots and lines — selecting a trip brings it to full detail. National parks can be added as stops directly within a trip.
+
+See the [full changelog](docs/CHANGELOG.md) for details on every release.
+
+---
+
 ## Screenshots
 
 <table>
@@ -25,6 +35,9 @@ Prism is a configurable family dashboard designed for large wall-mounted screens
   </tr>
   <tr>
     <td align="center"><b>Calendar</b><br><img src="docs/demos/calendar_light.png" width="500" alt="Calendar week view with events"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Travel Map</b><br><img src="docs/demos/travel_map.png" width="500" alt="Travel map globe with trip routes and place pins"></td>
   </tr>
 </table>
 
@@ -93,7 +106,7 @@ Widgets are resizable and rearrangeable on a 48-column CSS Grid. Multiple dashbo
 Beyond the dashboard, Prism includes dedicated pages for:
 
 - **Calendar** - Full calendar with multiple view modes (day, week, multi-week, month, 3-month), event creation, and configurable hidden hours
-- **Travel Map** - Interactive globe for tracking family travel: visited places, want-to-go destinations, and bucket list trips. Each location can include stops, national parks, trip dates, and notes. Filter and search via the Places tab. Dark map mode available.
+- **Travel Map** - Interactive globe for tracking family travel. Add standalone places (visited, want-to-go, bucket list) or create multi-stop **trips** in Route, Loop, or Hub/spoke styles. Trips and places are always visible on the globe; selecting a trip highlights its route. Supports national park stops, visit dates, notes, and GPS-linked photos from OneDrive. Filter and search via the Places tab.
 - **Recipes** - Recipe library with URL import (schema.org), Paprika import, and favorites
 - **Shopping** - Multiple lists with drag-to-reorder categories, shopping mode, and barcode scanning
 - **Chores** - Chore management with group-by-person view and approval workflow
