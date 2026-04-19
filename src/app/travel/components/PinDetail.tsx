@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
 import { Trash2, X, MapPin, Star, TreePine, GripVertical, Check } from 'lucide-react';
 import {
-  DndContext, closestCenter, KeyboardSensor, PointerSensor,
+  DndContext, closestCenter, KeyboardSensor, MouseSensor, TouchSensor,
   useSensor, useSensors, type DragEndEvent,
 } from '@dnd-kit/core';
 import {
@@ -136,7 +136,8 @@ export function PinDetail({ pin, childPins, onUpdate, onDelete, onDeleteChild, o
   }, [childPins]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(MouseSensor),
+    useSensor(TouchSensor, { activationConstraint: { delay: 500, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 

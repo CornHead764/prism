@@ -1,11 +1,12 @@
 'use client';
 
 import { useMemo, useState, useCallback } from 'react';
-import { ClipboardList, GripVertical } from 'lucide-react';
+import { ClipboardList, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/ui/avatar';
 import { useDragReorder } from '@/lib/hooks/useDragReorder';
+import { useIsTouch } from '@/lib/hooks/useIsTouch';
 import { ChoreGroupCard } from './ChoreGroupCard';
 import { cn } from '@/lib/utils';
 
@@ -37,6 +38,7 @@ export function ChoreGroupGrid({
   setCelebratingUser,
   isMobile = false,
 }: ChoreGroupGridProps) {
+  const isTouch = useIsTouch();
   const groupKeys = useMemo(
     () => choresByUser.map((g) => g.user?.id || 'unassigned'),
     [choresByUser]
@@ -64,7 +66,7 @@ export function ChoreGroupGrid({
     } catch {}
   }, []);
 
-  const { draggedId, getDragProps } = useDragReorder({ order: effectiveOrder, onReorder: saveOrder });
+  const { draggedId, getDragProps, moveUp, moveDown } = useDragReorder({ order: effectiveOrder, onReorder: saveOrder });
 
   const sortedGroups = useMemo(() => {
     const map = new Map(choresByUser.map((g) => [g.user?.id || 'unassigned', g]));
@@ -84,17 +86,17 @@ export function ChoreGroupGrid({
           : 'grid-cols-2 md:grid-cols-3'
       )}
     >
-      {sortedGroups.map(({ user, chores }) => {
+      {sortedGroups.map(({ user, chores }, idx) => {
         const userColor = user?.color || '#6B7280';
         const key = user?.id || 'unassigned';
         const isDragging = draggedId === key;
         return (
           <div
             key={key}
-            {...(isMobile ? {} : getDragProps(key))}
+            {...(!isTouch && !isMobile ? getDragProps(key) : {})}
             className={cn(
               'flex flex-col border-2 rounded-lg overflow-hidden bg-card/90 backdrop-blur-sm transition-all',
-              !isMobile && 'cursor-grab active:cursor-grabbing touch-none',
+              !isTouch && !isMobile && 'cursor-grab active:cursor-grabbing touch-none',
               isDragging && 'opacity-50 scale-95 ring-4 ring-primary/50'
             )}
             style={{ borderColor: userColor }}
@@ -103,7 +105,29 @@ export function ChoreGroupGrid({
               className="flex items-center gap-2 px-3 py-2 shrink-0"
               style={{ backgroundColor: userColor + '20' }}
             >
-              <GripVertical className="h-4 w-4 text-muted-foreground/50 shrink-0 hidden md:block" />
+              {/* Mouse: grip icon / Touch: up-down arrows */}
+              {isTouch || isMobile ? (
+                <div className="flex flex-col shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => moveUp(key)}
+                    disabled={idx === 0}
+                    className="p-0.5 text-muted-foreground/50 hover:text-foreground disabled:opacity-20 transition-colors"
+                  >
+                    <ChevronUp className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveDown(key)}
+                    disabled={idx === sortedGroups.length - 1}
+                    className="p-0.5 text-muted-foreground/50 hover:text-foreground disabled:opacity-20 transition-colors"
+                  >
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <GripVertical className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+              )}
               {user ? (
                 <UserAvatar name={user.name} color={user.color} size="sm" className="h-7 w-7" />
               ) : (

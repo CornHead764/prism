@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { X, Trash2, Plus, GripVertical, MapPin, Pencil, TreePine } from 'lucide-react';
 import {
-  DndContext, closestCenter, KeyboardSensor, PointerSensor,
+  DndContext, closestCenter, KeyboardSensor, MouseSensor, TouchSensor,
   useSensor, useSensors, type DragEndEvent,
 } from '@dnd-kit/core';
 import {
@@ -94,7 +94,8 @@ export function TripDetail({
   React.useEffect(() => { setLocalStops(stops); }, [stops]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(MouseSensor),
+    useSensor(TouchSensor, { activationConstraint: { delay: 500, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 

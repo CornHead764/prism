@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { GripVertical } from 'lucide-react';
+import { GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useDragReorder } from '@/lib/hooks/useDragReorder';
+import { useIsTouch } from '@/lib/hooks/useIsTouch';
 import { TaskRow } from '@/app/tasks/TaskRow';
 import type { Task } from '@/types';
 import type { NestedGroupDef } from '@/app/tasks/taskGroupTypes';
@@ -44,7 +45,8 @@ export function NestedGroupedTaskGrid({
     } catch {}
   });
 
-  const { draggedId, getDragProps } = useDragReorder({ order: effectiveOrder, onReorder: saveOrder });
+  const isTouch = useIsTouch();
+  const { draggedId, getDragProps, moveUp, moveDown } = useDragReorder({ order: effectiveOrder, onReorder: saveOrder });
 
   const sortedGroups = useMemo(() => {
     const map = new Map(primaryGroups.map(g => [g.key, g]));
@@ -59,23 +61,34 @@ export function NestedGroupedTaskGrid({
       sortedGroups.length <= 4 ? 'grid-cols-2' :
       'grid-cols-2 md:grid-cols-3'
     )}>
-      {sortedGroups.map((group) => {
+      {sortedGroups.map((group, idx) => {
         const completedCount = group.tasks.filter(t => t.completed).length;
         const isDragging = draggedId === group.key;
         return (
           <div
             key={group.key}
-            {...(isMobile ? {} : getDragProps(group.key))}
+            {...(!isTouch && !isMobile ? getDragProps(group.key) : {})}
             className={cn(
               'flex flex-col border-2 rounded-lg overflow-hidden bg-card/90 backdrop-blur-sm transition-all',
-              !isMobile && 'cursor-grab active:cursor-grabbing touch-none',
+              !isTouch && !isMobile && 'cursor-grab active:cursor-grabbing touch-none',
               isDragging && 'opacity-50 scale-95 ring-4 ring-primary/50'
             )}
             style={{ borderColor: group.color }}
           >
             {/* Primary group header */}
             <div className="flex items-center gap-2 px-3 py-2 shrink-0" style={{ backgroundColor: group.color + '20' }}>
-              <GripVertical className="h-4 w-4 text-muted-foreground/50 shrink-0 hidden md:block" />
+              {isTouch || isMobile ? (
+                <div className="flex flex-col shrink-0">
+                  <button type="button" onClick={() => moveUp(group.key)} disabled={idx === 0} className="p-0.5 text-muted-foreground/50 hover:text-foreground disabled:opacity-20 transition-colors">
+                    <ChevronUp className="h-3.5 w-3.5" />
+                  </button>
+                  <button type="button" onClick={() => moveDown(group.key)} disabled={idx === sortedGroups.length - 1} className="p-0.5 text-muted-foreground/50 hover:text-foreground disabled:opacity-20 transition-colors">
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <GripVertical className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+              )}
               {group.avatar}
               <h3 className="font-bold text-lg" style={{ color: group.color }}>{group.label}</h3>
               <Badge variant="outline" className="ml-auto">{completedCount}/{group.tasks.length}</Badge>

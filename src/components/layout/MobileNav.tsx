@@ -20,6 +20,7 @@ import {
   MessageSquare,
   MoreHorizontal,
   UtensilsCrossed,
+  ChefHat,
   Trophy,
   X,
   Sun,
@@ -60,8 +61,10 @@ const primaryItems: NavItem[] = [
   { label: 'Messages', href: '/messages', icon: MessageSquare },
 ];
 
-// Secondary items shown in "More" menu (empty now, but kept for future use)
-const secondaryItems: NavItem[] = [];
+// Secondary items shown in "More" menu
+const secondaryItems: NavItem[] = [
+  { label: 'Recipes', href: '/recipes', icon: ChefHat },
+];
 
 export function MobileNav({ user, onLogin, onLogout, uiHidden }: MobileNavProps) {
   const pathname = usePathname();

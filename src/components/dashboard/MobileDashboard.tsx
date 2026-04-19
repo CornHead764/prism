@@ -5,7 +5,7 @@ import {
   DndContext,
   closestCenter,
   TouchSensor,
-  PointerSensor,
+  MouseSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -86,8 +86,8 @@ export const MobileDashboard = memo(function MobileDashboard() {
   }, []);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 5 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 500, tolerance: 5 } }),
   );
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {

@@ -17,8 +17,10 @@
 import * as React from 'react';
 import { useState, useEffect, useMemo } from 'react';
 import { Loader2, MapPin, AlignLeft, ChevronDown, ChevronUp } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
 import { useCalendarSources } from '@/lib/hooks';
 import { toast } from '@/components/ui/use-toast';
+import { TimeDropdown } from './TimeDropdown';
 import {
   Dialog,
   DialogContent,
@@ -167,8 +169,10 @@ export function AddEventModal({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [startDate, setStartDate] = useState('');    // YYYY-MM-DD
+  const [startTimeStr, setStartTimeStr] = useState(''); // HH:MM
+  const [endDate, setEndDate] = useState('');
+  const [endTimeStr, setEndTimeStr] = useState('');
   const [allDay, setAllDay] = useState(false);
   const [recurrenceRule, setRecurrenceRule] = useState('');
   const [reminderMinutes, setReminderMinutes] = useState<number | ''>('');
@@ -191,25 +195,36 @@ export function AddEventModal({
     return selectedCalendar.groupColor || selectedCalendar.color || selectedCalendar.user?.color || undefined;
   }, [selectedCalendar]);
 
-  // Handle all-day toggle: convert between date and datetime formats
-  function handleAllDayChange(checked: boolean) {
-    setAllDay(checked);
-    if (checked && startTime) {
-      // datetime-local → date: strip time portion
-      setStartTime(startTime.split('T')[0] || startTime);
-      if (endTime) {
-        setEndTime(endTime.split('T')[0] || endTime);
-      }
-    } else if (!checked && startTime) {
-      // date → datetime-local: add default times
-      setStartTime(`${startTime}T09:00`);
-      if (endTime) {
-        setEndTime(`${endTime}T10:00`);
+  function addHour(hhmm: string, hrs = 1): string {
+    const [h, m] = hhmm.split(':').map(Number);
+    const total = (h! * 60 + m! + hrs * 60) % (24 * 60);
+    return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+  }
+
+  function handleStartTimeChange(time: string) {
+    setStartTimeStr(time);
+    // If end is same day and no longer after start, bump it
+    if (startDate === endDate) {
+      if (!endTimeStr || endTimeStr <= time) {
+        setEndTimeStr(addHour(time));
       }
     }
   }
 
-  // Populate form when editing
+  function handleStartDateChange(date: string) {
+    setStartDate(date);
+    if (!endDate || endDate < date) setEndDate(date);
+  }
+
+  function handleAllDayChange(checked: boolean) {
+    setAllDay(checked);
+    if (!checked && !startTimeStr) {
+      setStartTimeStr('09:00');
+      setEndTimeStr('10:00');
+    }
+  }
+
+  // Populate form when opening
   useEffect(() => {
     if (open && event) {
       setTitle(event.title);
@@ -217,60 +232,61 @@ export function AddEventModal({
       setLocation(event.location || '');
       const isAllDay = event.allDay || false;
       setAllDay(isAllDay);
-      setStartTime(isAllDay ? formatDateLocal(event.startTime) : formatDateTimeLocal(event.startTime));
-      setEndTime(isAllDay ? formatDateLocal(event.endTime) : formatDateTimeLocal(event.endTime));
-      // Match recurrence rule to a preset, or use raw value
+      const sd = formatDateLocal(event.startTime);
+      const ed = formatDateLocal(event.endTime);
+      setStartDate(sd);
+      setEndDate(ed);
+      if (!isAllDay) {
+        const s = formatDateTimeLocal(event.startTime);
+        const e = formatDateTimeLocal(event.endTime);
+        setStartTimeStr(s.split('T')[1] ?? '09:00');
+        setEndTimeStr(e.split('T')[1] ?? '10:00');
+      } else {
+        setStartTimeStr('');
+        setEndTimeStr('');
+      }
       setRecurrenceRule(event.recurrenceRule || '');
       setReminderMinutes(event.reminderMinutes ?? '');
       setCalendarSourceId(event.calendarSourceId || defaultCalendarId);
-      // Show more options if editing event has description, location, reminder, or recurrence
       setShowMore(!!(event.description || event.location || event.reminderMinutes || event.recurrenceRule));
     } else if (open && defaultDate) {
-      const start = new Date(defaultDate);
-      start.setHours(9, 0, 0, 0);
-      const end = new Date(start);
-      end.setHours(10, 0, 0, 0);
-      setStartTime(formatDateTimeLocal(start));
-      setEndTime(formatDateTimeLocal(end));
+      const d = formatDateLocal(defaultDate);
+      setStartDate(d);
+      setEndDate(d);
+      setStartTimeStr('09:00');
+      setEndTimeStr('10:00');
+    } else if (open) {
+      const today = formatDateLocal(new Date());
+      setStartDate(today);
+      setEndDate(today);
+      setStartTimeStr('09:00');
+      setEndTimeStr('10:00');
     }
-    // Set default calendar when opening (for new events without explicit calendar)
-    if (open && !event) {
-      setCalendarSourceId(defaultCalendarId);
-    }
+    if (open && !event) setCalendarSourceId(defaultCalendarId);
   }, [open, event, defaultDate, defaultCalendarId]);
 
   // Reset form when modal closes
   useEffect(() => {
     if (!open) {
-      setTitle('');
-      setDescription('');
-      setLocation('');
-      setStartTime('');
-      setEndTime('');
-      setAllDay(false);
-      setRecurrenceRule('');
-      setReminderMinutes('');
-      setCalendarSourceId(defaultCalendarId);
-      setShowMore(false);
-      setError(null);
+      setTitle(''); setDescription(''); setLocation('');
+      setStartDate(''); setStartTimeStr(''); setEndDate(''); setEndTimeStr('');
+      setAllDay(false); setRecurrenceRule(''); setReminderMinutes('');
+      setCalendarSourceId(defaultCalendarId); setShowMore(false); setError(null);
     }
   }, [open, defaultCalendarId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    // For all-day, only require date; for timed, require full datetime
-    const hasStart = allDay ? !!startTime : !!startTime;
-    const hasEnd = allDay ? !!endTime : !!endTime;
-    if (!title.trim() || !hasStart || !hasEnd) return;
+    if (!title.trim() || !startDate || !endDate) return;
+    if (!allDay && (!startTimeStr || !endTimeStr)) return;
 
-    // Build full ISO dates
     const startISO = allDay
-      ? new Date(`${startTime}T00:00:00`).toISOString()
-      : new Date(startTime).toISOString();
+      ? new Date(`${startDate}T00:00:00`).toISOString()
+      : new Date(`${startDate}T${startTimeStr}:00`).toISOString();
     const endISO = allDay
-      ? new Date(`${endTime}T23:59:59`).toISOString()
-      : new Date(endTime).toISOString();
+      ? new Date(`${endDate}T23:59:59`).toISOString()
+      : new Date(`${endDate}T${endTimeStr}:00`).toISOString();
 
     if (new Date(endISO) < new Date(startISO)) {
       setError('End must be after start');
@@ -354,60 +370,90 @@ export function AddEventModal({
             required
           />
 
-          {/* Date & Time */}
-          <div className="space-y-2">
-            {allDay ? (
-              <div className="flex items-center gap-2">
-                <Input
+          {/* Date & Time — Google Calendar style */}
+          <div className="flex items-center gap-1 flex-wrap -mx-1 px-1 py-1 rounded-lg hover:bg-muted/40 transition-colors">
+            {/* Start date */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={(e) => (e.currentTarget.nextElementSibling as HTMLInputElement | null)?.showPicker?.()}
+                className="h-8 px-2.5 rounded-md text-sm font-medium hover:bg-muted transition-colors whitespace-nowrap"
+              >
+                {startDate ? format(parseISO(startDate + 'T00:00:00'), 'EEE, MMM d') : 'Start date'}
+              </button>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => handleStartDateChange(e.target.value)}
+                className="absolute inset-0 opacity-0 w-full cursor-pointer"
+                tabIndex={-1}
+                required
+              />
+            </div>
+
+            {/* Start time (hidden when all-day) */}
+            {!allDay && (
+              <TimeDropdown value={startTimeStr} onChange={handleStartTimeChange} />
+            )}
+
+            <span className="text-muted-foreground text-sm px-0.5">–</span>
+
+            {/* End date (only shown when different from start) */}
+            {endDate !== startDate && (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={(e) => (e.currentTarget.nextElementSibling as HTMLInputElement | null)?.showPicker?.()}
+                  className="h-8 px-2.5 rounded-md text-sm font-medium hover:bg-muted transition-colors whitespace-nowrap"
+                >
+                  {endDate ? format(parseISO(endDate + 'T00:00:00'), 'EEE, MMM d') : 'End date'}
+                </button>
+                <input
                   type="date"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  className="flex-1 text-sm"
-                  required
+                  value={endDate}
+                  min={startDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="absolute inset-0 opacity-0 w-full cursor-pointer"
+                  tabIndex={-1}
                 />
-                <span className="text-muted-foreground text-sm shrink-0">to</span>
-                <Input
-                  type="date"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className="flex-1 text-sm"
-                  required
-                />
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Start</Label>
-                  <Input
-                    type="datetime-local"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    className="text-xs px-2"
-                    required
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">End</Label>
-                  <Input
-                    type="datetime-local"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    className="text-xs px-2"
-                    required
-                  />
-                </div>
               </div>
             )}
-            <div className="flex items-center gap-2">
-              <Switch
-                id="event-all-day"
-                checked={allDay}
-                onCheckedChange={handleAllDayChange}
+
+            {/* End time (hidden when all-day) */}
+            {!allDay && (
+              <TimeDropdown
+                value={endTimeStr}
+                onChange={setEndTimeStr}
+                minTime={startDate === endDate ? startTimeStr : undefined}
               />
-              <Label htmlFor="event-all-day" className="text-sm cursor-pointer">
-                All day
-              </Label>
+            )}
+
+            {/* All day toggle */}
+            <div className="flex items-center gap-1.5 ml-1">
+              <Switch id="event-all-day" checked={allDay} onCheckedChange={handleAllDayChange} />
+              <Label htmlFor="event-all-day" className="text-sm cursor-pointer select-none">All day</Label>
             </div>
+
+            {/* End date selector when all-day and same date (show explicit end date control) */}
+            {allDay && endDate === startDate && (
+              <div className="relative ml-0">
+                <button
+                  type="button"
+                  onClick={(e) => (e.currentTarget.nextElementSibling as HTMLInputElement | null)?.showPicker?.()}
+                  className="h-8 px-2.5 rounded-md text-sm font-medium hover:bg-muted transition-colors whitespace-nowrap text-muted-foreground"
+                >
+                  {endDate ? format(parseISO(endDate + 'T00:00:00'), 'EEE, MMM d') : 'End date'}
+                </button>
+                <input
+                  type="date"
+                  value={endDate}
+                  min={startDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="absolute inset-0 opacity-0 w-full cursor-pointer"
+                  tabIndex={-1}
+                />
+              </div>
+            )}
           </div>
 
           {/* Calendar Selection */}
@@ -539,7 +585,7 @@ export function AddEventModal({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={!title.trim() || !startTime || !endTime || isSubmitting}>
+            <Button type="submit" disabled={!title.trim() || !startDate || !endDate || (!allDay && (!startTimeStr || !endTimeStr)) || isSubmitting}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
