@@ -35,11 +35,7 @@ export function GiftIdeasView() {
   const [editingIdea, setEditingIdea] = useState<GiftIdea | null>(null);
   const [quickAddByUser, setQuickAddByUser] = useState<Record<string, string>>({});
 
-  // Other family members (exclude active user — can't have gift ideas for yourself)
-  const otherMembers = useMemo(
-    () => members.filter((m) => m.id !== activeUser?.id),
-    [members, activeUser]
-  );
+  const otherMembers = useMemo(() => members, [members]);
 
   // Group ideas by forUserId
   const ideasByUser = useMemo(() => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { format, parseISO } from 'date-fns';
@@ -305,13 +305,14 @@ interface TravelGlobeProps {
   selectedPinId: string | null;
   selectedTripId: string | null;
   darkMode: boolean;
+  overlayOpen: boolean;
   onPinClick: (pin: TravelPin) => void;
   onTripStopClick: (pin: TravelPin, trip: TravelTrip) => void;
   onMapClick: (lat: number, lng: number) => void;
 }
 
 export function TravelGlobe({
-  pins, trips, selectedPinId, selectedTripId, darkMode,
+  pins, trips, selectedPinId, selectedTripId, darkMode, overlayOpen,
   onPinClick, onTripStopClick, onMapClick,
 }: TravelGlobeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -324,6 +325,54 @@ export function TravelGlobe({
   const pinsRef = useRef(pins);
   const tripsRef = useRef(trips);
   const [zoomTier, setZoomTier] = useState(0);
+
+  // Auto-rotation refs
+  const rotationFrameRef = useRef<number | null>(null);
+  const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isRotatingRef = useRef(false);
+  const overlayOpenRef = useRef(overlayOpen);
+  // Far-side culling
+  const updateCullingRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => { overlayOpenRef.current = overlayOpen; }, [overlayOpen]);
+
+  const startRotation = useCallback(() => {
+    if (!mapRef.current || isRotatingRef.current) return;
+    isRotatingRef.current = true;
+    const tick = () => {
+      if (!mapRef.current || !isRotatingRef.current) return;
+      const { lng, lat } = mapRef.current.getCenter();
+      mapRef.current.setCenter([(lng + 0.04) % 360, lat]);
+      rotationFrameRef.current = requestAnimationFrame(tick);
+    };
+    rotationFrameRef.current = requestAnimationFrame(tick);
+  }, []);
+
+  const stopRotation = useCallback(() => {
+    isRotatingRef.current = false;
+    if (rotationFrameRef.current !== null) {
+      cancelAnimationFrame(rotationFrameRef.current);
+      rotationFrameRef.current = null;
+    }
+  }, []);
+
+  const scheduleResume = useCallback(() => {
+    if (resumeTimerRef.current !== null) clearTimeout(resumeTimerRef.current);
+    resumeTimerRef.current = setTimeout(() => {
+      resumeTimerRef.current = null;
+      if (!overlayOpenRef.current) startRotation();
+    }, 60_000);
+  }, [startRotation]);
+
+  // When overlay opens: stop rotation + cancel resume. When closes: start 1-min timer.
+  useEffect(() => {
+    if (overlayOpen) {
+      stopRotation();
+      if (resumeTimerRef.current !== null) { clearTimeout(resumeTimerRef.current); resumeTimerRef.current = null; }
+    } else {
+      scheduleResume();
+    }
+  }, [overlayOpen, stopRotation, scheduleResume]);
 
   useEffect(() => { onPinClickRef.current = onPinClick; }, [onPinClick]);
   useEffect(() => { onTripStopClickRef.current = onTripStopClick; }, [onTripStopClick]);
@@ -365,7 +414,7 @@ export function TravelGlobe({
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: STYLE_LIGHT,
-      zoom: 2, center: [0, 20], pitchWithRotate: false, attributionControl: false,
+      zoom: 3, center: [0, 20], pitchWithRotate: false, attributionControl: false,
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
@@ -374,6 +423,7 @@ export function TravelGlobe({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (map as any).setProjection({ type: 'globe' });
       addTripLinesLayer(map);
+      if (!overlayOpenRef.current) startRotation();
     });
 
     map.on('zoomend', () => {
@@ -381,11 +431,43 @@ export function TravelGlobe({
       setZoomTier((prev) => (prev !== tier ? tier : prev));
     });
 
+    // Far-side culling — hide/fade pins behind the globe
+    const updateCulling = () => {
+      const { lng: cLng, lat: cLat } = map.getCenter();
+      const toRad = (d: number) => (d * Math.PI) / 180;
+      const cx = Math.cos(toRad(cLat)) * Math.cos(toRad(cLng));
+      const cy = Math.cos(toRad(cLat)) * Math.sin(toRad(cLng));
+      const cz = Math.sin(toRad(cLat));
+      for (const [id, marker] of markersRef.current) {
+        const pin = pinsRef.current.find((p) => p.id === id);
+        if (!pin) continue;
+        const px = Math.cos(toRad(pin.latitude)) * Math.cos(toRad(pin.longitude));
+        const py = Math.cos(toRad(pin.latitude)) * Math.sin(toRad(pin.longitude));
+        const pz = Math.sin(toRad(pin.latitude));
+        const dot = cx * px + cy * py + cz * pz;
+        const el = marker.getElement();
+        const base = parseFloat(el.dataset.baseOpacity ?? '1');
+        const factor = dot < 0 ? 0 : dot < 0.12 ? dot / 0.12 : 1;
+        el.style.opacity = factor === 1 ? String(base) : String(base * factor);
+        el.style.pointerEvents = dot < 0.02 ? 'none' : '';
+      }
+    };
+    updateCullingRef.current = updateCulling;
+    map.on('move', updateCulling);
+
+    // Stop rotation on any user interaction; schedule resume after 1 min
+    const onInteraction = () => { stopRotation(); scheduleResume(); };
+    map.on('mousedown', onInteraction);
+    map.on('touchstart', onInteraction);
+    map.on('wheel', onInteraction);
+
     popupRef.current = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 14, className: 'travel-pin-popup' });
     map.on('click', (e) => { onMapClickRef.current(e.lngLat.lat, e.lngLat.lng); });
     mapRef.current = map;
 
     return () => {
+      stopRotation();
+      if (resumeTimerRef.current !== null) { clearTimeout(resumeTimerRef.current); resumeTimerRef.current = null; }
       markersRef.current.forEach((m) => m.remove());
       markersRef.current.clear();
       popupRef.current?.remove();
@@ -434,11 +516,13 @@ export function TravelGlobe({
       const existing = markersRef.current.get(pin.id);
       if (existing) { existing.remove(); markersRef.current.delete(pin.id); }
       const { el, anchor } = buildMarker();
+      el.dataset.baseOpacity = el.style.opacity || '1';
       const marker = new maplibregl.Marker({ element: el, anchor })
         .setLngLat([pin.longitude, pin.latitude])
         .addTo(map);
       markersRef.current.set(pin.id, marker);
     }
+    updateCullingRef.current?.();
   }, [pins, trips, selectedPinId, zoomTier]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Trip lines — always render all trips; active trip gets full style, others get faded

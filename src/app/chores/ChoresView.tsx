@@ -87,10 +87,10 @@ export function ChoresView() {
     const assigneeMap = new Map<string, { id: string; name: string; color: string }>();
     effectiveFilteredChores.forEach(c => { if (c.assignedTo) assigneeMap.set(c.assignedTo.id, c.assignedTo); });
 
-    // Preserve familyMembers display order where we have real IDs
+    // All family members always get a column; append any extra assignees not in family
     const ordered: { id: string; name: string; color: string }[] = [];
     familyMembers.forEach(member => {
-      if (member.id && assigneeMap.has(member.id)) {
+      if (member.id) {
         ordered.push(member);
         assigneeMap.delete(member.id);
       }
@@ -100,7 +100,7 @@ export function ChoresView() {
     const groups: { user: { id: string; name: string; color: string } | null; chores: typeof effectiveFilteredChores }[] = [];
     ordered.forEach(member => {
       const userChores = effectiveFilteredChores.filter(c => c.assignedTo?.id === member.id);
-      if (userChores.length > 0) groups.push({ user: member, chores: userChores });
+      groups.push({ user: member, chores: userChores });
     });
 
     const unassigned = effectiveFilteredChores.filter(c => !c.assignedTo);
@@ -176,7 +176,7 @@ export function ChoresView() {
               <AlertCircle className="h-12 w-12 mb-4 opacity-50" /><p>{error}</p>
               <Button variant="outline" size="sm" className="mt-4" onClick={() => refreshChores()}>Try Again</Button>
             </div>
-          ) : effectiveFilteredChores.length === 0 ? (
+          ) : effectiveFilteredChores.length === 0 && !(groupByUser && familyMembers.length > 0) ? (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
               <ClipboardList className="h-12 w-12 mb-4 opacity-50" /><p>No chores found</p>
               <Button variant="outline" size="sm" className="mt-4" onClick={handleAddWithAuth}>Add your first chore</Button>

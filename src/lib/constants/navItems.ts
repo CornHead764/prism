@@ -12,7 +12,7 @@ import {
   Gift,
   Baby,
   Globe,
-  Compass,
+  Backpack,
   Settings,
 } from 'lucide-react';
 
@@ -37,7 +37,7 @@ export const ALL_NAV_ITEMS: NavItem[] = [
   { label: 'Wishes', href: '/wishes', icon: Gift },
   { label: 'Babysitter', href: '/babysitter', icon: Baby },
   { label: 'Travel', href: '/travel', icon: Globe },
-  { label: 'Weekend', href: '/weekend', icon: Compass },
+  { label: 'Weekend', href: '/weekend', icon: Backpack },
   { label: 'Settings', href: '/settings', icon: Settings },
 ];
 

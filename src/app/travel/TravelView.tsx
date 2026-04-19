@@ -348,6 +348,7 @@ export function TravelView() {
                 selectedPinId={selectedPinId}
                 selectedTripId={selectedTripId}
                 darkMode={globeDarkMode}
+                overlayOpen={overlay.mode !== 'none'}
                 onPinClick={handlePinClick}
                 onTripStopClick={handleTripStopClick}
                 onMapClick={handleMapClick}

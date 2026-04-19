@@ -76,7 +76,9 @@ export function TaskContentArea({
     );
   }
 
-  if (filteredTasks.length === 0) {
+  const isPersonGrouped = (groupMode === 'person' && !!tasksByUser?.length) ||
+    (groupMode === 'person_then_list' && !!tasksByPersonThenList?.length);
+  if (filteredTasks.length === 0 && !isPersonGrouped) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
         <CheckSquare className="h-12 w-12 mb-4 opacity-50" /><p>No tasks found</p>

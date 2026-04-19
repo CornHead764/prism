@@ -126,7 +126,7 @@ export function WeekendView() {
   const panelOpen = overlayMode !== 'none';
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="h-screen flex flex-col">
       {/* Toolbar */}
       <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-background/80 backdrop-blur shrink-0 flex-wrap">
         {/* Status tabs */}

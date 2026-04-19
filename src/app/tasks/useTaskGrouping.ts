@@ -85,10 +85,10 @@ export function useTaskGrouping({
     const assigneeMap = new Map<string, { id: string; name: string; color: string }>();
     filteredTasks.forEach(t => { if (t.assignedTo) assigneeMap.set(t.assignedTo.id, t.assignedTo); });
 
-    // Preserve familyMembers display order where we have real IDs
+    // All family members always get a column; append any extra assignees not in family
     const ordered: { id: string; name: string; color: string }[] = [];
     familyMembers.forEach(member => {
-      if (member.id && assigneeMap.has(member.id)) {
+      if (member.id) {
         ordered.push(member);
         assigneeMap.delete(member.id);
       }
@@ -99,7 +99,7 @@ export function useTaskGrouping({
     const groups: { user: { id: string; name: string; color: string } | null; tasks: Task[] }[] = [];
     ordered.forEach(member => {
       const userTasks = filteredTasks.filter(t => t.assignedTo?.id === member.id);
-      if (userTasks.length > 0) groups.push({ user: member, tasks: userTasks });
+      groups.push({ user: member, tasks: userTasks });
     });
 
     const unassigned = filteredTasks.filter(t => !t.assignedTo);
@@ -148,9 +148,7 @@ export function useTaskGrouping({
 
     familyMembers.forEach((member) => {
       const memberTasks = filteredTasks.filter(t => t.assignedTo?.id === member.id);
-      if (memberTasks.length > 0) {
-        result.push({ member, tasks: memberTasks, subGroups: buildSubGroups(memberTasks) });
-      }
+      result.push({ member, tasks: memberTasks, subGroups: buildSubGroups(memberTasks) });
     });
 
     const unassigned = filteredTasks.filter(t => !t.assignedTo);

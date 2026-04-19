@@ -31,6 +31,26 @@ All notable changes to Prism are documented in this file.
 - **Travel Map — Places tab**: Sortable list with stats bar, text search, filter pills (All / Been There / Want to Go / Bucket List / Has NP), and group-by (Year / Country / None) with country flag emoji. Selecting a place switches to the globe and opens its detail panel.
 - **Travel Map — dark map mode**: Moon/sun toggle button on the globe applies a CSS filter (`brightness · saturate · contrast · hue-rotate`) only to the map canvas — tiles darken while all markers stay at full brightness, and no tile reload is required.
 - **Travel Map — geocoding**: Nominatim proxy at `/api/travel/geocode` with Hawaiian island aliases, special-character normalization, and national park search scoring (boundary/park results ranked above natural features like volcano summits).
+- **Tasks**: Person→List and List→Person nested group modes — primary group cards with sub-group sections inside (colored left-border dividers, per-sub-group badge counts). Available in the Group dropdown when task lists exist.
+- **Undo Stack**: Global undo across shopping, tasks, wishes, and chores — undo button in the nav bar reverses the most recent mutation.
+- **Dashboard Editor**: Transparent background mode — widget cards can render over the grid background image without a double-card effect.
+- **Dashboard Editor**: Per-widget text color and opacity controls.
+- **Dashboard Editor**: Custom color picker for theme palette swatches.
+- **Dashboard Editor**: Grid line opacity and cell background color/opacity controls for calendar and weather widgets.
+- **Camera Scanner**: Scan product barcodes with phone/tablet camera on the Shopping page — camera icon in header opens full-screen scanner overlay; automatically looks up product on Open Food Facts and adds it to the active list.
+- **Docker**: Multi-arch builds (amd64 + arm64) — Raspberry Pi support via pre-built GHCR image.
+- **Health check**: `GET /api/health` now probes PostgreSQL and Redis — returns 503 with `status: "degraded"` if either is down (previously always returned 200).
+- **Calendar**: Profile columns now follow family member sort order from Settings; Family calendar group always sorts first before person columns.
+
+### Improved
+- **Tasks**: Group control split into a "Group" primary select and a "Then by" secondary select — the nested `Person → List` / `List → Person` arrow-notation options are replaced by two independent dropdowns.
+- **Chores**: "Group by Person" toggle replaced with a consistent "Group" dropdown (None / Person) matching Tasks' style.
+- **Calendar**: Day view and week view hourly rows now expand to fill available widget/subpage height — `1fr` grid rows scale proportionally instead of using a fixed minimum.
+- **Bus Tracker**: Train map switches to 2-row snake layout when 6+ nodes — top row left→right, bottom row right→left, connected by a right-side vertical segment.
+- **Bus Tracker**: PM route at-school status now shows "Bus at school — en route" instead of a bogus 0-minute ETA.
+- **Bus Tracker**: Route dialog "Scheduled" field renamed to "Home ETA" with helper text clarifying it is the expected arrival time at your stop.
+- **Bus Tracker**: Large minute values now display as hours and minutes (e.g., "15h 25m" instead of "925m").
+- **README**: Replaced GIF demos with static screenshots for faster loading.
 
 ### Bug Fixes
 - **Auth cookie secure flag**: Login route now detects HTTPS per-request via `X-Forwarded-Proto` header instead of a global `isSecure` flag derived from `APP_URL` — fixes "Log in to make changes" errors when accessing via `http://localhost:3000` while `APP_URL` pointed at the HTTPS public domain.
@@ -39,121 +59,73 @@ All notable changes to Prism are documented in this file.
 - **Bucket list unstar persistence**: Star and status toggles now auto-save immediately on click rather than requiring the Save button — fixes unstar/status changes being lost on navigation.
 - **Microsoft OAuth callback**: Removed `requireAuth` requirement on the callback route — Microsoft redirects without a Prism session cookie, causing the connection flow to fail silently. Success/error toasts now display in Settings → Connected Accounts.
 - **Performance mode**: Removed animation stripping (transitions run on the compositor thread and don't cause CPU overhead); caps transitions at 150ms so the UI remains responsive without looking broken. Fixes washed-out surfaces when backdrop-blur is disabled.
+- **Virtual Keyboard**: Tapping a key no longer dismisses the keyboard after one character — `preventDefault` on `pointerDown` keeps focus in the active input field.
+- **Virtual Keyboard**: Toggle button now appears correctly on touchscreen laptops where Windows converts touch events to mouse events (uses `navigator.maxTouchPoints` instead of pointer type tracking).
+- **Virtual Keyboard**: Reduced height from 38vh to 32vh — less intrusive on 1080p displays.
+- **Virtual Keyboard**: Scroll position no longer jumps after voice input adds a new list item — scroll restore is skipped when text was injected while the keyboard was open.
+- **Camera Scanner**: Overlay now self-dismisses immediately after a successful scan; haptic feedback on successful scan; iOS AudioContext unlocked synchronously on "Open Camera" tap.
+- **UI**: Desktop/laptop font size reduced to 14px base (via `pointer: fine` media query) — previously used the same 16px as touch displays.
+- **Calendar**: Day name headers rotate correctly when week starts on Monday.
+- **Mobile**: Navigation no longer causes flash/slide animation on page transitions.
+- **Docker**: App health check uses node instead of curl; fresh install schema fixed; `VirtualKeyboard` and `CameraScannerOverlay` loaded via `next/dynamic` with `ssr: false`.
+- **Database**: Truncate operation now includes all tables (gift_ideas, calendar_notes, wish_items, bus_tracking, audit_logs).
+- **CI**: GitHub Actions upgraded from Node.js 20 to 22; layout validation size constraints downgraded to warnings.
 
 ### Infrastructure
 - **Automatic database migrations**: Schema changes now apply automatically on container startup via `scripts/migrate.js`. Users update by running `./scripts/update.sh` (or `git pull && docker-compose up -d --build`) — no manual database commands required. `drizzle/0000_upgrade.sql` brings any existing installation (regardless of age) to the current schema; future changes go in numbered `drizzle/NNNN_description.sql` files.
 
-### Security / Infrastructure
-- **Centralized cache invalidation**: New `invalidateEntity(entity)` helper in `src/lib/cache/cacheKeys.ts` replaces 166 ad-hoc `invalidateCache('entity:*')` calls across 65 files; cross-entity dependency graph ensures chore completions also clear points/goals cache
-- **Redis-down 503**: `validateSession` now returns a discriminated union `{ ok, reason }` — Redis unavailability returns 503 ("service unavailable") instead of 401 ("please log in"), preventing confusing auth errors during infra outages
-- **Request ID middleware**: All API responses include `x-request-id` header (24-char hex UUID); propagated into `logError()` for log correlation across distributed traces
-- **`/api/health/deep`** (parent-auth): Deep health check verifying DB, Redis, last backup recency, and OAuth token expiry; triggers optional `ALERT_WEBHOOK_URL` notification on degradation
-- **`apiError()` helper**: Standardized error responses via `src/lib/api/apiResponse.ts` — `{ error: { code, message } }` shape with typed codes: `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_ERROR`, `INTERNAL_ERROR`, `SERVICE_UNAVAILABLE`
-- **withAuth migration**: birthdays, calendar-notes routes migrated from raw `requireAuth` boilerplate to `withAuth` wrapper
-- **API token scopes**: `scopes` JSONB column added to `api_tokens` table (default `["*"]` = full access); `withAuth` now enforces scope on API token requests; existing tokens unaffected
+### Security
+- **CSRF**: Next.js middleware validates `Origin` header on all API mutations — cross-origin requests blocked at the edge (away-mode auto-activation exempt).
+- **WiFi config**: Password now stored AES-256-GCM encrypted in the database; decrypted on read with backward-compat for existing plaintext rows.
+- **Backups**: `PGPASSWORD` moved from inline shell string to process env — prevents credential leakage in process listings.
+- **Babysitter info**: Sensitive section content now requires authentication (`includeSensitive=true` requests gated behind `requireAuth`).
+- **Paprika import**: HTML payload capped at 5 MB — prevents memory exhaustion from oversized uploads.
+- **Centralized cache invalidation**: New `invalidateEntity(entity)` helper in `src/lib/cache/cacheKeys.ts` replaces 166 ad-hoc `invalidateCache('entity:*')` calls across 65 files; cross-entity dependency graph ensures chore completions also clear points/goals cache.
+- **Redis-down 503**: `validateSession` now returns a discriminated union `{ ok, reason }` — Redis unavailability returns 503 ("service unavailable") instead of 401 ("please log in"), preventing confusing auth errors during infra outages.
+- **Request ID middleware**: All API responses include `x-request-id` header (24-char hex UUID); propagated into `logError()` for log correlation across distributed traces.
+- **`/api/health/deep`** (parent-auth): Deep health check verifying DB, Redis, last backup recency, and OAuth token expiry; triggers optional `ALERT_WEBHOOK_URL` notification on degradation.
+- **`apiError()` helper**: Standardized error responses via `src/lib/api/apiResponse.ts` — `{ error: { code, message } }` shape with typed codes: `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_ERROR`, `INTERNAL_ERROR`, `SERVICE_UNAVAILABLE`.
+- **withAuth migration**: birthdays, calendar-notes routes migrated from raw `requireAuth` boilerplate to `withAuth` wrapper.
+- **API token scopes**: `scopes` JSONB column added to `api_tokens` table (default `["*"]` = full access); `withAuth` now enforces scope on API token requests; existing tokens unaffected.
+- **Rate limiting**: In-memory fallback limiter — rate limits now enforced even when Redis is unavailable (previously all requests passed through).
+- **Backups API**: `POST /api/admin/backups` rate-limited to 5 per hour per user.
+- **API**: `GET /api/settings`, `GET /api/settings/wifi`, and `POST /api/shopping/scan` now require display/full auth — previously exposed unauthenticated.
 
 ### Performance
-- **FamilyProvider**: Equality check on polling results before calling `setMembers` — prevents unnecessary re-renders across all consumers on every 10-minute poll when data is unchanged
-- **CLS fix**: `AppShell` no longer removes `ml-16` from `<main>` when auto-hide fires — SideNav is `position:fixed` so layout should never shift; eliminates CLS spike caused by the 10-second auto-hide timer (CLS 0.337 → 0.07)
+- **FamilyProvider**: Equality check on polling results before calling `setMembers` — prevents unnecessary re-renders across all consumers on every 10-minute poll when data is unchanged.
+- **CLS fix**: `AppShell` no longer removes `ml-16` from `<main>` when auto-hide fires — SideNav is `position:fixed` so layout should never shift; eliminates CLS spike caused by the 10-second auto-hide timer (CLS 0.337 → 0.07).
+- **Caching**: Messages, Tasks, and Photos GET endpoints now cache responses in Redis (60s / 60s / 300s TTLs) — reduces DB load on frequently-polled dashboard data.
+- **Visibility polling**: `useCalendarEvents` and `usePhotos` now use `useVisibilityPolling` — polling pauses when the browser tab is hidden.
+- **Images**: Replaced raw `<img>` tags with `next/image` (lazy loading, layout stability) in RecipeCard, RecipeDetailModal, and all four nav components.
 
 ### Quality
-- **BabysitterModeOverlay**: `useBabysitterInfo` and `useWifiConfig` now skip authenticated endpoints when babysitter mode is inactive — eliminates 401 console errors and network failures in Lighthouse best-practices audit (best-practices 96 → 100)
+- **BabysitterModeOverlay**: `useBabysitterInfo` and `useWifiConfig` now skip authenticated endpoints when babysitter mode is inactive — eliminates 401 console errors and network failures in Lighthouse best-practices audit (best-practices 96 → 100).
 
 ### Tests
-- **API error shape** (19 tests): every error code maps to correct HTTP status; `{ error: { code, message } }` shape enforced; `apiSuccess` coverage
-- **Cache cross-dependency** (14 tests): `invalidateEntity('chores')` cascades to points/goals; visited-set prevents double-invalidation; `invalidateEntities` shares visited set across entities
-- **Middleware request ID** (8 tests): `x-request-id` generated and propagated; CSRF blocks mismatched origin; exempt paths pass through; 403 responses still carry the ID
-- **Redis-down degradation** (7 tests): `validateSession` returns `unavailable` vs `invalid`; `requireAuth` returns 503 not 401 on Redis outage; `optionalAuth` degrades to null
-- **PinPad behavioral** (21 tests): member selection, digit entry, backspace, auto-submit, wrong PIN error, keyboard input, cancel, demo mode
-- **Shopping widget behavioral** (10 tests): check/uncheck items, optimistic update, progress bar ratio, list switching, all-checked, empty state
-- **OAuth token expiry** (10 tests): calendar/photo tokens expiring soon → warn; stale/missing backup → warn; Redis/DB down → degraded 503; auth enforcement
-- **Integration tests** (8 tests, `jest.integration.config.js`): events CRUD, chore completion flow with cascade, auth session create/validate/invalidate against real `prism_test` database
+- **API error shape** (19 tests): every error code maps to correct HTTP status; `{ error: { code, message } }` shape enforced; `apiSuccess` coverage.
+- **Cache cross-dependency** (14 tests): `invalidateEntity('chores')` cascades to points/goals; visited-set prevents double-invalidation; `invalidateEntities` shares visited set across entities.
+- **Middleware request ID** (8 tests): `x-request-id` generated and propagated; CSRF blocks mismatched origin; exempt paths pass through; 403 responses still carry the ID.
+- **Redis-down degradation** (7 tests): `validateSession` returns `unavailable` vs `invalid`; `requireAuth` returns 503 not 401 on Redis outage; `optionalAuth` degrades to null.
+- **PinPad behavioral** (21 tests): member selection, digit entry, backspace, auto-submit, wrong PIN error, keyboard input, cancel, demo mode.
+- **Shopping widget behavioral** (10 tests): check/uncheck items, optimistic update, progress bar ratio, list switching, all-checked, empty state.
+- **OAuth token expiry** (10 tests): calendar/photo tokens expiring soon → warn; stale/missing backup → warn; Redis/DB down → degraded 503; auth enforcement.
+- **Integration tests** (8 tests, `jest.integration.config.js`): events CRUD, chore completion flow with cascade, auth session create/validate/invalidate against real `prism_test` database.
+- **Auth enumeration**: Jest tests verify requireAuth routes return 401 and getDisplayAuth routes are correctly guest-accessible (`src/app/api/__tests__/authEnumeration.test.ts`).
+- **Widget smoke tests**: 14 render tests for ChoresWidget, TasksWidget, ShoppingWidget covering empty state, data display, and filtering (`src/components/widgets/__tests__/widgetRender.test.tsx`).
+- **Jest config**: Added `.test.tsx` to testMatch; ts-jest now overrides `jsx: react-jsx` for component test files.
 
 ### Refactored
-- **TasksView** (943→235 lines): extracted `TaskRow`, `GroupedTaskGrid`, `NestedGroupedTaskGrid`, `TaskContentArea`, `useTaskGrouping`, `taskGroupTypes` — all files under 250 lines
-- **ChoresView** (632→213 lines): extracted `ChoreGroupCard`, `ChoreGroupGrid`, `ChoreCompletionsList`, `useChoreModals`
-- **LayoutEditor** (901→228 lines): extracted 10 sub-components and hooks — toolbar sections, dashboard manager, measure mode, popover wrapper, shared types
-- **PinPad** (648→164 lines): extracted `usePinPad`, `NumberPad`, `MemberSelection`, `PinDisplay`
-
-### Docs / Guidelines
-- **CLAUDE.md**: Added API error standardization, cache invalidation, auth degradation, testing, and request ID guidelines
-
-### Security
-- **CSRF**: Next.js middleware validates `Origin` header on all API mutations — cross-origin requests blocked at the edge (away-mode auto-activation exempt)
-- **WiFi config**: Password now stored AES-256-GCM encrypted in the database; decrypted on read with backward-compat for existing plaintext rows
-- **Backups**: `PGPASSWORD` moved from inline shell string to process env — prevents credential leakage in process listings
-- **Babysitter info**: Sensitive section content now requires authentication (`includeSensitive=true` requests gated behind `requireAuth`)
-- **Paprika import**: HTML payload capped at 5 MB — prevents memory exhaustion from oversized uploads
-
-### Performance
-- **Caching**: Messages, Tasks, and Photos GET endpoints now cache responses in Redis (60s / 60s / 300s TTLs) — reduces DB load on frequently-polled dashboard data
-- **Visibility polling**: `useCalendarEvents` and `usePhotos` now use `useVisibilityPolling` — polling pauses when the browser tab is hidden
-- **Images**: Replaced raw `<img>` tags with `next/image` (lazy loading, layout stability) in RecipeCard, RecipeDetailModal, and all four nav components (avatar images)
-
-### Improved
-- **Tasks**: Group control split into a "Group" primary select and a "Then by" secondary select — the nested `Person → List` / `List → Person` arrow-notation options are replaced by two independent dropdowns; "Then by" only appears when a groupable primary is chosen and task lists exist
-- **Chores**: "Group by Person" toggle replaced with a consistent "Group" dropdown (None / Person) matching Tasks' style
-
-### Tests
-- **Auth enumeration**: Jest tests verify requireAuth routes return 401 and getDisplayAuth routes are correctly guest-accessible (`src/app/api/__tests__/authEnumeration.test.ts`)
-- **Widget smoke tests**: 14 render tests for ChoresWidget, TasksWidget, ShoppingWidget covering empty state, data display, and filtering (`src/components/widgets/__tests__/widgetRender.test.tsx`)
-- **Jest config**: Added `.test.tsx` to testMatch; ts-jest now overrides `jsx: react-jsx` for component test files
+- **TasksView** (943→235 lines): extracted `TaskRow`, `GroupedTaskGrid`, `NestedGroupedTaskGrid`, `TaskContentArea`, `useTaskGrouping`, `taskGroupTypes` — all files under 250 lines.
+- **ChoresView** (632→213 lines): extracted `ChoreGroupCard`, `ChoreGroupGrid`, `ChoreCompletionsList`, `useChoreModals`.
+- **LayoutEditor** (901→228 lines): extracted 10 sub-components and hooks — toolbar sections, dashboard manager, measure mode, popover wrapper, shared types.
+- **PinPad** (648→164 lines): extracted `usePinPad`, `NumberPad`, `MemberSelection`, `PinDisplay`.
+- **Days**: Consolidated 8 inline day-of-week arrays across calendar views, chore modals, WeatherWidget, and the OpenWeather integration into shared `DAYS_SHORT_ARRAY`, `DAYS_LONG_ARRAY`, and `DAYS_SINGLE_ARRAY` constants in `src/lib/constants/days.ts`.
+- **CalendarWidget**: Extracted `useCalendarWidgetPrefs` hook (view state, navigation, localStorage persistence) and `CalendarWidgetControls` sub-component — main component reduced from ~357 to ~200 lines.
+- **Widgets**: Added `useMemo` for filter/sort chains and `useCallback` for event handlers in ChoresWidget, TasksWidget, ShoppingWidget, and MealsWidget.
 
 ### Docs
-- **API auth levels**: Added `docs/api-auth-levels.md` documenting the auth requirement (Public / Display / Auth / Parent) for every API route
-
-### Refactor
-- **Days**: Consolidated 8 inline day-of-week arrays across calendar views, chore modals, WeatherWidget, and the OpenWeather integration into shared `DAYS_SHORT_ARRAY`, `DAYS_LONG_ARRAY`, and `DAYS_SINGLE_ARRAY` constants in `src/lib/constants/days.ts`
-- **CalendarWidget**: Extracted `useCalendarWidgetPrefs` hook (view state, navigation, localStorage persistence) and `CalendarWidgetControls` sub-component — main component reduced from ~357 to ~200 lines
-- **Widgets**: Added `useMemo` for filter/sort chains and `useCallback` for event handlers in ChoresWidget, TasksWidget, ShoppingWidget, and MealsWidget
-
-## [1.3.0] - 2026-04-08
-
-### Added
-- **Tasks**: Person→List and List→Person nested group modes — primary group cards with sub-group sections inside (colored left-border dividers, per-sub-group badge counts). Available in the Group dropdown when task lists exist.
-- **Undo Stack**: Global undo across shopping, tasks, wishes, and chores — undo button in the nav bar reverses the most recent mutation
-- **Dashboard Editor**: Transparent background mode — widget cards can render over the grid background image without a double-card effect
-- **Dashboard Editor**: Per-widget text color and opacity controls
-- **Dashboard Editor**: Custom color picker for theme palette swatches
-- **Dashboard Editor**: Grid line opacity and cell background color/opacity controls for calendar and weather widgets
-- **Camera Scanner**: Scan product barcodes with phone/tablet camera on the Shopping page — camera icon in header opens full-screen scanner overlay; automatically looks up product on Open Food Facts and adds it to the active list
-- **Docker**: Multi-arch builds (amd64 + arm64) — Raspberry Pi support via pre-built GHCR image
-- **Health check**: `GET /api/health` now probes PostgreSQL and Redis — returns 503 with `status: "degraded"` if either is down (previously always returned 200)
-- **Calendar**: Profile columns now follow family member sort order from Settings
-- **Calendar**: Family calendar group always sorts first before person columns
-
-### Improved
-- **Calendar**: Day view and week view hourly rows now expand to fill available widget/subpage height — `1fr` grid rows scale proportionally instead of using a fixed minimum
-- **Bus Tracker**: Train map switches to 2-row snake layout when 6+ nodes — top row left→right, bottom row right→left, connected by a right-side vertical segment
-- **Bus Tracker**: PM route at-school status now shows "Bus at school — en route" instead of a bogus 0-minute ETA
-- **Bus Tracker**: Route dialog "Scheduled" field renamed to "Home ETA" with helper text clarifying it is the expected arrival time at your stop
-- **Bus Tracker**: Large minute values now display as hours and minutes (e.g., "15h 25m" instead of "925m")
-- **README**: Replaced GIF demos with static screenshots for faster loading
-
-### Security
-- **Rate limiting**: In-memory fallback limiter — rate limits now enforced even when Redis is unavailable (previously all requests passed through)
-- **Backups**: `POST /api/admin/backups` rate-limited to 5 per hour per user
-- **API**: `GET /api/settings` now requires display auth — previously exposed all app configuration unauthenticated
-- **API**: `GET /api/settings/wifi` now requires auth — previously exposed Wi-Fi credentials unauthenticated
-- **API**: `POST /api/shopping/scan` now requires display auth — previously allowed unauthenticated writes to shopping list
-
-### Fixed
-- **Virtual Keyboard**: Tapping a key no longer dismisses the keyboard after one character — `preventDefault` on `pointerDown` keeps focus in the active input field
-- **Virtual Keyboard**: Toggle button now appears correctly on touchscreen laptops where Windows converts touch events to mouse events (uses `navigator.maxTouchPoints` instead of pointer type tracking)
-- **Virtual Keyboard**: Reduced height from 38vh to 32vh — less intrusive on 1080p displays
-- **Virtual Keyboard**: Scroll position no longer jumps after voice input adds a new list item — scroll restore is skipped when text was injected while the keyboard was open
-- **Camera Scanner**: Overlay now self-dismisses immediately after a successful scan — no longer stays open waiting for parent state propagation
-- **Camera Scanner**: Haptic feedback (`navigator.vibrate`) on successful scan (Android; iOS does not support web vibration)
-- **Camera Scanner**: iOS photo mode — AudioContext unlocked synchronously on "Open Camera" tap to maximise audio feedback compatibility
-- **UI**: Desktop/laptop font size reduced to 14px base (via `pointer: fine` media query) — previously used the same 16px as touch displays, making the UI feel oversized on mouse-driven monitors
-- **Calendar**: Day name headers rotate correctly when week starts on Monday
-- **Mobile**: Navigation no longer causes flash/slide animation on page transitions
-- **Docker**: App health check uses node instead of curl (not available in Alpine)
-- **Docker**: Fresh install schema fixed (removed duplicate function and restrict lines from pg_dump)
-- **Docker**: `VirtualKeyboard` and `CameraScannerOverlay` now loaded via `next/dynamic` with `ssr: false` — prevents `HTMLInputElement is not defined` crash during Next.js prerender on fresh builds
-- **Database**: Truncate operation now includes all tables (gift_ideas, calendar_notes, wish_items, bus_tracking, audit_logs)
-- **CI**: GitHub Actions upgraded from Node.js 20 to 22
-- **CI**: Layout validation size constraints downgraded to warnings
+- **CLAUDE.md**: Added API error standardization, cache invalidation, auth degradation, testing, and request ID guidelines.
+- **API auth levels**: Added `docs/api-auth-levels.md` documenting the auth requirement (Public / Display / Auth / Parent) for every API route.
 
 ---
 
