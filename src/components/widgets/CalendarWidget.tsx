@@ -6,11 +6,10 @@ import { format, isToday, isTomorrow, startOfWeek, addDays } from 'date-fns';
 import { Calendar, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isLightColor } from '@/lib/utils/color';
-import { UserAvatar } from '@/components/ui/avatar';
 import { deduplicateEvents } from '@/lib/utils/calendarDedup';
 import { WidgetContainer, useWidgetBgOverride } from './WidgetContainer';
 import { useCalendarEvents, useCalendarFilter, useCalendarNotes } from '@/lib/hooks';
-import { useAuth, useFamily } from '@/components/providers';
+import { useAuth } from '@/components/providers';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import { useCalendarWidgetPrefs, VIEW_OPTIONS } from '@/lib/hooks/useCalendarWidgetPrefs';
 import { CalendarWidgetControls } from './CalendarWidgetControls';
@@ -46,7 +45,6 @@ export const CalendarWidget = React.memo(function CalendarWidget({
   gridH = 2,
 }: CalendarWidgetProps) {
   const { activeUser } = useAuth();
-  const { members: familyMembers } = useFamily();
   const { weekStartsOn } = useWeekStartsOn();
   const bgOverride = useWidgetBgOverride();
   const transparentMode = bgOverride?.hasCustomBg === true;
@@ -121,14 +119,7 @@ export const CalendarWidget = React.memo(function CalendarWidget({
               : undefined
           }
         >
-          {(() => {
-            const member = group.userId ? familyMembers.find(m => m.id === group.userId) : null;
-            return member ? (
-              <UserAvatar name={member.name} imageUrl={member.avatarUrl} color={member.color} size="sm" className="h-3 w-3 text-[6px]" />
-            ) : (
-              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: group.color }} />
-            );
-          })()}
+          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: selectedCalendarIds.has(group.id) || selectedCalendarIds.has('all') ? 'rgba(255,255,255,0.55)' : group.color }} />
           {group.name}
         </button>
       ))}
