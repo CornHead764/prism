@@ -416,7 +416,7 @@ export function TravelGlobe({
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: STYLE_LIGHT,
-      zoom: 3, center: [0, 20], pitchWithRotate: false, attributionControl: false,
+      zoom: 1.5, center: [0, 20], pitchWithRotate: false, attributionControl: false,
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
