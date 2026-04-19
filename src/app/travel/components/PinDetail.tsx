@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { format, parseISO } from 'date-fns';
-import { Trash2, X, MapPin, Star, TreePine, GripVertical, Check } from 'lucide-react';
+import { Trash2, X, MapPin, Star, TreePine, GripVertical, Check, Pencil, Loader2 } from 'lucide-react';
 import {
   DndContext, closestCenter, KeyboardSensor, MouseSensor, TouchSensor,
   useSensor, useSensors, type DragEndEvent,
@@ -127,6 +127,32 @@ export function PinDetail({ pin, childPins, onUpdate, onDelete, onDeleteChild, o
   const handleToggleStatus = async (next: PinStatus) => {
     setStatus(next);
     await onUpdate({ status: next });
+  };
+
+  // Re-locate
+  const [relocating, setRelocating] = useState(false);
+  const [geoQuery, setGeoQuery] = useState('');
+  const [geoResults, setGeoResults] = useState<{ latitude: number; longitude: number; displayName: string; fullName?: string }[]>([]);
+  const [geoSearching, setGeoSearching] = useState(false);
+  const geoInputRef = useRef<HTMLInputElement>(null);
+
+  const handleGeoSearch = async () => {
+    if (!geoQuery.trim()) return;
+    setGeoSearching(true);
+    try {
+      const res = await fetch(`/api/travel/geocode?q=${encodeURIComponent(geoQuery.trim())}`);
+      const data = await res.json();
+      setGeoResults(data.results ?? []);
+    } finally {
+      setGeoSearching(false);
+    }
+  };
+
+  const handleRelocatePick = async (r: { latitude: number; longitude: number; displayName: string; fullName?: string }) => {
+    await onUpdate({ latitude: r.latitude, longitude: r.longitude, placeName: r.fullName ?? r.displayName });
+    setRelocating(false);
+    setGeoQuery('');
+    setGeoResults([]);
   };
 
   // Children reorder
@@ -285,13 +311,61 @@ export function PinDetail({ pin, childPins, onUpdate, onDelete, onDeleteChild, o
           />
         )}
 
-        {/* Coordinates */}
-        {(pin.latitude !== 0 || pin.longitude !== 0) && (
+        {/* Coordinates + re-locate */}
+        <div className="space-y-1.5">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <MapPin className="h-3 w-3" />
-            <span>{pin.latitude.toFixed(4)}, {pin.longitude.toFixed(4)}</span>
+            <MapPin className="h-3 w-3 shrink-0" />
+            {(pin.latitude !== 0 || pin.longitude !== 0)
+              ? <span className="flex-1">{pin.latitude.toFixed(4)}, {pin.longitude.toFixed(4)}</span>
+              : <span className="flex-1 italic">No location set</span>
+            }
+            <button
+              onClick={() => { setRelocating(v => !v); setGeoQuery(''); setGeoResults([]); setTimeout(() => geoInputRef.current?.focus(), 50); }}
+              className="text-muted-foreground/50 hover:text-foreground transition-colors"
+              title="Re-locate this pin"
+            >
+              <Pencil className="h-3 w-3" />
+            </button>
           </div>
-        )}
+          {relocating && (
+            <div className="space-y-1">
+              <div className="flex gap-1">
+                <input
+                  ref={geoInputRef}
+                  value={geoQuery}
+                  onChange={e => setGeoQuery(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleGeoSearch()}
+                  placeholder="Search for a new location…"
+                  className="flex-1 h-7 rounded-md border border-border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+                <button
+                  onClick={handleGeoSearch}
+                  disabled={geoSearching || !geoQuery.trim()}
+                  className="h-7 px-2 rounded-md bg-primary text-primary-foreground text-xs disabled:opacity-50"
+                >
+                  {geoSearching ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Go'}
+                </button>
+              </div>
+              {geoResults.length > 0 && (
+                <div className="rounded-md border border-border bg-background shadow-sm max-h-40 overflow-y-auto">
+                  {geoResults.map((r, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleRelocatePick(r)}
+                      className="w-full text-left px-2.5 py-1.5 text-xs hover:bg-accent transition-colors border-b border-border last:border-0"
+                    >
+                      <div className="font-medium truncate">{r.fullName ?? r.displayName}</div>
+                      <div className="text-muted-foreground">{r.latitude.toFixed(4)}, {r.longitude.toFixed(4)}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {geoResults.length === 0 && geoQuery && !geoSearching && (
+                <p className="text-xs text-muted-foreground italic px-1">No results — try a broader search</p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Footer */}
