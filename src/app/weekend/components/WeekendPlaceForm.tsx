@@ -76,7 +76,7 @@ export function WeekendPlaceForm({ initial, onSave, onCancel, hideHeader }: Week
             id="wp-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Elawa Farms"
+            placeholder="e.g. Lincoln Park Zoo"
             className="mt-1"
             autoFocus
           />

@@ -342,7 +342,9 @@ export function TravelGlobe({
     const tick = () => {
       if (!mapRef.current || !isRotatingRef.current) return;
       const { lng, lat } = mapRef.current.getCenter();
-      mapRef.current.setCenter([(lng + 0.04) % 360, lat]);
+      // Keep longitude within -180..180 to prevent click coordinate drift
+      const next = ((lng + 0.04 + 180) % 360) - 180;
+      mapRef.current.setCenter([next, lat]);
       rotationFrameRef.current = requestAnimationFrame(tick);
     };
     rotationFrameRef.current = requestAnimationFrame(tick);
@@ -446,10 +448,17 @@ export function TravelGlobe({
         const pz = Math.sin(toRad(pin.latitude));
         const dot = cx * px + cy * py + cz * pz;
         const el = marker.getElement();
-        const base = parseFloat(el.dataset.baseOpacity ?? '1');
-        const factor = dot < 0 ? 0 : dot < 0.12 ? dot / 0.12 : 1;
-        el.style.opacity = factor === 1 ? String(base) : String(base * factor);
-        el.style.pointerEvents = dot < 0.02 ? 'none' : '';
+        if (dot < 0.05) {
+          el.classList.add('travel-pin-hidden');
+          el.style.opacity = '';
+          el.style.pointerEvents = 'none';
+        } else {
+          el.classList.remove('travel-pin-hidden');
+          const base = parseFloat(el.dataset.baseOpacity ?? '1');
+          const factor = dot < 0.2 ? (dot - 0.05) / 0.15 : 1;
+          el.style.opacity = String(base * factor);
+          el.style.pointerEvents = '';
+        }
       }
     };
     updateCullingRef.current = updateCulling;
@@ -462,7 +471,11 @@ export function TravelGlobe({
     map.on('wheel', onInteraction);
 
     popupRef.current = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 14, className: 'travel-pin-popup' });
-    map.on('click', (e) => { onMapClickRef.current(e.lngLat.lat, e.lngLat.lng); });
+    map.on('click', (e) => {
+      // Normalize longitude to -180..180 in case globe rotation drifted it
+      const lng = ((e.lngLat.lng + 180) % 360 + 360) % 360 - 180;
+      onMapClickRef.current(e.lngLat.lat, lng);
+    });
     mapRef.current = map;
 
     return () => {
@@ -593,6 +606,7 @@ export function TravelGlobe({
         .travel-pin-popup .maplibregl-popup-content { padding: 10px 12px; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.18); border: 1px solid rgba(0,0,0,0.08); }
         .travel-pin-popup .maplibregl-popup-tip { border-top-color: white; }
         .globe-dark .maplibregl-canvas-container { filter: brightness(0.72) saturate(0.55) contrast(1.08) hue-rotate(5deg); }
+        .travel-pin-hidden { opacity: 0 !important; pointer-events: none !important; visibility: hidden !important; }
       `}</style>
       <div ref={containerRef} className={`flex-1 rounded-lg overflow-hidden${darkMode ? ' globe-dark' : ''}`} />
     </>
