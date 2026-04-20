@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
 
     const response = await fetch(url.toString(), {
       headers: {
-        'User-Agent': 'Prism-Family-Dashboard/1.0',
+        'User-Agent': 'Prism-Family-Dashboard/1.0 (https://github.com/sandydargoport/prism)',
         'Accept-Language': 'en',
       },
     });
