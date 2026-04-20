@@ -102,7 +102,7 @@ export const createShoppingItemSchema = z.object({
   name: z.string().min(1, 'Name is required').max(255),
   quantity: z.number().int().positive().optional(),
   unit: z.string().max(50).optional(),
-  category: z.enum(['produce', 'dairy', 'meat', 'bakery', 'frozen', 'pantry', 'household', 'other']).optional(),
+  category: z.string().max(50).optional(),
   recurring: z.boolean().optional().default(false),
   recurrenceInterval: z.enum(['weekly', 'monthly']).optional(),
   addedBy: uuidSchema.optional(),

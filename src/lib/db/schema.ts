@@ -398,8 +398,7 @@ export const shoppingItems = pgTable('shopping_items', {
   name: varchar('name', { length: 255 }).notNull(),
   quantity: integer('quantity'),
   unit: varchar('unit', { length: 50 }), // "lbs", "oz", "gallon", "count"
-  category: varchar('category', { length: 50 })
-    .$type<'produce' | 'dairy' | 'meat' | 'bakery' | 'frozen' | 'pantry' | 'household' | 'other'>(),
+  category: varchar('category', { length: 50 }),
 
   checked: boolean('checked').default(false).notNull(),
 
