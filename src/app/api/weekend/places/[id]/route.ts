@@ -14,7 +14,7 @@ const updateSchema = z.object({
   longitude: z.number().min(-180).max(180).nullable().optional(),
   placeName: z.string().max(255).nullable().optional(),
   address: z.string().max(500).nullable().optional(),
-  url: z.string().max(1000).nullable().optional(),
+  url: z.string().max(1000).regex(/^https?:\/\//i, 'URL must start with http:// or https://').nullable().optional(),
   status: z.enum(['backlog', 'visited']).optional(),
   isFavorite: z.boolean().optional(),
   rating: z.number().int().min(1).max(5).nullable().optional(),
