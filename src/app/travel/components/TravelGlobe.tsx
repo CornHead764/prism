@@ -382,6 +382,19 @@ export function TravelGlobe({
     }
   }, [overlayOpen, stopRotation, scheduleResume]);
 
+  // Pause rotation when tab is hidden, resume when visible again
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden) {
+        stopRotation();
+      } else if (!overlayOpenRef.current) {
+        scheduleResume();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [stopRotation, scheduleResume]);
+
   useEffect(() => { onPinClickRef.current = onPinClick; }, [onPinClick]);
   useEffect(() => { onTripStopClickRef.current = onTripStopClick; }, [onTripStopClick]);
   useEffect(() => { onMapClickRef.current = onMapClick; }, [onMapClick]);

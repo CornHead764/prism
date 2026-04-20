@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDisplayAuth } from '@/lib/auth';
 import { db } from '@/lib/db/client';
 import { travelPins, photos } from '@/lib/db/schema';
-import { eq, isNotNull, and } from 'drizzle-orm';
+import { eq, isNotNull, and, gte, lte, sql } from 'drizzle-orm';
 import { logError } from '@/lib/utils/logError';
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -57,12 +57,20 @@ export async function GET(
       { lat: parseFloat(pin.latitude as unknown as string), lng: parseFloat(pin.longitude as unknown as string) },
       ...childPins
         .map((c) => ({ lat: parseFloat(c.latitude as unknown as string), lng: parseFloat(c.longitude as unknown as string) }))
-        .filter((c) => c.lat || c.lng),
-    ].filter((a) => a.lat || a.lng);
+        .filter((c) => isFinite(c.lat) && isFinite(c.lng)),
+    ].filter((a) => isFinite(a.lat) && isFinite(a.lng));
 
     if (anchorPoints.length === 0) return NextResponse.json({ photos: [] });
 
-    // Fetch all geotagged photos — Haversine filter in JS (fine for home-scale libraries)
+    // Bounding box pre-filter in SQL to avoid full table scan in JS
+    const degPerKm = 1 / 111;
+    const latMargin = radiusKm * degPerKm;
+    const lngMargin = radiusKm * degPerKm / Math.max(Math.cos((anchorPoints[0]!.lat * Math.PI) / 180), 0.01);
+    const minLat = Math.min(...anchorPoints.map(a => a.lat)) - latMargin;
+    const maxLat = Math.max(...anchorPoints.map(a => a.lat)) + latMargin;
+    const minLng = Math.min(...anchorPoints.map(a => a.lng)) - lngMargin;
+    const maxLng = Math.max(...anchorPoints.map(a => a.lng)) + lngMargin;
+
     const geoPhotos = await db
       .select({
         id: photos.id,
@@ -75,7 +83,14 @@ export async function GET(
         height: photos.height,
       })
       .from(photos)
-      .where(and(isNotNull(photos.latitude), isNotNull(photos.longitude)));
+      .where(and(
+        isNotNull(photos.latitude),
+        isNotNull(photos.longitude),
+        gte(sql`CAST(${photos.latitude} AS DECIMAL)`, minLat),
+        lte(sql`CAST(${photos.latitude} AS DECIMAL)`, maxLat),
+        gte(sql`CAST(${photos.longitude} AS DECIMAL)`, minLng),
+        lte(sql`CAST(${photos.longitude} AS DECIMAL)`, maxLng),
+      ));
 
     const nearby = geoPhotos
       .filter((p) => {

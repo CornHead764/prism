@@ -8,6 +8,7 @@ on:
 jobs:
   traffic:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
 
@@ -17,15 +18,16 @@ jobs:
       - name: Fetch traffic data from GitHub API
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
-          gh api repos/${{ github.repository }}/traffic/views    > /tmp/views.json
-          gh api repos/${{ github.repository }}/traffic/clones   > /tmp/clones.json
-          gh api repos/${{ github.repository }}/traffic/referrers > /tmp/referrers.json
+          gh api "repos/${REPO}/traffic/views"     > /tmp/views.json
+          gh api "repos/${REPO}/traffic/clones"    > /tmp/clones.json
+          gh api "repos/${REPO}/traffic/referrers" > /tmp/referrers.json
 
       - name: Merge into history
         run: |
           python3 << 'PYEOF'
-          import json, os
+          import json, os, sys
           from datetime import datetime, timezone
 
           def load(path, default):
@@ -33,6 +35,14 @@ jobs:
                   with open(path) as f:
                       return json.load(f)
               return default
+
+          def load_api(path):
+              try:
+                  with open(path) as f:
+                      return json.load(f)
+              except Exception as e:
+                  print(f"Warning: could not parse {path}: {e}", file=sys.stderr)
+                  return {}
 
           history = load('traffic/history.json', {
               'views': {},
@@ -42,17 +52,17 @@ jobs:
           })
 
           # Merge views — keyed by YYYY-MM-DD, newer run wins
-          for day in json.load(open('/tmp/views.json')).get('views', []):
+          for day in load_api('/tmp/views.json').get('views', []):
               date = day['timestamp'][:10]
               history['views'][date] = {'count': day['count'], 'uniques': day['uniques']}
 
           # Merge clones
-          for day in json.load(open('/tmp/clones.json')).get('clones', []):
+          for day in load_api('/tmp/clones.json').get('clones', []):
               date = day['timestamp'][:10]
               history['clones'][date] = {'count': day['count'], 'uniques': day['uniques']}
 
-          # Referrers — always replace with latest (they're a rolling 14-day window)
-          history['referrers'] = json.load(open('/tmp/referrers.json'))
+          # Referrers — always replace with latest (rolling 14-day window)
+          history['referrers'] = load_api('/tmp/referrers.json') if isinstance(load_api('/tmp/referrers.json'), list) else []
           history['updated_at'] = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
           os.makedirs('traffic', exist_ok=True)
