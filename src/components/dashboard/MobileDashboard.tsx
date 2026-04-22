@@ -26,22 +26,15 @@ import { useDashboardData } from './useDashboardData';
 import { useMobileCardOrder, loadHiddenCards } from './useMobileCardOrder';
 import { useBusTracking } from '@/lib/hooks/useBusTracking';
 import {
-  WeatherCard,
-  ClockCard,
-  CalendarCard,
-  ChoresCard,
-  TasksCard,
-  ShoppingCard,
-  MealsCard,
-  MessagesCard,
-  BirthdaysCard,
-  PointsCard,
-  WishesCard,
-  PhotosCard,
-  RecipesCard,
-  BusTrackingCard,
-  MobileLayoutProvider,
+  WeatherCard, ClockCard, CalendarCard, ChoresCard, TasksCard,
+  ShoppingCard, MealsCard, MessagesCard, BirthdaysCard, PointsCard,
+  WishesCard, PhotosCard, RecipesCard, BusTrackingCard, MobileLayoutProvider,
 } from './MobileCards';
+import {
+  WeatherTile, ClockTile, CalendarTile, ChoresTile, TasksTile,
+  ShoppingTile, MealsTile, MessagesTile, BirthdaysTile, PointsTile,
+  WishesTile, PhotosTile, RecipesTile, BusTrackingTile,
+} from './TileCards';
 
 function SortableCard({ id, children }: { id: string; children: React.ReactNode }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
@@ -106,6 +99,23 @@ export const MobileDashboard = memo(function MobileDashboard() {
       setOrder(arrayMove(order, oldIndex, newIndex));
     }
   }, [order, setOrder]);
+
+  const tileMap: Record<string, React.ReactNode> = useMemo(() => ({
+    weather: <WeatherTile data={data.weather} />,
+    clock: <ClockTile />,
+    calendar: <CalendarTile data={data.calendar} />,
+    chores: <ChoresTile data={data.chores} />,
+    tasks: <TasksTile data={data.tasks} />,
+    shopping: <ShoppingTile data={data.shopping} />,
+    meals: <MealsTile data={data.meals} />,
+    messages: <MessagesTile data={data.messages} />,
+    birthdays: <BirthdaysTile data={data.birthdays} />,
+    points: <PointsTile data={data.points} />,
+    wishes: <WishesTile />,
+    photos: <PhotosTile />,
+    recipes: <RecipesTile />,
+    busTracking: <BusTrackingTile routes={busRoutes} />,
+  }), [data, busRoutes]);
 
   const cardMap: Record<string, React.ReactNode> = useMemo(() => ({
     weather: <WeatherCard data={data.weather} />,
@@ -173,28 +183,52 @@ export const MobileDashboard = memo(function MobileDashboard() {
   const pullProgress = Math.min(pullDistance / 72, 1);
   const showIndicator = pullDistance > 8 || refreshing;
 
+  const isTiles = layout === 'tiles';
+  const tileRows = Math.ceil(visibleOrder.length / 2);
+
   return (
     <MobileLayoutProvider value={layout}>
+      {/* Pull-to-refresh indicator */}
       <div
-        className="p-4 pb-24 max-w-lg mx-auto"
-        style={pullDistance > 0 ? { transform: `translateY(${pullDistance * 0.4}px)`, transition: 'none' } : undefined}
+        className="flex items-center justify-center overflow-hidden"
+        style={{ height: showIndicator ? (refreshing ? 48 : pullDistance * 0.5) : 0, opacity: pullProgress, transition: pullDistance > 0 ? 'none' : 'height 0.2s, opacity 0.2s' }}
       >
-        {/* Pull-to-refresh indicator — collapses to zero height when inactive */}
+        <RefreshCw
+          className={cn('h-5 w-5 text-muted-foreground', refreshing && 'animate-spin')}
+          style={{ transform: refreshing ? undefined : `rotate(${pullProgress * 180}deg)` }}
+        />
+      </div>
+
+      {isTiles ? (
+        /* Tiles: auto-size rows to fill viewport with no scroll */
         <div
-          className="flex items-center justify-center overflow-hidden"
-          style={{ height: showIndicator ? (refreshing ? 48 : pullDistance * 0.5) : 0, opacity: pullProgress, transition: pullDistance > 0 ? 'none' : 'height 0.2s, opacity 0.2s' }}
+          className="px-4 overflow-hidden"
+          style={{
+            height: `calc(100dvh - 112px - ${showIndicator ? (refreshing ? 48 : pullDistance * 0.5) : 0}px)`,
+            transform: pullDistance > 0 ? `translateY(${pullDistance * 0.4}px)` : undefined,
+            transition: pullDistance > 0 ? 'none' : undefined,
+          }}
         >
-          <RefreshCw
-            className={cn('h-5 w-5 text-muted-foreground', refreshing && 'animate-spin')}
-            style={{ transform: refreshing ? undefined : `rotate(${pullProgress * 180}deg)` }}
-          />
+          <div
+            className="grid grid-cols-2 gap-2 h-full"
+            style={{ gridTemplateRows: `repeat(${tileRows}, 1fr)` }}
+          >
+            {visibleOrder.map((id) => (
+              <div key={id} className="min-h-0">{tileMap[id]}</div>
+            ))}
+          </div>
         </div>
-        <div className={layout === 'tiles' ? 'grid grid-cols-2 gap-2' : 'space-y-3'}>
+      ) : (
+        /* Rows: scrollable list */
+        <div
+          className="p-4 pb-24 space-y-3 max-w-lg mx-auto"
+          style={pullDistance > 0 ? { transform: `translateY(${pullDistance * 0.4}px)`, transition: 'none' } : undefined}
+        >
           {visibleOrder.map((id) => (
             <div key={id}>{cardMap[id]}</div>
           ))}
         </div>
-      </div>
+      )}
     </MobileLayoutProvider>
   );
 });
