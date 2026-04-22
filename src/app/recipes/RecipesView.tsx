@@ -5,12 +5,17 @@ import { useSearchParams } from 'next/navigation';
 import { toast } from '@/components/ui/use-toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
-import { ChefHat, Plus, Search, Heart, X, Link2, FileUp } from 'lucide-react';
+import { ChefHat, Plus, Search, Heart, X, Link2, FileUp, PenLine, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { PageWrapper, SubpageHeader, FilterBar, FilterDropdown } from '@/components/layout';
-import type { OverflowItem } from '@/components/layout';
 import { useRecipes, type Recipe } from '@/lib/hooks/useRecipes';
 import { useShoppingLists } from '@/lib/hooks/useShoppingLists';
 import { useAuth } from '@/components/providers';
@@ -100,14 +105,28 @@ export function RecipesView() {
           title="Recipes"
           badge={<Badge variant="secondary">{recipes.length}</Badge>}
           actions={
-            <Button size="sm" onClick={handleAddWithAuth}>
-              <Plus className="h-4 w-4 mr-1" />Add Recipe
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm">
+                  <Plus className="h-4 w-4 mr-1" />Add<ChevronDown className="h-3 w-3 ml-1 opacity-70" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={handleImportUrlWithAuth}>
+                  <Link2 className="h-4 w-4 mr-2 text-muted-foreground" />
+                  Import from URL
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleImportPaprikaWithAuth}>
+                  <FileUp className="h-4 w-4 mr-2 text-muted-foreground" />
+                  Import from Paprika
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleAddWithAuth}>
+                  <PenLine className="h-4 w-4 mr-2 text-muted-foreground" />
+                  Create manually
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           }
-          overflow={[
-            { label: 'Import URL', icon: Link2, onClick: handleImportUrlWithAuth },
-            { label: 'Import Paprika', icon: FileUp, onClick: handleImportPaprikaWithAuth },
-          ] as OverflowItem[]}
         />
 
         <FilterBar>
