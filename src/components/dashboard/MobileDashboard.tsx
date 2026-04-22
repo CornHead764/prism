@@ -1,6 +1,8 @@
 'use client';
 
 import React, { memo, useMemo, useState, useCallback, useEffect } from 'react';
+import { usePullToRefresh } from '@/lib/hooks/usePullToRefresh';
+import { RefreshCw } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -75,6 +77,8 @@ export const MobileDashboard = memo(function MobileDashboard() {
   const { routes: busRoutes } = useBusTracking();
   const [hiddenCards] = useState(loadHiddenCards);
   const [reorderMode, setReorderMode] = useState(false);
+
+  const { pullDistance, refreshing } = usePullToRefresh();
 
   // Listen for reorder mode toggle from FAB
   useEffect(() => {
@@ -163,8 +167,24 @@ export const MobileDashboard = memo(function MobileDashboard() {
     );
   }
 
+  const pullProgress = Math.min(pullDistance / 72, 1);
+  const showIndicator = pullDistance > 8 || refreshing;
+
   return (
-    <div className="p-4 pb-24 space-y-3 max-w-lg mx-auto">
+    <div
+      className="p-4 pb-24 space-y-3 max-w-lg mx-auto"
+      style={pullDistance > 0 ? { transform: `translateY(${pullDistance * 0.4}px)`, transition: 'none' } : undefined}
+    >
+      {/* Pull-to-refresh indicator — collapses to zero height when inactive */}
+      <div
+        className="flex items-center justify-center overflow-hidden"
+        style={{ height: showIndicator ? (refreshing ? 48 : pullDistance * 0.5) : 0, opacity: pullProgress, transition: pullDistance > 0 ? 'none' : 'height 0.2s, opacity 0.2s' }}
+      >
+        <RefreshCw
+          className={cn('h-5 w-5 text-muted-foreground', refreshing && 'animate-spin')}
+          style={{ transform: refreshing ? undefined : `rotate(${pullProgress * 180}deg)` }}
+        />
+      </div>
       {visibleOrder.map((id) => (
         <div key={id}>{cardMap[id]}</div>
       ))}
