@@ -16,10 +16,13 @@ import {
   Eye,
   EyeOff,
   ScanLine,
+  Rows3,
+  LayoutDashboard,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/ThemeProvider';
 import { loadHiddenCards, saveHiddenCards } from '@/components/dashboard/useMobileCardOrder';
+import { useMobileLayout } from '@/lib/hooks/useMobileLayout';
 
 export interface MobileFabProps {
   user?: {
@@ -42,6 +45,7 @@ const ALL_CARDS: { id: string; label: string }[] = [
   { id: 'tasks', label: 'Tasks' },
   { id: 'shopping', label: 'Shopping' },
   { id: 'meals', label: 'Meals' },
+  { id: 'recipes', label: 'Recipes' },
   { id: 'messages', label: 'Messages' },
   { id: 'birthdays', label: 'Birthdays' },
   { id: 'points', label: 'Goals' },
@@ -56,6 +60,7 @@ export function MobileFab({ user, onLogin, onLogout, uiHidden }: MobileFabProps)
   const [hiddenCards, setHiddenCards] = useState<string[]>([]);
   const [reorderMode, setReorderMode] = useState(false);
   const { theme, setTheme } = useTheme();
+  const { layout, setLayout } = useMobileLayout();
 
   useEffect(() => {
     setHiddenCards(loadHiddenCards());
@@ -173,7 +178,7 @@ export function MobileFab({ user, onLogin, onLogout, uiHidden }: MobileFabProps)
             </button>
           </div>
           {/* Theme toggle */}
-          <div className="flex items-center justify-between p-3 rounded-lg border border-border mb-3">
+          <div className="flex items-center justify-between p-3 rounded-lg border border-border mb-2">
             <span className="text-sm font-medium">Theme</span>
             <button
               onClick={cycleTheme}
@@ -182,6 +187,32 @@ export function MobileFab({ user, onLogin, onLogout, uiHidden }: MobileFabProps)
               <ThemeIcon className="h-4 w-4" />
               <span>{themeLabel}</span>
             </button>
+          </div>
+          {/* Layout toggle */}
+          <div className="flex items-center justify-between p-3 rounded-lg border border-border mb-3">
+            <span className="text-sm font-medium">Layout</span>
+            <div className="flex items-center border rounded-md overflow-hidden text-xs">
+              <button
+                onClick={() => setLayout('rows')}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 transition-colors',
+                  layout === 'rows' ? 'bg-secondary text-secondary-foreground font-medium' : 'text-muted-foreground hover:bg-accent'
+                )}
+              >
+                <Rows3 className="h-3.5 w-3.5" />
+                Rows
+              </button>
+              <button
+                onClick={() => setLayout('tiles')}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 border-l transition-colors',
+                  layout === 'tiles' ? 'bg-secondary text-secondary-foreground font-medium' : 'text-muted-foreground hover:bg-accent'
+                )}
+              >
+                <LayoutDashboard className="h-3.5 w-3.5" />
+                Tiles
+              </button>
+            </div>
           </div>
 
           <p className="text-xs text-muted-foreground mb-3">

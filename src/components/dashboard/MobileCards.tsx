@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, createContext, useContext } from 'react';
 import { DAYS_OF_WEEK } from '@/lib/constants/days';
+import type { MobileLayoutMode } from '@/lib/hooks/useMobileLayout';
 import { format, isToday, isTomorrow } from 'date-fns';
 import Link from 'next/link';
 import {
@@ -31,6 +32,9 @@ import type { BusRouteStatus, BusPrediction } from '@/lib/hooks/useBusTracking';
 
 type DashData = ReturnType<typeof useDashboardData>;
 
+const LayoutCtx = createContext<MobileLayoutMode>('rows');
+export const MobileLayoutProvider = LayoutCtx.Provider;
+
 function CardShell({ href, icon, title, count, children }: {
   href?: string;
   icon: React.ReactNode;
@@ -38,19 +42,20 @@ function CardShell({ href, icon, title, count, children }: {
   count?: number;
   children: React.ReactNode;
 }) {
+  const compact = useContext(LayoutCtx) === 'tiles';
   const inner = (
-    <div className="bg-card/85 backdrop-blur-sm rounded-xl border border-border p-3 hover:border-primary/30 transition-colors">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
+    <div className={`bg-card/85 backdrop-blur-sm rounded-xl border border-border hover:border-primary/30 transition-colors ${compact ? 'p-3' : 'p-3'}`}>
+      <div className={`flex items-center justify-between ${compact ? '' : 'mb-2'}`}>
+        <div className="flex items-center gap-2 min-w-0">
           {icon}
-          <h3 className="font-semibold text-sm">{title}</h3>
+          <h3 className="font-semibold text-sm truncate">{title}</h3>
           {count !== undefined && count > 0 && (
-            <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">{count}</span>
+            <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full shrink-0">{count}</span>
           )}
         </div>
-        {href && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+        {href && <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
       </div>
-      {children}
+      {!compact && children}
     </div>
   );
 

@@ -2,6 +2,7 @@
 
 import React, { memo, useMemo, useState, useCallback, useEffect } from 'react';
 import { usePullToRefresh } from '@/lib/hooks/usePullToRefresh';
+import { useMobileLayout } from '@/lib/hooks/useMobileLayout';
 import { RefreshCw } from 'lucide-react';
 import {
   DndContext,
@@ -39,6 +40,7 @@ import {
   PhotosCard,
   RecipesCard,
   BusTrackingCard,
+  MobileLayoutProvider,
 } from './MobileCards';
 
 function SortableCard({ id, children }: { id: string; children: React.ReactNode }) {
@@ -79,6 +81,7 @@ export const MobileDashboard = memo(function MobileDashboard() {
   const [reorderMode, setReorderMode] = useState(false);
 
   const { pullDistance, refreshing } = usePullToRefresh();
+  const { layout } = useMobileLayout();
 
   // Listen for reorder mode toggle from FAB
   useEffect(() => {
@@ -171,23 +174,27 @@ export const MobileDashboard = memo(function MobileDashboard() {
   const showIndicator = pullDistance > 8 || refreshing;
 
   return (
-    <div
-      className="p-4 pb-24 space-y-3 max-w-lg mx-auto"
-      style={pullDistance > 0 ? { transform: `translateY(${pullDistance * 0.4}px)`, transition: 'none' } : undefined}
-    >
-      {/* Pull-to-refresh indicator — collapses to zero height when inactive */}
+    <MobileLayoutProvider value={layout}>
       <div
-        className="flex items-center justify-center overflow-hidden"
-        style={{ height: showIndicator ? (refreshing ? 48 : pullDistance * 0.5) : 0, opacity: pullProgress, transition: pullDistance > 0 ? 'none' : 'height 0.2s, opacity 0.2s' }}
+        className="p-4 pb-24 max-w-lg mx-auto"
+        style={pullDistance > 0 ? { transform: `translateY(${pullDistance * 0.4}px)`, transition: 'none' } : undefined}
       >
-        <RefreshCw
-          className={cn('h-5 w-5 text-muted-foreground', refreshing && 'animate-spin')}
-          style={{ transform: refreshing ? undefined : `rotate(${pullProgress * 180}deg)` }}
-        />
+        {/* Pull-to-refresh indicator — collapses to zero height when inactive */}
+        <div
+          className="flex items-center justify-center overflow-hidden"
+          style={{ height: showIndicator ? (refreshing ? 48 : pullDistance * 0.5) : 0, opacity: pullProgress, transition: pullDistance > 0 ? 'none' : 'height 0.2s, opacity 0.2s' }}
+        >
+          <RefreshCw
+            className={cn('h-5 w-5 text-muted-foreground', refreshing && 'animate-spin')}
+            style={{ transform: refreshing ? undefined : `rotate(${pullProgress * 180}deg)` }}
+          />
+        </div>
+        <div className={layout === 'tiles' ? 'grid grid-cols-2 gap-2' : 'space-y-3'}>
+          {visibleOrder.map((id) => (
+            <div key={id}>{cardMap[id]}</div>
+          ))}
+        </div>
       </div>
-      {visibleOrder.map((id) => (
-        <div key={id}>{cardMap[id]}</div>
-      ))}
-    </div>
+    </MobileLayoutProvider>
   );
 });
