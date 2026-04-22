@@ -25,6 +25,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import type { Recipe } from '@/lib/hooks/useRecipes';
+import { AddToMealPlanSection } from './AddToMealPlanSection';
 
 export interface RecipeDetailModalProps {
   recipe: Recipe;
@@ -300,6 +301,8 @@ export function RecipeDetailModal({
             </div>
           )}
         </div>
+
+        <AddToMealPlanSection recipe={recipe} />
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
           <div className="flex gap-2 ml-auto">
