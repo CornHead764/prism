@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { addDays, format, isSameDay, startOfWeek } from 'date-fns';
+import { addDays, format, isSameDay, isPast, startOfDay, startOfWeek } from 'date-fns';
 import { CalendarPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from '@/components/ui/use-toast';
 import { useAuth } from '@/components/providers';
+import { getWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import type { Recipe } from '@/lib/hooks/useRecipes';
 
 type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
@@ -15,69 +16,52 @@ const MEAL_LABELS: Record<MealType, string> = {
   breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snack',
 };
 
-interface DayChip {
-  label: string;
-  shortLabel: string; // used in toast
-  date: Date;
-  weekOf: string;
-  dayOfWeek: string;
-}
-
-function getDayChips(today: Date): DayChip[] {
-  const tomorrow = addDays(today, 1);
-
-  const makeChip = (d: Date, label?: string): DayChip => ({
-    label: label ?? format(d, 'EEE d'),
-    shortLabel: label ? label.toLowerCase() : format(d, 'EEEE'),
-    date: d,
-    weekOf: format(startOfWeek(d, { weekStartsOn: 1 }), 'yyyy-MM-dd'),
-    dayOfWeek: format(d, 'EEEE').toLowerCase(),
-  });
-
-  const chips: DayChip[] = [makeChip(today, 'Today'), makeChip(tomorrow, 'Tomorrow')];
-
-  // Fill in remaining days of the current week (Mon–Sun), skip today and tomorrow
-  const weekStart = startOfWeek(today, { weekStartsOn: 1 });
-  for (let i = 0; i < 7; i++) {
-    const d = addDays(weekStart, i);
-    if (!isSameDay(d, today) && !isSameDay(d, tomorrow)) chips.push(makeChip(d));
+// Build 2 full weeks starting from the week that contains today
+function buildCalendarWeeks(today: Date, weekStartsOn: 0 | 1): Date[][] {
+  const weekStart = startOfWeek(today, { weekStartsOn });
+  const weeks: Date[][] = [];
+  for (let w = 0; w < 2; w++) {
+    const week: Date[] = [];
+    for (let d = 0; d < 7; d++) {
+      week.push(addDays(weekStart, w * 7 + d));
+    }
+    weeks.push(week);
   }
-
-  return chips;
+  return weeks;
 }
+
+const DAY_HEADERS_SUN = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const DAY_HEADERS_MON = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 export function AddToMealPlanSection({ recipe }: { recipe: Recipe }) {
   const { requireAuth } = useAuth();
-  const chips = getDayChips(new Date());
+  const weekStartsOn = getWeekStartsOn();
+  const today = startOfDay(new Date());
+  const weeks = buildCalendarWeeks(today, weekStartsOn);
+  const dayHeaders = weekStartsOn === 1 ? DAY_HEADERS_MON : DAY_HEADERS_SUN;
 
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [mealType, setMealType] = useState<MealType>('dinner');
   const [saving, setSaving] = useState(false);
 
-  const selectedChip = chips.find((c) => `${c.weekOf}:${c.dayOfWeek}` === selectedKey) ?? null;
-
   const handleAdd = async () => {
-    if (!selectedChip) return;
+    if (!selectedDate) return;
     if (!await requireAuth('Add to Meal Plan', 'Please log in to add meals')) return;
     setSaving(true);
     try {
+      const weekOf = format(startOfWeek(selectedDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+      const dayOfWeek = format(selectedDate, 'EEEE').toLowerCase();
       const res = await fetch('/api/meals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: recipe.name,
-          recipeId: recipe.id,
-          weekOf: selectedChip.weekOf,
-          dayOfWeek: selectedChip.dayOfWeek,
-          mealType,
-        }),
+        body: JSON.stringify({ name: recipe.name, recipeId: recipe.id, weekOf, dayOfWeek, mealType }),
       });
       if (!res.ok) throw new Error();
-      toast({
-        title: `Added to ${selectedChip.shortLabel}'s ${MEAL_LABELS[mealType].toLowerCase()}`,
-        variant: 'success',
-      });
-      setSelectedKey(null);
+      const dayLabel = isSameDay(selectedDate, today) ? 'today'
+        : isSameDay(selectedDate, addDays(today, 1)) ? 'tomorrow'
+        : format(selectedDate, 'EEEE').toLowerCase();
+      toast({ title: `Added to ${dayLabel}'s ${MEAL_LABELS[mealType].toLowerCase()}`, variant: 'success' });
+      setSelectedDate(null);
     } catch {
       toast({ title: 'Failed to add to meal plan', variant: 'destructive' });
     } finally {
@@ -92,26 +76,47 @@ export function AddToMealPlanSection({ recipe }: { recipe: Recipe }) {
         <span className="text-sm font-medium">Add to Meal Plan</span>
       </div>
 
-      {/* Day chips */}
-      <div className="flex flex-wrap gap-1.5">
-        {chips.map((chip) => {
-          const key = `${chip.weekOf}:${chip.dayOfWeek}`;
-          const selected = key === selectedKey;
-          return (
-            <button
-              key={key}
-              onClick={() => setSelectedKey(selected ? null : key)}
-              className={cn(
-                'px-2.5 py-1 rounded-full text-xs font-medium border transition-colors',
-                selected
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'border-border text-muted-foreground hover:border-primary/60 hover:text-foreground'
-              )}
-            >
-              {chip.label}
-            </button>
-          );
-        })}
+      {/* Mini calendar grid */}
+      <div className="select-none">
+        {/* Day headers */}
+        <div className="grid grid-cols-7 mb-1">
+          {dayHeaders.map((h, i) => (
+            <div key={i} className="text-center text-[11px] font-medium text-muted-foreground py-0.5">
+              {h}
+            </div>
+          ))}
+        </div>
+        {/* Week rows */}
+        {weeks.map((week, wi) => (
+          <div key={wi} className="grid grid-cols-7">
+            {week.map((date) => {
+              const isToday = isSameDay(date, today);
+              const isPastDay = isPast(date) && !isToday;
+              const isSelected = selectedDate ? isSameDay(date, selectedDate) : false;
+              return (
+                <div key={date.toISOString()} className="flex flex-col items-center py-0.5">
+                  <button
+                    onClick={() => setSelectedDate(isSelected ? null : date)}
+                    className={cn(
+                      'w-8 h-8 rounded-full text-sm font-medium transition-colors',
+                      isSelected
+                        ? 'bg-primary text-primary-foreground'
+                        : isPastDay
+                        ? 'text-muted-foreground/50 hover:bg-accent'
+                        : 'hover:bg-accent text-foreground'
+                    )}
+                  >
+                    {format(date, 'd')}
+                  </button>
+                  {/* Today indicator dot */}
+                  {isToday && (
+                    <div className={cn('w-1 h-1 rounded-full mt-0.5', isSelected ? 'bg-primary-foreground' : 'bg-primary')} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ))}
       </div>
 
       {/* Meal type toggle + confirm */}
@@ -135,7 +140,7 @@ export function AddToMealPlanSection({ recipe }: { recipe: Recipe }) {
         <Button
           size="sm"
           className="ml-auto"
-          disabled={!selectedKey || saving}
+          disabled={!selectedDate || saving}
           onClick={handleAdd}
         >
           {saving ? 'Adding…' : 'Add to Plan'}
