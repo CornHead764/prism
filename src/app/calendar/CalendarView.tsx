@@ -92,10 +92,10 @@ export function CalendarView() {
     setShowAddEvent(true);
   };
 
-  // Force day or agenda view on mobile
+  // Force agenda or day view on mobile; default to agenda
   useEffect(() => {
     if (isMobile && viewType !== 'day' && viewType !== 'agenda') {
-      setViewType('day');
+      setViewType('agenda');
     }
   }, [isMobile, viewType, setViewType]);
 
@@ -118,20 +118,20 @@ export function CalendarView() {
                 </Button>
                 <div className="flex items-center border rounded-md">
                   <Button
-                    variant={viewType === 'day' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewType('day')}
-                    className="h-7 text-xs rounded-r-none"
-                  >
-                    Day
-                  </Button>
-                  <Button
                     variant={viewType === 'agenda' ? 'secondary' : 'ghost'}
                     size="sm"
                     onClick={() => setViewType('agenda')}
-                    className="h-7 text-xs rounded-l-none border-l"
+                    className="h-7 text-xs rounded-r-none"
                   >
                     Agenda
+                  </Button>
+                  <Button
+                    variant={viewType === 'day' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewType('day')}
+                    className="h-7 text-xs rounded-l-none border-l"
+                  >
+                    Day
                   </Button>
                 </div>
                 <div className="flex items-center">

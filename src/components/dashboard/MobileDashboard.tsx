@@ -35,6 +35,7 @@ import {
   PointsCard,
   WishesCard,
   PhotosCard,
+  RecipesCard,
   BusTrackingCard,
 } from './MobileCards';
 
@@ -112,6 +113,7 @@ export const MobileDashboard = memo(function MobileDashboard() {
     points: <PointsCard data={data.points} />,
     wishes: <WishesCard />,
     photos: <PhotosCard />,
+    recipes: <RecipesCard />,
     busTracking: <BusTrackingCard routes={busRoutes} />,
   }), [data, busRoutes]);
 
@@ -128,6 +130,7 @@ export const MobileDashboard = memo(function MobileDashboard() {
     points: !data.points.loading && (data.points.goals?.length ?? 0) > 0,
     wishes: true,
     photos: true,
+    recipes: true,
     busTracking: (busRoutes?.length ?? 0) > 0,
   }), [data, busRoutes]);
 

@@ -23,6 +23,7 @@ import {
   Bus,
   Clock,
   Image as ImageIcon,
+  ChefHat,
 } from 'lucide-react';
 import type { useDashboardData } from './useDashboardData';
 import type { CalendarEvent } from '@/types/calendar';
@@ -249,6 +250,14 @@ export function PointsCard({ data }: { data: DashData['points'] }) {
           ))}
         </div>
       )}
+    </CardShell>
+  );
+}
+
+export function RecipesCard() {
+  return (
+    <CardShell href="/recipes" icon={<ChefHat className="h-4 w-4 text-orange-500" />} title="Recipes">
+      <p className="text-xs text-muted-foreground">Browse recipes or import from a URL</p>
     </CardShell>
   );
 }

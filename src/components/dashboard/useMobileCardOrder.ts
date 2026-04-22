@@ -11,6 +11,7 @@ const DEFAULT_ORDER = [
   'tasks',
   'shopping',
   'meals',
+  'recipes',
   'messages',
   'birthdays',
   'points',
