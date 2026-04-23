@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
-import { format, differenceInDays, parseISO, isToday } from 'date-fns';
+import { format, differenceInDays, parseISO, startOfWeek } from 'date-fns';
 import Link from 'next/link';
 import {
   Calendar, Cloud, Sun, CloudRain, CloudSnow, CloudSun,
@@ -59,16 +59,16 @@ export function WeatherTile({ data }: { data: DashData['weather'] }) {
       <TileLine dim>Loading…</TileLine>
     </TileShell>
   );
-  const w = data.data as { temperature?: number; condition?: string; description?: string };
-  const WeatherIcon = w.condition === 'sunny' ? Sun
-    : w.condition === 'partly-cloudy' ? CloudSun
-    : w.condition === 'rainy' || w.condition === 'stormy' ? CloudRain
-    : w.condition === 'snowy' ? CloudSnow
+  const current = (data.data as { current?: { temperature?: number; condition?: string; description?: string } }).current;
+  const WeatherIcon = current?.condition === 'sunny' ? Sun
+    : current?.condition === 'partly-cloudy' ? CloudSun
+    : current?.condition === 'rainy' || current?.condition === 'stormy' ? CloudRain
+    : current?.condition === 'snowy' ? CloudSnow
     : Cloud;
   return (
     <TileShell icon={<WeatherIcon className="h-4 w-4 text-sky-400" />} title="Weather">
-      {w.temperature && <TileLine>{w.temperature}°F</TileLine>}
-      {w.description && <TileLine dim>{w.description}</TileLine>}
+      {current?.temperature != null && <TileLine>{current.temperature}°F</TileLine>}
+      {current?.description && <TileLine dim>{current.description}</TileLine>}
     </TileShell>
   );
 }
@@ -156,8 +156,10 @@ export function MealsTile({ data }: { data: DashData['meals'] }) {
   const todayMeal = useMemo(() => {
     if (!data.meals) return null;
     const todayDay = DAYS_OF_WEEK[new Date().getDay()];
-    return data.meals.find((m) => m.dayOfWeek === todayDay && m.mealType === 'dinner')
-      ?? data.meals.find((m) => m.dayOfWeek === todayDay)
+    const currentWeekOf = format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+    const thisWeek = data.meals.filter((m) => m.weekOf === currentWeekOf);
+    return thisWeek.find((m) => m.dayOfWeek === todayDay && m.mealType === 'dinner')
+      ?? thisWeek.find((m) => m.dayOfWeek === todayDay)
       ?? null;
   }, [data.meals]);
   return (
@@ -251,7 +253,7 @@ export function BusTrackingTile({ routes }: { routes: BusRouteStatus[] | null })
     : pred.etaMinutes != null ? `${pred.etaMinutes} min away`
     : first.label;
   return (
-    <TileShell href="/bus" icon={<Bus className="h-4 w-4 text-amber-500" />} title="Bus">
+    <TileShell icon={<Bus className="h-4 w-4 text-amber-500" />} title="Bus">
       <TileLine>{statusLabel}</TileLine>
       {first && <TileLine dim>{first.studentName}</TileLine>}
     </TileShell>

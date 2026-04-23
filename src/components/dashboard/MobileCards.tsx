@@ -3,7 +3,7 @@
 import React, { useMemo, createContext, useContext } from 'react';
 import { DAYS_OF_WEEK } from '@/lib/constants/days';
 import type { MobileLayoutMode } from '@/lib/hooks/useMobileLayout';
-import { format, isToday, isTomorrow } from 'date-fns';
+import { format, isToday, isTomorrow, startOfWeek } from 'date-fns';
 import Link from 'next/link';
 import {
   Calendar,
@@ -190,8 +190,10 @@ export function MealsCard({ data }: { data: DashData['meals'] }) {
   const todayMeal = useMemo(() => {
     if (!data.meals) return null;
     const todayDay = DAYS_OF_WEEK[new Date().getDay()];
-    return data.meals.find((m) => m.dayOfWeek === todayDay && m.mealType === 'dinner')
-      || data.meals.find((m) => m.dayOfWeek === todayDay)
+    const currentWeekOf = format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+    const thisWeek = data.meals.filter((m) => m.weekOf === currentWeekOf);
+    return thisWeek.find((m) => m.dayOfWeek === todayDay && m.mealType === 'dinner')
+      || thisWeek.find((m) => m.dayOfWeek === todayDay)
       || null;
   }, [data.meals]);
 

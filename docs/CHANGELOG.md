@@ -4,6 +4,13 @@ All notable changes to Prism are documented in this file.
 
 ## [Unreleased]
 
+## [1.5.2] – 2026-04-22
+
+### Bug Fixes
+- **PWA tiles — weather blank**: Weather tile was reading a flat data shape; fixed to use the correct nested `WeatherData.current.temperature/condition/description` structure.
+- **PWA tiles — meals wrong**: Meals tile (and rows-mode meals card) matched any meal with today's day name across all historical weeks. Now filters to the current week before looking up today's meal.
+- **PWA tiles — bus 404**: Bus tile linked to `/bus` which does not exist. Removed the link; tile now shows status inline with no navigation chevron.
+
 ## [1.5.1] – 2026-04-19
 
 ### Bug Fixes
