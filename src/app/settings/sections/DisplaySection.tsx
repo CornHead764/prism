@@ -299,15 +299,15 @@ function PerformanceModeCard() {
       <CardHeader>
         <CardTitle>Performance Mode</CardTitle>
         <CardDescription>
-          Reduces visual effects for smoother performance on low-end devices
+          A lighter preset for low-end hardware (thin clients, older mini PCs)
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <div>
             <span className="text-sm font-medium">Enable performance mode</span>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Disables backdrop blur (the main GPU cost on thin clients). Recommended for Wyse, NUC, and other low-end kiosk hardware.
+              Disables backdrop blur, stretches polling intervals, and shows a single static photo instead of a slideshow. Auto-enabled on devices reporting ≤2 GB RAM or ≤4 CPU cores; you can override it here at any time.
             </p>
           </div>
           <Switch

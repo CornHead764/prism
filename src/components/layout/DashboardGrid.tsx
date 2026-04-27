@@ -33,6 +33,7 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 import { AwayModeToggle } from '@/components/away-mode';
 import { BabysitterModeToggle } from '@/components/babysitter-mode';
+import { PerformanceModeBadge } from '@/components/layout/PerformanceModeBadge';
 import { useAutoHideUI } from '@/lib/hooks/useAutoHideUI';
 import { RefreshCw } from 'lucide-react';
 
@@ -235,6 +236,9 @@ export function DashboardHeader({
         >
           <RefreshCw className="h-5 w-5" />
         </button>
+
+        {/* Performance mode indicator */}
+        <PerformanceModeBadge />
 
         {/* Babysitter mode button */}
         <BabysitterModeToggle />

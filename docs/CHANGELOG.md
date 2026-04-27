@@ -4,6 +4,9 @@ All notable changes to Prism are documented in this file.
 
 ## [Unreleased]
 
+### Improved
+- **Performance Mode — extended scope**: Existing Performance Mode toggle now also stretches polling intervals (×2.5) and renders the Photo widget as a single static image instead of a slideshow. Auto-enabled on first load when the device reports ≤2 GB RAM or ≤4 CPU cores (`navigator.deviceMemory` / `hardwareConcurrency`); your explicit choice in Settings is always respected on subsequent loads. A subtle lightning-bolt badge appears in the dashboard header while active so you know what you're seeing. Existing `?perf=1` URL param continues to work for kiosk URLs.
+
 ## [1.5.2] – 2026-04-22
 
 ### Bug Fixes
