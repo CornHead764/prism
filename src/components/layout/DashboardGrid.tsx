@@ -213,10 +213,10 @@ export function DashboardHeader({
   const hidden = uiHidden || measureHideChrome;
   return (
     <header className={cn(
-      'flex-shrink-0 bg-card/95 backdrop-blur-sm px-4 transition-all duration-500 ease-in-out overflow-hidden',
+      'flex-shrink-0 bg-card/95 backdrop-blur-sm px-4 transition-all duration-500 ease-in-out overflow-hidden text-card-foreground',
       hidden ? 'opacity-0 max-h-0 py-0' : 'max-h-20 py-2 delay-200'
     )}>
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex items-center justify-end gap-2 text-card-foreground">
         {/* Edit layout button */}
         {onEditClick && (
           <button
