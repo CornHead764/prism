@@ -261,15 +261,22 @@
 
   /* Performance mode: minimum-viable stylesheet. The only CSS effect
    * we are confident gives a meaningful perf win on weak GPUs is
-   * disabling backdrop-filter; everything else (transition caps,
-   * surface-opacity overrides) was either marginal or actively buggy
-   * (caused light-mode text/icons to render as white). Keep this
-   * deliberately tiny — bigger wins come from JS-side changes
-   * (polling stretch, photo widget lite, structural-shared polling). */
-  html.performance-mode,
-  html.performance-mode *,
-  html.performance-mode *::before,
-  html.performance-mode *::after {
+   * disabling backdrop-filter, and only on elements that actually
+   * declare it (the .backdrop-blur* utility classes). An earlier
+   * version applied this to a universal `*` selector and that turned
+   * out to make toolbar SVG icons render invisibly in light theme on
+   * Chrome — applying `backdrop-filter: none` to descendants that
+   * never had backdrop-filter set creates new stacking contexts and
+   * compositor layers that can change rendering in subtle ways.
+   * Bigger perf wins come from JS-side changes (polling stretch, photo
+   * widget lite, structural-shared polling). */
+  html.performance-mode .backdrop-blur,
+  html.performance-mode .backdrop-blur-sm,
+  html.performance-mode .backdrop-blur-md,
+  html.performance-mode .backdrop-blur-lg,
+  html.performance-mode .backdrop-blur-xl,
+  html.performance-mode .backdrop-blur-2xl,
+  html.performance-mode .backdrop-blur-3xl {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
   }
