@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { useShouldSkipMotion } from '@/lib/hooks/useShouldSkipMotion';
 
 export function PlaneCelebration({
   show,
@@ -14,6 +15,7 @@ export function PlaneCelebration({
   const [visible, setVisible] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const onCompleteRef = useRef(onComplete);
+  const skipMotion = useShouldSkipMotion();
 
   // Keep onComplete ref updated to avoid stale closure issues
   useEffect(() => {
@@ -27,6 +29,14 @@ export function PlaneCelebration({
 
   useEffect(() => {
     if (show && !visible) {
+      // In perf-mode or with reduced-motion, fire onComplete immediately
+      // and skip the 5s animation entirely. Preserves the behavior contract
+      // (callers count on onComplete firing) without any rendered motion.
+      if (skipMotion) {
+        onCompleteRef.current?.();
+        return;
+      }
+
       setVisible(true);
 
       // Clear any existing timer
@@ -44,7 +54,7 @@ export function PlaneCelebration({
         timerRef.current = null;
       }
     };
-  }, [show, visible, handleAnimationEnd]);
+  }, [show, visible, handleAnimationEnd, skipMotion]);
 
   // Reset when show goes back to false (parent state cleared)
   useEffect(() => {

@@ -47,7 +47,18 @@ export function useFetch<T>(options: UseFetchOptions<T>): UseFetchResult<T> {
       const json = await response.json();
       const result = transformRef.current ? transformRef.current(json) : (json as T);
       navCacheSet(url, result);
-      setData(result);
+      // Structural-shared polling: when the new payload is byte-identical
+      // to what's already in state, return the previous reference so React
+      // skips re-renders for every consumer of this data. Big win on weak
+      // hardware where most polls return unchanged data (weather, calendar
+      // hours past, finished chores, etc.).
+      setData((prev) => {
+        try {
+          return JSON.stringify(prev) === JSON.stringify(result) ? prev : result;
+        } catch {
+          return result;
+        }
+      });
     } catch (err) {
       console.error(`Error fetching ${labelRef.current}:`, err);
       setError(err instanceof Error ? err.message : `Failed to fetch ${labelRef.current}`);

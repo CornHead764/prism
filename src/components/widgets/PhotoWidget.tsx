@@ -37,7 +37,7 @@ export const PhotoWidget = React.memo(function PhotoWidget({ className }: PhotoW
       ) : perfMode && firstPhoto ? (
         <div className="relative w-full h-full overflow-hidden rounded">
           <img
-            src={`/api/photos/${firstPhoto.id}/file`}
+            src={`/api/photos/${firstPhoto.id}/file?thumb=1`}
             alt=""
             className="w-full h-full object-cover"
             loading="lazy"

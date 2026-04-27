@@ -239,11 +239,18 @@
     @apply flex flex-row items-center gap-4;
   }
 
+  /* Respect the OS-level "reduce motion" accessibility preference. Disables
+   * animations and collapses transitions site-wide. Standard accessible
+   * pattern — keeps a 0.01ms animation-duration so animations still "fire"
+   * (so callbacks like onAnimationEnd run) but are imperceptible. */
   @media (prefers-reduced-motion: reduce) {
-    .animate-spin,
-    .animate-pulse,
-    .animate-bounce {
-      animation: none;
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
     }
   }
 

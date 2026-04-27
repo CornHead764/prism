@@ -28,7 +28,7 @@ function useWidgetTravelData() {
   return { pins, loading };
 }
 
-export function TravelWidget({ className }: TravelWidgetProps) {
+export const TravelWidget = React.memo(function TravelWidget({ className }: TravelWidgetProps) {
   const { pins, loading } = useWidgetTravelData();
 
   const rootPins = pins.filter((p) => !p.parentId);
@@ -142,7 +142,7 @@ export function TravelWidget({ className }: TravelWidgetProps) {
       )}
     </WidgetContainer>
   );
-}
+});
 
 function StatChip({ icon, value, label }: { icon: React.ReactNode; value: number; label: string }) {
   return (

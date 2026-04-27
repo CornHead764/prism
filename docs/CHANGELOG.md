@@ -6,6 +6,11 @@ All notable changes to Prism are documented in this file.
 
 ### Improved
 - **Performance Mode — extended scope**: Existing Performance Mode toggle now also stretches polling intervals (×2.5) and renders the Photo widget as a single static image instead of a slideshow. Auto-enabled on first load when the device reports ≤2 GB RAM or ≤4 CPU cores (`navigator.deviceMemory` / `hardwareConcurrency`); your explicit choice in Settings is always respected on subsequent loads. A subtle lightning-bolt badge appears in the dashboard header while active so you know what you're seeing. Existing `?perf=1` URL param continues to work for kiosk URLs.
+- **Performance pass**: Polling now does a structural-shared compare on each fetch — when the new payload is byte-identical to current state (the common case), the existing reference is reused so React skips re-renders downstream. Wraps `useFetch` so every consumer benefits without any callsite changes. `prefers-reduced-motion` is now honored site-wide via standard accessibility CSS; full-screen celebrations (plane fly-by, seasonal goal scenes) skip their motion entirely under either reduced-motion or Performance Mode and fire their `onComplete` callback immediately. Lite-mode photo widget now requests the `?thumb=1` thumbnail variant instead of the full image. TravelWidget gained the `React.memo` wrapper its peers already had.
+- **Default dashboard — set in app**: The layout editor's More menu now exposes "Set as Default" (becomes "Default Dashboard ✓" when active). The `/api/layouts/[id]/default` endpoint already existed; this wires the UI consumer.
+
+### Bug Fixes
+- **Performance Mode — light-mode widget white-out**: An `opacity: 1 !important` override on translucent surfaces forced widget bodies to solid `hsl(var(--card))`, which resolves to white in light mode — making muted/secondary content blend into the background while only chrome (titles, icons) stayed visible. Dropped the override; surfaces now show their original 85–95% translucency over the wallpaper, which reads correctly with or without backdrop-blur.
 
 ## [1.5.2] – 2026-04-22
 

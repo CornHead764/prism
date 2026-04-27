@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { useShouldSkipMotion } from '@/lib/hooks/useShouldSkipMotion';
 
 /**
  * Check if today falls within a date window (inclusive).
@@ -485,6 +486,7 @@ export function GoalCelebration({
   const [visible, setVisible] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const onCompleteRef = useRef(onComplete);
+  const skipMotion = useShouldSkipMotion();
 
   useEffect(() => {
     onCompleteRef.current = onComplete;
@@ -497,6 +499,12 @@ export function GoalCelebration({
 
   useEffect(() => {
     if (show && !visible) {
+      // In perf-mode or with reduced-motion, fire onComplete immediately
+      // and skip the 6s SVG-heavy seasonal scene entirely.
+      if (skipMotion) {
+        onCompleteRef.current?.();
+        return;
+      }
       setVisible(true);
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(handleDismiss, 6000);
@@ -507,7 +515,7 @@ export function GoalCelebration({
         timerRef.current = null;
       }
     };
-  }, [show, visible, handleDismiss]);
+  }, [show, visible, handleDismiss, skipMotion]);
 
   useEffect(() => {
     if (!show && visible) {
