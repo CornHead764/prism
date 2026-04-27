@@ -259,63 +259,19 @@
     transition: none !important;
   }
 
-  /* Performance mode: removes GPU-intensive effects for low-end hardware (thin clients, etc.)
-   * Toggled via Settings → Appearance → Performance Mode.
-   *
-   * What this actually helps on thin clients (Wyse 3040, etc.):
-   *   - backdrop-filter forces GPU compositor layers on every blurred element — very expensive
-   *   - box-shadow on many elements adds re-paint cost
-   *
-   * What it does NOT meaningfully help:
-   *   - CSS transitions/animations run on the compositor thread and are essentially free;
-   *     stripping them just makes the UI feel broken with no real perf benefit
-   */
-  html.performance-mode * {
+  /* Performance mode: minimum-viable stylesheet. The only CSS effect
+   * we are confident gives a meaningful perf win on weak GPUs is
+   * disabling backdrop-filter; everything else (transition caps,
+   * surface-opacity overrides) was either marginal or actively buggy
+   * (caused light-mode text/icons to render as white). Keep this
+   * deliberately tiny — bigger wins come from JS-side changes
+   * (polling stretch, photo widget lite, structural-shared polling). */
+  html.performance-mode,
+  html.performance-mode *,
+  html.performance-mode *::before,
+  html.performance-mode *::after {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-  }
-
-  /* Cap transitions at 150ms — fast enough to feel snappy, still visible so
-   * the UI doesn't feel broken. Transitions are compositor-thread work and
-   * essentially free on any GPU; stripping them entirely just breaks the UX. */
-  html.performance-mode * {
-    transition-duration: 150ms !important;
-  }
-
-  /* Wallpaper bleed-through fix for perf mode.
-   *
-   * Tailwind's `bg-card/85` and `bg-background/95` resolve to
-   * `hsl(var(--card) / 0.85)` etc. — a translucent surface that, with
-   * backdrop-blur, smooths the wallpaper underneath into a soft tint.
-   *
-   * With perf mode disabling blur, that 15% bleed-through is no longer
-   * smoothed. On dark theme + bright wallpaper, the wallpaper shows
-   * through enough to lighten the widget surface, and dark-mode text
-   * (which is white) becomes invisible against the now-bright body —
-   * what users perceive as "widgets going white-out".
-   *
-   * Fix: force these widget surfaces to fully opaque card / background
-   * color in perf mode. We deliberately DO NOT touch the `opacity`
-   * property (an earlier version of this rule forced `opacity: 1` and
-   * caused unrelated cascading issues). Solid surface = stable contrast
-   * for text regardless of wallpaper choice, which is the right tradeoff
-   * for the weak-hardware target of perf mode.
-   */
-  html.performance-mode .bg-card\/95,
-  html.performance-mode .bg-card\/85 {
-    background-color: hsl(var(--card)) !important;
-  }
-  html.performance-mode .bg-background\/95,
-  html.performance-mode .bg-background\/80 {
-    background-color: hsl(var(--background)) !important;
-  }
-
-  /* Stop color transitions from interpolating through grey when CSS
-   * variables flip on theme/perf-mode mount — under perf mode, color
-   * changes apply instantly so widgets never dwell in a transitional
-   * grey state. */
-  html.performance-mode * {
-    transition-property: transform, opacity !important;
   }
 }
 
