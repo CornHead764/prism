@@ -183,6 +183,7 @@ export function LayoutEditor({
             saveFeedback={state.saveFeedback}
             exportFeedback={state.exportFeedback}
             allDashboards={allDashboards}
+            currentDashboardId={currentDashboardId}
             onToggleMeasureMode={toggleMeasureMode}
             onToggleScreensaverEdit={onToggleScreensaverEdit}
             onSave={state.handleSave}

@@ -12,6 +12,7 @@ interface ToolbarRightProps {
   saveFeedback: string;
   exportFeedback: string;
   allDashboards: DashboardInfo[];
+  currentDashboardId?: string;
   onToggleMeasureMode: () => void;
   onToggleScreensaverEdit?: () => void;
   onSave: () => void;
@@ -37,6 +38,7 @@ export function LayoutEditorToolbarRight({
   saveFeedback,
   exportFeedback,
   allDashboards,
+  currentDashboardId,
   onToggleMeasureMode,
   onToggleScreensaverEdit,
   onSave,
@@ -116,10 +118,34 @@ export function LayoutEditorToolbarRight({
         label="More"
         isActive={activePopover === 'more'}
         onToggle={() => onTogglePopover('more')}
-        width={180}
+        width={200}
         align="right"
       >
         <div className="py-1">
+          {!editingScreensaver && currentDashboardId && (() => {
+            const current = allDashboards.find(d => d.id === currentDashboardId);
+            const alreadyDefault = current?.isDefault === true;
+            return (
+              <button
+                onClick={async () => {
+                  if (alreadyDefault) return;
+                  try {
+                    const res = await fetch(`/api/layouts/${currentDashboardId}/default`, { method: 'POST' });
+                    if (res.ok) window.location.reload();
+                  } catch { /* ignore — UI stays put on failure */ }
+                  onTogglePopover('more');
+                }}
+                className={`${moreItemClass} ${alreadyDefault ? 'text-muted-foreground cursor-not-allowed' : ''}`}
+                disabled={alreadyDefault}
+                title={alreadyDefault ? 'Already the default dashboard' : 'Make this the dashboard shown at /'}
+              >
+                {alreadyDefault ? 'Default Dashboard ✓' : 'Set as Default'}
+              </button>
+            );
+          })()}
+          {!editingScreensaver && currentDashboardId && (
+            <div className="border-t border-border my-1" />
+          )}
           {!editingScreensaver && onDeleteDashboard && (
             <button
               onClick={onHandleDelete}
