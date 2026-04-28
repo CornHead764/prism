@@ -78,23 +78,25 @@ Boot a fresh DB container, apply all migrations, apply them a second time, asser
 
 Wire `scripts/test-fresh-install.sh`, `scripts/test-migration-replay.sh`, the reverse-proxy spec, the visual-regression spec, and the PII scan (#5 below) into `.github/workflows/` on every PR. Currently only `jest` and `playwright test` defaults run; the modality-specific suites need explicit invocations.
 
-### 5. `scripts/scan-pii.sh` (cross-artifact-shape)
+### 5. `scripts/scan-pii.sh` ✅ (script landed; denylist is per-maintainer setup)
 
-A pre-commit / pre-push grep that fails if any tracked file contains items from a known-personal denylist. Catches the class of leak that surfaced in `formatters.test.ts` (fictional-looking test fixture that actually used real first names from the maintainer's family).
+Whole-word, fixed-string grep that fails if any tracked file contains items from a maintainer-curated personal denylist. Catches the class of leak that surfaced in `formatters.test.ts` (fictional-looking test fixture that actually used real first names from the maintainer's family).
 
-The denylist itself is private — committed values would defeat the purpose. Approach:
+**Setup per maintainer** (one-time):
 
-- The script reads the denylist from a path outside the repo (e.g. `~/.config/prism-pii-denylist.txt`, one entry per line, gitignored even if accidentally placed in the repo).
-- Each entry is matched as a whole word (`grep -w`) against tracked files only (`git ls-files | xargs ...`).
-- Exits non-zero on any match, prints offending file:line.
-- Wired as a Husky `pre-push` hook so it runs before publication, not on every save.
+1. Create `~/.config/prism-pii-denylist.txt` — one entry per line. Comments start with `#`. Categories to consider:
+   - Real first / last names of household members
+   - Street addresses, school names, employer names
+   - Phone numbers (anything not in the `555-01xx` reserved-for-fiction range)
+   - Email addresses other than the maintainer's public commit identity
+   - Personal GPS coordinates (for the travel feature)
+2. (Optional) Install the pre-push hook so it runs automatically before every `git push`:
+   ```bash
+   npm run scan:pii:install-hook
+   ```
+3. Run manually anytime: `npm run scan:pii`
 
-Categories to populate the denylist with (each maintainer customizes):
-- Real first/last names of household members
-- Real street addresses, school names, employer names
-- Real phone numbers (anything not in the `555-01xx` reserved-for-fiction range)
-- Real email addresses other than the maintainer's public commit identity
-- Real GPS coordinates the maintainer has personally visited (for the travel feature)
+The denylist file MUST live outside the repo and MUST NOT be committed. Each maintainer populates their own — committed values would defeat the purpose. The script exits cleanly (with a warning) if the denylist file doesn't exist, so contributors who haven't set it up don't have their pushes blocked.
 
 Why this catches what LLM review misses: an LLM has no way of knowing whether `'Eric'` is fictional or refers to the maintainer's spouse. A maintainer-curated denylist closes that gap with one grep. Cheap, deterministic, and survives changes to who's reviewing.
 
