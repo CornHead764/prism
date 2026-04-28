@@ -35,7 +35,6 @@ import { AwayModeToggle } from '@/components/away-mode';
 import { BabysitterModeToggle } from '@/components/babysitter-mode';
 import { PerformanceModeBadge } from '@/components/layout/PerformanceModeBadge';
 import { useAutoHideUI } from '@/lib/hooks/useAutoHideUI';
-import { usePerformanceMode } from '@/lib/hooks/usePerformanceMode';
 import { RefreshCw } from 'lucide-react';
 
 
@@ -199,7 +198,6 @@ export function DashboardHeader({
   onScreensaverClick,
 }: DashboardHeaderProps) {
   const { uiHidden } = useAutoHideUI();
-  const { enabled: perfMode } = usePerformanceMode();
   const [measureHideChrome, setMeasureHideChrome] = React.useState(false);
 
   React.useEffect(() => {
@@ -215,52 +213,45 @@ export function DashboardHeader({
   const hidden = uiHidden || measureHideChrome;
   return (
     <header className={cn(
-      'relative z-10 flex-shrink-0 text-card-foreground px-4 transition-all duration-500 ease-in-out overflow-hidden',
-      perfMode ? 'bg-card' : 'bg-card/95 backdrop-blur-sm',
+      // 'relative z-10' is load-bearing: WallpaperBackground is fixed at z-0,
+      // and without our own stacking context the toolbar would paint underneath
+      // it whenever backdrop-blur is disabled (e.g. perf mode).
+      'relative z-10 flex-shrink-0 bg-card/95 backdrop-blur-sm px-4 transition-all duration-500 ease-in-out overflow-hidden',
       hidden ? 'opacity-0 max-h-0 py-0' : 'max-h-20 py-2 delay-200'
     )}>
       <div className="flex items-center justify-end gap-2">
-        {/* Edit layout button */}
         {onEditClick && (
           <button
             onClick={onEditClick}
-            className="p-2 rounded-md hover:bg-accent transition-colors text-foreground"
+            className="p-2 rounded-md hover:bg-accent transition-colors"
             aria-label="Edit layout"
           >
             <GridEditIcon />
           </button>
         )}
 
-        {/* Refresh page */}
         <button
           onClick={() => window.location.reload()}
-          className="p-2 rounded-md hover:bg-accent transition-colors text-foreground"
+          className="p-2 rounded-md hover:bg-accent transition-colors"
           aria-label="Refresh page"
         >
           <RefreshCw className="h-5 w-5" />
         </button>
 
-        {/* Performance mode indicator */}
         <PerformanceModeBadge />
-
-        {/* Babysitter mode button */}
         <BabysitterModeToggle />
-
-        {/* Away mode button */}
         <AwayModeToggle />
 
-        {/* Screensaver button */}
         {onScreensaverClick && (
           <button
             onMouseDown={(e) => { e.stopPropagation(); }}
             onClick={(e) => { e.stopPropagation(); onScreensaverClick(); }}
-            className="p-2 rounded-md hover:bg-accent transition-colors text-foreground"
+            className="p-2 rounded-md hover:bg-accent transition-colors"
             aria-label="Start screensaver"
           >
             <ScreensaverIcon />
           </button>
         )}
-
       </div>
     </header>
   );
