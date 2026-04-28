@@ -25,6 +25,8 @@ Real Prism bugs in this class that survived adversarial review and were caught b
 | `/api/family` POST blocked initial setup wizard | User-flow |
 | Auto-hide UI making toolbar appear "broken" | User-flow |
 | Real first names ("Eric"/"Kim") in `formatters.test.ts` fixtures | Cross-artifact (PII) |
+| `scan-pii.sh` couldn't find the denylist when run via npm-spawned bash on WSL | Cross-environment (path resolution) |
+| `scan-pii.sh` ran 30+ seconds on a 50-entry denylist (per-entry loop instead of single-pass `grep -f`) | Performance / algorithmic |
 
 The fix is **not "more adversarial review."** A 50-LLM panel and a 5-LLM panel are reading the same input. Making reviewers stricter doesn't add modalities; it sharpens the one modality already in use. The structural blind spot remains.
 
@@ -123,3 +125,25 @@ Why this catches what LLM review misses: an LLM has no way of knowing whether `'
 ## Background
 
 This document was created after fork contributions (JD-Gonz, sevenlayercookie, iann) caught a number of bugs that LLM-only review had missed. The list of "shipped past panel review" bugs above came directly from those contributions plus issues uncovered during the perf-mode toolbar saga (April 2026). Documenting the failure mode, not just the fixes, is the durable improvement.
+
+## Specific lessons worth re-stating
+
+These are *not* one-time anecdotes; they're durable engineering rules that any future Prism work should respect. Worth re-reading whenever a new tool or script is being designed.
+
+### Filesystem paths on Windows have THREE flavors
+
+Any script that resolves a path under the user's home directory on Windows must support all three bash environments simultaneously:
+
+| Bash flavor | `$HOME` | C: drive accessed at |
+|---|---|---|
+| Git Bash | `/c/Users/Foo` | `/c/Users/Foo/` |
+| WSL (1 or 2) | `/home/<user>` | `/mnt/c/Users/Foo/` |
+| Cygwin / msys2 | varies | `/cygdrive/c/Users/Foo/` |
+
+Plus: `$USERPROFILE` may or may not be propagated into bash's environment depending on how bash was spawned (npm scripts on Windows often spawn bash *without* `USERPROFILE`).
+
+Robust path discovery: try `$PRISM_PII_DENYLIST`, then `$HOME/...`, then `$USERPROFILE/...` (if set), then ask `cmd.exe /c "echo %USERPROFILE%"` and try BOTH `/c/...` and `/mnt/c/...` derivations of the result. See `scripts/scan-pii.sh` for a worked example.
+
+### Scripts that loop over entries × files are O(N×M)
+
+The first version of `scan-pii.sh` ran one `grep -wF -- "$entry"` per denylist entry. With ~50 entries and ~1500 tracked files, that's 75,000 file scans and ran 30+ seconds. The fix is `grep -f tempfile` to read all patterns from a single file and do **one** Aho-Corasick pass. Same correctness, ~10× faster. Whenever a script's body is "for each entry, scan all files," look for the single-pass equivalent before shipping.

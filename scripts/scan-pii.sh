@@ -104,49 +104,53 @@ EOF
   exit 0
 fi
 
-violations=0
-matched_entries=()
+# Single-pass scan. Naive approach (loop over each entry, grep all files
+# once per entry) is O(entries × files) and went 30s+ on a 50-entry list
+# against the Prism tree. Strip comments + blanks into a temp file, then
+# one `grep -f` does the whole job in one Aho-Corasick pass.
+tmpfile=$(mktemp)
+trap 'rm -f "$tmpfile"' EXIT INT TERM
 
-# Read denylist line by line. Skip blanks and comments.
-while IFS= read -r entry || [ -n "$entry" ]; do
-  # Trim trailing CR (in case the file was edited on Windows).
-  entry="${entry%$'\r'}"
-  # Trim leading/trailing whitespace.
-  entry="$(echo "$entry" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
-  [ -z "$entry" ] && continue
-  case "$entry" in '#'*) continue ;; esac
+# Filter denylist:
+#   - drop blank lines
+#   - drop comment lines (whole-line comments starting with #, after trim)
+#   - strip leading/trailing whitespace from each remaining entry
+#   - strip trailing CR (Windows line endings)
+sed -e 's/\r$//' \
+    -e 's/^[[:space:]]*//' \
+    -e 's/[[:space:]]*$//' \
+    "$DENYLIST" \
+  | grep -v '^$' \
+  | grep -v '^#' \
+  > "$tmpfile"
 
-  # Whole-word, fixed-string grep across tracked files only.
-  # Excludes the scan script and modality docs which discuss the issue meta.
-  # `|| true` because xargs returns non-zero when *any* grep batch finds
-  # nothing — even if other batches matched. Ignore the exit status and
-  # check the output instead.
-  # `grep -I` skips binary files (PNG/GIF/etc.) which would otherwise produce
-  # false positives from random byte sequences happening to match a denylist
-  # entry. Real text-file leaks are still caught.
-  matches=$(
-    git ls-files \
-      | grep -v -E '^(scripts/scan-pii\.sh|scripts/scan-examples\.sh|docs/code-review-modalities\.md)$' \
-      | xargs -d '\n' grep -wn -F -I -- "$entry" 2>/dev/null \
-    || true
-  )
-  if [ -n "$matches" ]; then
-    echo ""
-    echo "[scan-pii] DENYLIST MATCH: $entry"
-    echo "$matches" | sed 's/^/  /'
-    violations=$((violations + 1))
-    matched_entries+=("$entry")
-  fi
-done < "$DENYLIST"
+if [ ! -s "$tmpfile" ]; then
+  echo "[scan-pii] Denylist contains no entries (after stripping comments and blanks)."
+  echo "Add real entries to $DENYLIST or the scan does nothing."
+  exit 0
+fi
 
-echo ""
-if [ "$violations" -eq 0 ]; then
+# Single-pass: grep -f reads patterns from the temp file. -w whole-word,
+# -F fixed-string, -I skip binary files. xargs may shard the file list
+# across multiple grep invocations on very large repos, which is fine —
+# each shard still does one pass over its files for all patterns at once.
+matches=$(
+  git ls-files \
+    | grep -v -E '^(scripts/scan-pii\.sh|scripts/scan-examples\.sh|docs/code-review-modalities\.md)$' \
+    | xargs -d '\n' grep -wn -F -I -f "$tmpfile" 2>/dev/null \
+  || true
+)
+
+if [ -z "$matches" ]; then
   echo "[scan-pii] Clean: no denylist matches in tracked files."
   exit 0
 fi
 
-echo "[scan-pii] FAIL: $violations denylist entr$([ "$violations" -eq 1 ] && echo "y" || echo "ies") matched in tracked files."
+violations=$(printf '%s\n' "$matches" | wc -l)
+
+echo "[scan-pii] DENYLIST MATCHES:"
+printf '%s\n' "$matches" | sed 's/^/  /'
+echo ""
+echo "[scan-pii] FAIL: $violations match(es) in tracked files."
 echo "Anonymize the offending values before pushing."
-echo "If a match is intentional and not actually PII, add it to a"
-echo "scripts/scan-pii.allowlist file (one path or path:line per entry)."
 exit 1
