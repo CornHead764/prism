@@ -43,11 +43,39 @@
 
 set -euo pipefail
 
-DENYLIST="${PRISM_PII_DENYLIST:-${HOME}/.config/prism-pii-denylist.txt}"
+# Resolve the denylist path. Try in order:
+#   1. $PRISM_PII_DENYLIST if set
+#   2. $HOME/.config/prism-pii-denylist.txt (Linux/macOS, also Git Bash on Windows)
+#   3. $USERPROFILE/.config/prism-pii-denylist.txt (Windows; some bash setups have
+#      HOME pointing at a Linux-shaped path that doesn't match the actual user dir)
+DENYLIST=""
+candidates=()
+if [ -n "${PRISM_PII_DENYLIST:-}" ]; then
+  candidates+=("$PRISM_PII_DENYLIST")
+fi
+if [ -n "${HOME:-}" ]; then
+  candidates+=("${HOME}/.config/prism-pii-denylist.txt")
+fi
+if [ -n "${USERPROFILE:-}" ]; then
+  # Convert C:\Users\Foo to /c/Users/Foo for bash file-test compatibility.
+  win_home="${USERPROFILE//\\//}"
+  win_home="${win_home//C:/\/c}"
+  win_home="${win_home//D:/\/d}"
+  candidates+=("${win_home}/.config/prism-pii-denylist.txt")
+  candidates+=("${USERPROFILE}/.config/prism-pii-denylist.txt")
+fi
+for path in "${candidates[@]}"; do
+  if [ -f "$path" ]; then
+    DENYLIST="$path"
+    break
+  fi
+done
 
-if [ ! -f "$DENYLIST" ]; then
+if [ -z "$DENYLIST" ]; then
   cat <<EOF
-[scan-pii] WARNING: denylist not found at $DENYLIST
+[scan-pii] WARNING: denylist not found.
+Searched:
+$(printf '  - %s\n' "${candidates[@]}")
 
 To enable PII scanning, create the file with one entry per line.
 See docs/code-review-modalities.md (TODO #5) for guidance on what to include.
@@ -74,10 +102,13 @@ while IFS= read -r entry || [ -n "$entry" ]; do
   # `|| true` because xargs returns non-zero when *any* grep batch finds
   # nothing — even if other batches matched. Ignore the exit status and
   # check the output instead.
+  # `grep -I` skips binary files (PNG/GIF/etc.) which would otherwise produce
+  # false positives from random byte sequences happening to match a denylist
+  # entry. Real text-file leaks are still caught.
   matches=$(
     git ls-files \
       | grep -v -E '^(scripts/scan-pii\.sh|docs/code-review-modalities\.md)$' \
-      | xargs -d '\n' grep -wn -F -- "$entry" 2>/dev/null \
+      | xargs -d '\n' grep -wn -F -I -- "$entry" 2>/dev/null \
     || true
   )
   if [ -n "$matches" ]; then
