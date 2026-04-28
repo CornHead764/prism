@@ -79,30 +79,24 @@ Boot a fresh DB container, apply all migrations, apply them a second time, asser
 
 Wire `scripts/test-fresh-install.sh`, `scripts/test-migration-replay.sh`, the reverse-proxy spec, the visual-regression spec, and the PII scan (#5 below) into `.github/workflows/` on every PR. Currently only `jest` and `playwright test` defaults run; the modality-specific suites need explicit invocations.
 
-### 6. Placeholder / example-text audit (recurring)
+### 6. `scripts/scan-examples.sh` ✅ (script landed; recurring human review)
 
-Placeholder text in form fields, "e.g." examples, and API doc comments are a high-leverage spot for accidental PII because **maintainers naturally write them based on their own real data** ("e.g. Lincoln Park Zoo" because the maintainer lives in Chicago; "e.g., Grandma Helen" because their kid actually has a Grandma Helen). Even when the rest of the codebase is anonymized, these tend to drift toward real names / places.
+Surfaces every `placeholder="..."` and "e.g." / "for example" instance in the tracked codebase for human review. Maintainers naturally write these from their own real data ("e.g. Lincoln Park Zoo" because the maintainer lives in Chicago; "e.g., Grandma Helen" because their kid actually has a Grandma Helen). Even when the rest of the codebase is anonymized, these tend to drift toward real names / places.
 
-**The audit** — run this grep periodically (especially before tagging a release) to surface every `placeholder="..."` and "e.g." instance for human review:
+**Run:** `npm run scan:examples`. Always exits 0 — this is a review tool, not a gate. Eyeball each line and ask: **does this string come from my real life?** If yes, swap to a generic alternative.
 
-```bash
-# All placeholder text
-git ls-files | grep -E '\.(tsx|jsx|ts|html)$' \
-  | xargs grep -nE 'placeholder="[^"]+"' 2>/dev/null
-
-# All "e.g." / "for example" examples (UI + docs + API JSDoc)
-git ls-files | grep -E '\.(tsx|jsx|ts|html|md)$' \
-  | xargs grep -niE "(e\.g\.|for example)" 2>/dev/null
-```
-
-Eyeball the output. For each line, ask: **does this string come from my real life?** If yes, swap to a generic alternative. Suggested neutral examples:
+Suggested generic alternatives:
 - Names → first names like "Alex", "Emma", "Jordan", "Sophie" (matches Prism's anonymized seed)
-- Cities / landmarks → use multi-region rotation: "Kauai, Rome, Banff" rather than one-city-only
+- Cities / landmarks → multi-region rotation: "Kauai, Rome, Banff" rather than one-city-only
 - Schools / employers → never use a real one
 - Phone numbers → `(555) 01xx-xxxx` (reserved-for-fiction range)
 - Email addresses → `name@example.com` (reserved-for-documentation domain)
 
-This audit is **complementary to `scan-pii.sh`**. The denylist scan catches things explicitly on the maintainer's denylist; this audit catches things the maintainer didn't realize were real. Run it before each release tag and after merging large feature work.
+This audit is **complementary to `scan-pii.sh`**:
+- `scan-pii.sh` — catches values explicitly on the maintainer's denylist (high-precision, low-recall — only finds what you knew to look for)
+- `scan-examples.sh` — surfaces all candidate spots so the maintainer can review (low-precision, high-recall — finds things you didn't realize were specific to your life)
+
+Run `scan-examples` before each release tag and after merging large feature work.
 
 ### 5. `scripts/scan-pii.sh` ✅ (script landed; denylist is per-maintainer setup)
 

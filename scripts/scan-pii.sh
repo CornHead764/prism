@@ -64,6 +64,16 @@ if [ -n "${USERPROFILE:-}" ]; then
   candidates+=("${win_home}/.config/prism-pii-denylist.txt")
   candidates+=("${USERPROFILE}/.config/prism-pii-denylist.txt")
 fi
+# Last-resort: ask Windows directly via cmd.exe for USERPROFILE. Catches the
+# WSL / Git-Bash-with-Linux-shaped-HOME case where the env var didn't make it
+# into bash's environment (e.g., npm-spawned bash on Windows).
+if command -v cmd.exe >/dev/null 2>&1; then
+  win_up_raw=$(cmd.exe /c "echo %USERPROFILE%" 2>/dev/null | tr -d '\r')
+  if [ -n "${win_up_raw:-}" ]; then
+    win_up_unix=$(echo "$win_up_raw" | sed 's|\\|/|g; s|^C:|/c|; s|^D:|/d|')
+    candidates+=("${win_up_unix}/.config/prism-pii-denylist.txt")
+  fi
+fi
 for path in "${candidates[@]}"; do
   if [ -f "$path" ]; then
     DENYLIST="$path"

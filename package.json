@@ -42,6 +42,7 @@
     "test:migration-replay": "bash scripts/test-migration-replay.sh",
     "scan:pii": "bash scripts/scan-pii.sh",
     "scan:pii:install-hook": "echo '#!/usr/bin/env bash\\nbash scripts/scan-pii.sh' > .git/hooks/pre-push && chmod +x .git/hooks/pre-push && echo 'Pre-push PII hook installed at .git/hooks/pre-push'",
+    "scan:examples": "bash scripts/scan-examples.sh",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
