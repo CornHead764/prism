@@ -64,14 +64,23 @@ if [ -n "${USERPROFILE:-}" ]; then
   candidates+=("${win_home}/.config/prism-pii-denylist.txt")
   candidates+=("${USERPROFILE}/.config/prism-pii-denylist.txt")
 fi
-# Last-resort: ask Windows directly via cmd.exe for USERPROFILE. Catches the
-# WSL / Git-Bash-with-Linux-shaped-HOME case where the env var didn't make it
-# into bash's environment (e.g., npm-spawned bash on Windows).
+# Last-resort: ask Windows directly via cmd.exe for USERPROFILE. Catches
+# WSL / Git-Bash / npm-spawned bash where USERPROFILE didn't propagate into
+# the bash environment.
+#
+# Path format depends on the bash flavor:
+#   Git Bash on Windows  → /c/Users/Foo
+#   WSL (mounts C: at /mnt/c) → /mnt/c/Users/Foo
+# We can't reliably detect which, so we try both.
 if command -v cmd.exe >/dev/null 2>&1; then
   win_up_raw=$(cmd.exe /c "echo %USERPROFILE%" 2>/dev/null | tr -d '\r')
   if [ -n "${win_up_raw:-}" ]; then
-    win_up_unix=$(echo "$win_up_raw" | sed 's|\\|/|g; s|^C:|/c|; s|^D:|/d|')
-    candidates+=("${win_up_unix}/.config/prism-pii-denylist.txt")
+    # /c/... form (Git Bash)
+    gitbash_path=$(echo "$win_up_raw" | sed 's|\\|/|g; s|^\([A-Za-z]\):|/\L\1|')
+    # /mnt/c/... form (WSL)
+    wsl_path=$(echo "$win_up_raw" | sed 's|\\|/|g; s|^\([A-Za-z]\):|/mnt/\L\1|')
+    candidates+=("${gitbash_path}/.config/prism-pii-denylist.txt")
+    candidates+=("${wsl_path}/.config/prism-pii-denylist.txt")
   fi
 fi
 for path in "${candidates[@]}"; do
@@ -117,7 +126,7 @@ while IFS= read -r entry || [ -n "$entry" ]; do
   # entry. Real text-file leaks are still caught.
   matches=$(
     git ls-files \
-      | grep -v -E '^(scripts/scan-pii\.sh|docs/code-review-modalities\.md)$' \
+      | grep -v -E '^(scripts/scan-pii\.sh|scripts/scan-examples\.sh|docs/code-review-modalities\.md)$' \
       | xargs -d '\n' grep -wn -F -I -- "$entry" 2>/dev/null \
     || true
   )
