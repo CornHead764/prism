@@ -15,9 +15,9 @@ describe('formatTaskRow', () => {
     createdAt: new Date('2026-02-20T08:00:00Z'),
     updatedAt: new Date('2026-02-20T09:00:00Z'),
     assignedUserId: 'user-1',
-    assignedUserName: 'Eric',
+    assignedUserName: 'Alex',
     assignedUserColor: '#3B82F6',
-    assignedUserAvatar: '/avatars/eric.png',
+    assignedUserAvatar: '/avatars/alex.png',
   };
 
   it('converts dates to ISO strings', () => {
@@ -31,9 +31,9 @@ describe('formatTaskRow', () => {
     const result = formatTaskRow(baseRow);
     expect(result.assignedTo).toEqual({
       id: 'user-1',
-      name: 'Eric',
+      name: 'Alex',
       color: '#3B82F6',
-      avatarUrl: '/avatars/eric.png',
+      avatarUrl: '/avatars/alex.png',
     });
   });
 
@@ -72,7 +72,7 @@ describe('formatMessageRow', () => {
     expiresAt: new Date('2026-03-01T00:00:00Z'),
     createdAt: new Date('2026-02-20T12:00:00Z'),
     authorId: 'user-1',
-    authorName: 'Kim',
+    authorName: 'Jordan',
     authorColor: '#EC4899',
     authorAvatar: null,
   };
@@ -81,7 +81,7 @@ describe('formatMessageRow', () => {
     const result = formatMessageRow(baseRow);
     expect(result.author).toEqual({
       id: 'user-1',
-      name: 'Kim',
+      name: 'Jordan',
       color: '#EC4899',
       avatarUrl: null,
     });
@@ -126,7 +126,7 @@ describe('formatMealRow', () => {
     createdAt: new Date('2026-02-15T08:00:00Z'),
     updatedAt: new Date('2026-02-15T09:00:00Z'),
     createdById: 'user-1',
-    createdByName: 'Eric',
+    createdByName: 'Alex',
     createdByColor: '#3B82F6',
     cookedByUserId: null,
     cookedByUserName: null,
@@ -137,7 +137,7 @@ describe('formatMealRow', () => {
     const result = formatMealRow(baseRow);
     expect(result.createdBy).toEqual({
       id: 'user-1',
-      name: 'Eric',
+      name: 'Alex',
       color: '#3B82F6',
     });
   });
@@ -151,12 +151,12 @@ describe('formatMealRow', () => {
     const result = formatMealRow({
       ...baseRow,
       cookedByUserId: 'user-2',
-      cookedByUserName: 'Kim',
+      cookedByUserName: 'Jordan',
       cookedByUserColor: '#EC4899',
     });
     expect(result.cookedBy).toEqual({
       id: 'user-2',
-      name: 'Kim',
+      name: 'Jordan',
       color: '#EC4899',
     });
   });
