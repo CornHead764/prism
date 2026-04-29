@@ -4,6 +4,7 @@ import { requireRole } from '@/lib/auth/requireAuth';
 import { checkDatabaseConnection, db } from '@/lib/db/client';
 import { getRedisClient } from '@/lib/cache/getRedisClient';
 import { calendarSources, photoSources } from '@/lib/db/schema';
+import { APP_VERSION } from '@/lib/constants';
 import { isNotNull, lt } from 'drizzle-orm';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -117,7 +118,7 @@ export async function GET() {
     {
       status: overall,
       timestamp: new Date().toISOString(),
-      version: process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0',
+      version: APP_VERSION,
       uptime: Math.floor(process.uptime()),
       checks: {
         database: dbOk ? 'ok' : 'error',

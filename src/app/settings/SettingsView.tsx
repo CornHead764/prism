@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { PrismIcon } from '@/components/ui/PrismIcon';
 import { cn } from '@/lib/utils';
+import { APP_VERSION } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageWrapper } from '@/components/layout';
@@ -250,7 +251,7 @@ export function SettingsView() {
                                 github.com/sandydargoport/prism/projects
                               </a>
                             </p>
-                            <p><strong>Version:</strong> 1.1.0</p>
+                            <p><strong>Version:</strong> {APP_VERSION}</p>
                             <p>
                               <strong>Help Guide:</strong>{' '}
                               <a href="/help" className="text-primary hover:underline">

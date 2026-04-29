@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { checkDatabaseConnection } from '@/lib/db/client';
 import { getRedisClient } from '@/lib/cache/getRedisClient';
+import { APP_VERSION } from '@/lib/constants';
 
 export async function GET() {
   const [dbOk, redisOk] = await Promise.all([
@@ -14,7 +15,7 @@ export async function GET() {
     {
       status: healthy ? 'ok' : 'degraded',
       timestamp: new Date().toISOString(),
-      version: process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0',
+      version: APP_VERSION,
       uptime: Math.floor(process.uptime()),
       checks: {
         database: dbOk ? 'ok' : 'error',

@@ -4,20 +4,30 @@ All notable changes to Prism are documented in this file.
 
 ## [Unreleased]
 
+## [1.6.0] – 2026-04-29
+
+> Consolidates the previously-prepared (but never tagged) v1.5.2 PWA fixes with substantial reverse-proxy / install-flow reliability work, Performance Mode polish, and new CI gating.
+
 ### Improved
 - **Performance Mode — extended scope**: Existing Performance Mode toggle now also stretches polling intervals (×2.5) and renders the Photo widget as a single static image instead of a slideshow. Auto-enabled on first load when the device reports ≤2 GB RAM or ≤4 CPU cores (`navigator.deviceMemory` / `hardwareConcurrency`); your explicit choice in Settings is always respected on subsequent loads. A subtle lightning-bolt badge appears in the dashboard header while active so you know what you're seeing. Existing `?perf=1` URL param continues to work for kiosk URLs.
 - **Performance pass**: Polling now does a structural-shared compare on each fetch — when the new payload is byte-identical to current state (the common case), the existing reference is reused so React skips re-renders downstream. Wraps `useFetch` so every consumer benefits without any callsite changes. `prefers-reduced-motion` is now honored site-wide via standard accessibility CSS; full-screen celebrations (plane fly-by, seasonal goal scenes) skip their motion entirely under either reduced-motion or Performance Mode and fire their `onComplete` callback immediately. Lite-mode photo widget now requests the `?thumb=1` thumbnail variant instead of the full image. TravelWidget gained the `React.memo` wrapper its peers already had.
 - **Default dashboard — set in app**: The layout editor's More menu now exposes "Set as Default" (becomes "Default Dashboard ✓" when active). The `/api/layouts/[id]/default` endpoint already existed; this wires the UI consumer.
+- **Reverse-proxy install — fewer surprises**: Fresh installs behind nginx / Cloudflare / Caddy now Just Work. `install.sh` generates a missing `ENCRYPTION_KEY` (was a fresh-install setup-wizard failure); `verify-pin` and `logout` derive HTTPS from the per-request `x-forwarded-proto` header instead of a module-level constant, so the session cookie carries the `Secure` flag whether you're behind a TLS-terminating proxy or not.
+- **Setup-wizard recovery**: `/api/family POST` now permits unauthenticated calls during setup (when no `setupComplete` row exists) and re-locks the moment setup finishes — fixes the chicken-and-egg "log in to set up your account" trap on fresh installs.
+- **Migration reliability**: `scripts/migrate.js` now detects first-run by checking whether `0000_upgrade.sql` has been applied (not by table existence) and wraps each migration in a transaction. Recovers cleanly from partially-applied migration state instead of throwing.
+- **Crypto key compatibility**: AES key derivation now falls back to `PIN_ENCRYPTION_KEY` when `ENCRYPTION_KEY` is unset — older installs that only had the PIN key continue to work without manual `.env` surgery.
+- **About-page version**: Settings → About now shows the actual `package.json` version (was a hardcoded `1.1.0` for several releases). Health endpoints (`/api/health`, `/api/health/deep`) report the same source of truth.
 
 ### Bug Fixes
 - **Performance Mode — light-mode widget white-out**: An `opacity: 1 !important` override on translucent surfaces forced widget bodies to solid `hsl(var(--card))`, which resolves to white in light mode — making muted/secondary content blend into the background while only chrome (titles, icons) stayed visible. Dropped the override; surfaces now show their original 85–95% translucency over the wallpaper, which reads correctly with or without backdrop-blur.
-
-## [1.5.2] – 2026-04-22
-
-### Bug Fixes
 - **PWA tiles — weather blank**: Weather tile was reading a flat data shape; fixed to use the correct nested `WeatherData.current.temperature/condition/description` structure.
 - **PWA tiles — meals wrong**: Meals tile (and rows-mode meals card) matched any meal with today's day name across all historical weeks. Now filters to the current week before looking up today's meal.
 - **PWA tiles — bus 404**: Bus tile linked to `/bus` which does not exist. Removed the link; tile now shows status inline with no navigation chevron.
+
+### Internal
+- **CI gates**: New `.github/workflows/ci.yml` runs type-check + lint + jest + a gated reverse-proxy e2e suite + migration-replay on every push and PR to master. Catches the bug classes that text-only review structurally misses (deployment-shape, schema idempotency, cookie handling behind a proxy). See `docs/code-review-modalities.md` for the rationale.
+- **Test debt**: Stale unit tests aligned with current code — session TTL constants moved to 7d/1d for the "stays logged in" UX; OneDrive test suite rewritten for the async credentialStore-based API.
+- **PII denylist scanner** (`scripts/scan-pii.sh`): pre-push hook that fails if tracked files match a maintainer-curated personal denylist read from outside the repo. Closes the gap that text-only LLM review can't cover.
 
 ## [1.5.1] – 2026-04-19
 
