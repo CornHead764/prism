@@ -23,9 +23,17 @@ jobs:
           GH_TOKEN: ${{ secrets.TRAFFIC_PAT }}
           REPO: ${{ github.repository }}
         run: |
-          gh api "/repos/${REPO}/traffic/views"     > /tmp/views.json
-          gh api "/repos/${REPO}/traffic/clones"    > /tmp/clones.json
-          gh api "/repos/${REPO}/traffic/referrers" > /tmp/referrers.json
+          set +e
+          for endpoint in views clones referrers; do
+            echo "--- /repos/$REPO/traffic/$endpoint ---"
+            gh api "/repos/$REPO/traffic/$endpoint" > "/tmp/${endpoint}.json"
+            rc=$?
+            echo "exit=$rc bytes=$(wc -c < "/tmp/${endpoint}.json" 2>/dev/null || echo 0)"
+            if [ $rc -ne 0 ]; then
+              echo "{}" > "/tmp/${endpoint}.json"
+            fi
+          done
+          set -e
 
       - name: Merge into history
         run: |
