@@ -148,10 +148,13 @@ describe('isEncrypted', () => {
 
 describe('getKey validation', () => {
   it('throws when ENCRYPTION_KEY is missing', () => {
-    const saved = process.env.ENCRYPTION_KEY;
+    const savedKey = process.env.ENCRYPTION_KEY;
+    const savedPin = process.env.PIN_ENCRYPTION_KEY;
     delete process.env.ENCRYPTION_KEY;
-    expect(() => encrypt('test')).toThrow('ENCRYPTION_KEY environment variable is required');
-    process.env.ENCRYPTION_KEY = saved;
+    delete process.env.PIN_ENCRYPTION_KEY;
+    expect(() => encrypt('test')).toThrow('environment variable is required');
+    process.env.ENCRYPTION_KEY = savedKey;
+    if (savedPin !== undefined) process.env.PIN_ENCRYPTION_KEY = savedPin;
   });
 
   it('throws when ENCRYPTION_KEY is wrong length', () => {
