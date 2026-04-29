@@ -15,6 +15,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Debug — verify TRAFFIC_PAT can read repo metadata
+        env:
+          GH_TOKEN: ${{ secrets.TRAFFIC_PAT }}
+          REPO: ${{ github.repository }}
+        run: |
+          echo "Token length: $(echo -n "$GH_TOKEN" | wc -c)"
+          echo "Token prefix: $(echo "$GH_TOKEN" | cut -c1-10)..."
+          echo "--- /user (whoami) ---"
+          gh api /user -q '.login' || echo "FAILED: token cannot identify user"
+          echo "--- /repos/$REPO ---"
+          gh api "/repos/$REPO" -q '.full_name + " | private=" + (.private|tostring)' || echo "FAILED: token cannot read repo metadata"
+          echo "--- /repos/$REPO/traffic/views ---"
+          gh api "/repos/$REPO/traffic/views" -q '.count' || echo "FAILED: token cannot read traffic"
+
       - name: Fetch traffic data from GitHub API
         env:
           # Traffic API requires Administration: Read, which the default
