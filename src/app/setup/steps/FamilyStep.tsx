@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -33,11 +34,18 @@ export function FamilyStep({ onNext, onBack }: FamilyStepProps) {
   const [pin, setPin] = useState('');
   const [saving, setSaving] = useState(false);
   const [added, setAdded] = useState<AddedMember[]>([]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const canAdd = name.trim().length > 0;
+  const hasUnsavedDraft = canAdd && added.length === 0;
 
-  const addMember = async () => {
-    if (!canAdd) return;
+  /**
+   * Returns true when the member was successfully created, false otherwise.
+   * Callers (e.g. handleAddAndContinue) use the result to decide whether to
+   * advance the wizard.
+   */
+  const addMember = async (): Promise<boolean> => {
+    if (!canAdd) return false;
     setSaving(true);
     try {
       const body: Record<string, string> = {
@@ -56,7 +64,7 @@ export function FamilyStep({ onNext, onBack }: FamilyStepProps) {
       if (!res.ok) {
         const data = await res.json();
         toast({ title: data.error || 'Failed to add member', variant: 'destructive' });
-        return;
+        return false;
       }
 
       setAdded((prev) => [...prev, { name: name.trim(), role, color }]);
@@ -65,9 +73,32 @@ export function FamilyStep({ onNext, onBack }: FamilyStepProps) {
       setRole('child');
       setColor(COLOR_OPTIONS[added.length % COLOR_OPTIONS.length] ?? COLOR_OPTIONS[0]!);
       toast({ title: `Added ${name.trim()}` });
+      return true;
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleContinue = () => {
+    // Catch the common trap: a name typed in the form but never explicitly
+    // added. Without this prompt, the wizard advances and marks setup
+    // complete with zero users — leaving the instance unable to log in.
+    if (hasUnsavedDraft) {
+      setConfirmOpen(true);
+      return;
+    }
+    onNext();
+  };
+
+  const handleAddAndContinue = async () => {
+    setConfirmOpen(false);
+    const ok = await addMember();
+    if (ok) onNext();
+  };
+
+  const handleSkipAndContinue = () => {
+    setConfirmOpen(false);
+    onNext();
   };
 
   return (
@@ -167,7 +198,7 @@ export function FamilyStep({ onNext, onBack }: FamilyStepProps) {
 
         <div className="flex gap-3 pt-1">
           <Button variant="ghost" onClick={onBack} className="flex-1">Back</Button>
-          <Button onClick={onNext} className="flex-1">
+          <Button onClick={handleContinue} className="flex-1">
             Continue <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         </div>
@@ -178,6 +209,17 @@ export function FamilyStep({ onNext, onBack }: FamilyStepProps) {
           </p>
         )}
       </CardContent>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={`Add ${name.trim() || 'this member'} before continuing?`}
+        description={`You filled in "${name.trim()}" but haven't clicked Add member yet. Save them now and continue, or move on without saving?`}
+        confirmLabel="Save & continue"
+        cancelLabel="Continue without saving"
+        variant="default"
+        onConfirm={handleAddAndContinue}
+        onCancel={handleSkipAndContinue}
+      />
     </Card>
   );
 }
