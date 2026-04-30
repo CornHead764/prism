@@ -10,6 +10,7 @@ import {
   type GoogleCalendarEvent,
 } from '@/lib/integrations/google-calendar';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
+import { async as icalAsync, type VEvent, type CalendarResponse } from 'node-ical';
 
 /**
  * Check if token needs refresh (within 5 minutes of expiry)
@@ -344,6 +345,231 @@ export async function syncAllGoogleCalendars(
       allErrors.push(...result.errors);
     } catch (error) {
       const errorMsg = `Failed to sync calendar "${source.dashboardCalendarName}": ${error instanceof Error ? error.message : String(error)}`;
+      console.error(`[Sync] ${errorMsg}`);
+      allErrors.push(errorMsg);
+    }
+  }
+
+  return { total, errors: allErrors };
+}
+
+const ICAL_DISABLE_THRESHOLD = 3;
+
+/**
+ * Build a stable per-instance external ID for a recurring iCal event so each
+ * occurrence gets its own row keyed off (calendarSourceId, externalEventId).
+ */
+function instanceExternalId(uid: string, occurrence: Date): string {
+  return `${uid}_${occurrence.toISOString()}`;
+}
+
+/**
+ * Sync events from a single iCal subscription source.
+ *
+ * Mirrors syncGoogleCalendarSource: fetches and parses the feed, upserts
+ * VEVENTs (expanding recurrences within the time window), then deletes Prism
+ * events whose externalEventId is no longer present upstream.
+ */
+export async function syncIcalCalendarSource(
+  sourceId: string,
+  options: {
+    timeMin?: Date;
+    timeMax?: Date;
+  } = {}
+): Promise<{ synced: number; errors: string[] }> {
+  const errors: string[] = [];
+  let synced = 0;
+
+  const source = await db.query.calendarSources.findFirst({
+    where: eq(calendarSources.id, sourceId),
+  });
+
+  if (!source) {
+    return { synced: 0, errors: ['Calendar source not found'] };
+  }
+  if (source.provider !== 'ical') {
+    return { synced: 0, errors: ['Not an iCal calendar source'] };
+  }
+  if (!source.icalUrl) {
+    return { synced: 0, errors: ['No iCal URL configured'] };
+  }
+
+  const timeMin = options.timeMin || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const timeMax = options.timeMax || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+  let parsed: CalendarResponse;
+  try {
+    parsed = await icalAsync.fromURL(source.icalUrl);
+  } catch (error) {
+    const errorStr = error instanceof Error ? error.message : String(error);
+    const prevErrors = (source.syncErrors as Record<string, unknown>) || {};
+    const prevFailures = typeof prevErrors.consecutiveFailures === 'number' ? prevErrors.consecutiveFailures : 0;
+    const consecutiveFailures = prevFailures + 1;
+    const shouldAutoDisable = consecutiveFailures >= ICAL_DISABLE_THRESHOLD && !prevErrors.userOverride;
+
+    await db
+      .update(calendarSources)
+      .set({
+        ...(shouldAutoDisable ? { enabled: false, showInEventModal: false } : {}),
+        syncErrors: {
+          lastError: `Failed to fetch iCal feed: ${errorStr}`,
+          consecutiveFailures,
+          ...(shouldAutoDisable ? { autoDisabled: true, autoDisabledAt: new Date().toISOString() } : {}),
+          ...(prevErrors.userOverride ? { userOverride: true } : {}),
+          timestamp: new Date().toISOString(),
+        },
+        updatedAt: new Date(),
+      })
+      .where(eq(calendarSources.id, sourceId));
+
+    return { synced: 0, errors: [`Failed to fetch iCal feed: ${errorStr}`] };
+  }
+
+  const externalIds = new Set<string>();
+
+  for (const item of Object.values(parsed)) {
+    if (!item || item.type !== 'VEVENT') continue;
+    const vevent = item as VEvent;
+
+    try {
+      if (vevent.status === 'CANCELLED') continue;
+      if (!vevent.start || !vevent.end) continue;
+
+      const allDay = vevent.datetype === 'date';
+      const baseDurationMs = vevent.end.getTime() - vevent.start.getTime();
+
+      // exdate is keyed by ISO-ish date string but we only need the values for comparison
+      const exdates = new Set<number>();
+      if (vevent.exdate && typeof vevent.exdate === 'object') {
+        for (const ex of Object.values(vevent.exdate as Record<string, Date | undefined>)) {
+          if (ex instanceof Date) exdates.add(ex.getTime());
+        }
+      }
+
+      const instances: Array<{ start: Date; end: Date; externalId: string }> = [];
+
+      if (vevent.rrule) {
+        // Expand recurring instances within the sync window
+        const occurrences = vevent.rrule.between(timeMin, timeMax, true);
+        for (const occ of occurrences) {
+          if (exdates.has(occ.getTime())) continue;
+          instances.push({
+            start: occ,
+            end: new Date(occ.getTime() + baseDurationMs),
+            externalId: instanceExternalId(vevent.uid, occ),
+          });
+        }
+      } else {
+        // Single event — only sync if it overlaps the window at all
+        if (vevent.end >= timeMin && vevent.start <= timeMax) {
+          instances.push({
+            start: vevent.start,
+            end: vevent.end,
+            externalId: vevent.uid,
+          });
+        }
+      }
+
+      const recurrenceRule = vevent.rrule ? vevent.rrule.toString() : null;
+      const title = vevent.summary || '(no title)';
+      const description = vevent.description || null;
+      const location = vevent.location || null;
+
+      for (const inst of instances) {
+        externalIds.add(inst.externalId);
+        await db
+          .insert(events)
+          .values({
+            calendarSourceId: sourceId,
+            externalEventId: inst.externalId,
+            title,
+            description,
+            location,
+            startTime: inst.start,
+            endTime: inst.end,
+            allDay,
+            recurring: !!vevent.rrule,
+            recurrenceRule,
+            lastSynced: new Date(),
+          })
+          .onConflictDoUpdate({
+            target: [events.calendarSourceId, events.externalEventId],
+            set: {
+              title,
+              description,
+              location,
+              startTime: inst.start,
+              endTime: inst.end,
+              allDay,
+              recurring: !!vevent.rrule,
+              recurrenceRule,
+              lastSynced: new Date(),
+              updatedAt: new Date(),
+            },
+          });
+
+        synced++;
+      }
+    } catch (error) {
+      errors.push(`Failed to sync VEVENT ${vevent.uid}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  // Cleanup: delete Prism events for this source whose external id is no
+  // longer present upstream (within the sync window).
+  const prismEvents = await db.query.events.findMany({
+    where: and(
+      eq(events.calendarSourceId, sourceId),
+      gte(events.startTime, timeMin),
+      lte(events.startTime, timeMax)
+    ),
+  });
+  for (const ev of prismEvents) {
+    if (ev.externalEventId && !externalIds.has(ev.externalEventId)) {
+      await db.delete(events).where(eq(events.id, ev.id));
+    }
+  }
+
+  const currentErrors = (source.syncErrors as Record<string, unknown>) || {};
+  await db
+    .update(calendarSources)
+    .set({
+      lastSynced: new Date(),
+      syncErrors: currentErrors.userOverride ? { userOverride: true } : null,
+      updatedAt: new Date(),
+    })
+    .where(eq(calendarSources.id, sourceId));
+
+  return { synced, errors };
+}
+
+/**
+ * Sync all enabled iCal calendar sources, isolating per-source errors so one
+ * bad feed does not block the rest.
+ */
+export async function syncAllIcalCalendars(
+  options: {
+    timeMin?: Date;
+    timeMax?: Date;
+  } = {}
+): Promise<{ total: number; errors: string[] }> {
+  const allErrors: string[] = [];
+  let total = 0;
+
+  const sources = await db.query.calendarSources.findMany({
+    where: and(
+      eq(calendarSources.provider, 'ical'),
+      eq(calendarSources.enabled, true)
+    ),
+  });
+
+  for (const source of sources) {
+    try {
+      const result = await syncIcalCalendarSource(source.id, options);
+      total += result.synced;
+      allErrors.push(...result.errors);
+    } catch (error) {
+      const errorMsg = `Failed to sync iCal calendar "${source.dashboardCalendarName}": ${error instanceof Error ? error.message : String(error)}`;
       console.error(`[Sync] ${errorMsg}`);
       allErrors.push(errorMsg);
     }
