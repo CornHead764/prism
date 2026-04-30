@@ -206,6 +206,7 @@ CREATE TABLE IF NOT EXISTS public.calendar_sources (
     access_token text,
     refresh_token text,
     token_expires_at timestamp without time zone,
+    ical_url text,
     last_synced timestamp without time zone,
     sync_errors jsonb,
     created_at timestamp without time zone DEFAULT now() NOT NULL,
