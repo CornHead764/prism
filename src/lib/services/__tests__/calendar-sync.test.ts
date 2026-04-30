@@ -415,6 +415,31 @@ describe('syncIcalCalendarSource', () => {
     );
   });
 
+  it('unwraps PropertyWithArgs objects on summary/description/location', async () => {
+    // Real-world iCal feeds (e.g. Office Holidays) carry parameters on these
+    // properties (`SUMMARY;LANGUAGE=en-us:...`), and node-ical surfaces those
+    // as { params, val } objects rather than plain strings.
+    mockFindFirst.mockResolvedValue(makeIcalSource());
+    mockIcalFromURL.mockResolvedValue({
+      'event-uid-1': makeVEvent({
+        summary: { params: { LANGUAGE: 'en-us' }, val: "New Year's Day" },
+        description: { params: { ALTREP: 'cid:foo' }, val: 'Federal holiday' },
+        location: { params: {}, val: 'USA' },
+      }),
+    });
+
+    const result = await syncIcalCalendarSource('ical-source-1');
+
+    expect(result.synced).toBe(1);
+    expect(mockInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "New Year's Day",
+        description: 'Federal holiday',
+        location: 'USA',
+      })
+    );
+  });
+
   it('skips CANCELLED VEVENTs', async () => {
     mockFindFirst.mockResolvedValue(makeIcalSource());
     mockIcalFromURL.mockResolvedValue({
