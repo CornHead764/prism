@@ -103,6 +103,9 @@ export const calendarSources = pgTable('calendar_sources', {
   refreshToken: text('refresh_token'),
   tokenExpiresAt: timestamp('token_expires_at'),
 
+  // iCal subscription URL (used when provider='ical'; null otherwise)
+  icalUrl: text('ical_url'),
+
   lastSynced: timestamp('last_synced'),
   syncErrors: jsonb('sync_errors'),
 
