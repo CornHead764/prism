@@ -60,11 +60,23 @@ jest.mock('@/lib/utils/crypto', () => ({
   encrypt: (val: string) => `encrypted_${val}`,
 }));
 
+const mockIcalFromURL = jest.fn();
+
+jest.mock('node-ical', () => ({
+  async: {
+    fromURL: (...args: unknown[]) => mockIcalFromURL(...args),
+  },
+}));
+
 // Suppress console.log/error from sync logging
 jest.spyOn(console, 'log').mockImplementation(() => {});
 jest.spyOn(console, 'error').mockImplementation(() => {});
 
-import { syncGoogleCalendarSource, syncAllGoogleCalendars } from '../calendar-sync';
+import {
+  syncGoogleCalendarSource,
+  syncAllGoogleCalendars,
+  syncIcalCalendarSource,
+} from '../calendar-sync';
 
 // --- Helpers ---
 
@@ -320,5 +332,116 @@ describe('syncAllGoogleCalendars', () => {
 
     // First source synced fine, second had error, but both were attempted
     expect(result.errors.length).toBeGreaterThan(0);
+  });
+});
+
+// --- iCal sync ---
+
+function makeIcalSource(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'ical-source-1',
+    provider: 'ical',
+    icalUrl: 'https://example.com/calendar.ics',
+    sourceCalendarId: 'ical_123',
+    dashboardCalendarName: 'Test iCal',
+    enabled: true,
+    ...overrides,
+  };
+}
+
+function makeVEvent(overrides: Record<string, unknown> = {}) {
+  return {
+    type: 'VEVENT',
+    uid: 'event-uid-1',
+    summary: 'Sample Event',
+    description: 'desc',
+    location: 'loc',
+    start: new Date('2026-05-01T10:00:00Z'),
+    end: new Date('2026-05-01T11:00:00Z'),
+    datetype: 'date-time',
+    ...overrides,
+  };
+}
+
+describe('syncIcalCalendarSource', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockFindMany.mockResolvedValue([]);
+  });
+
+  it('returns error when source is not found', async () => {
+    mockFindFirst.mockResolvedValue(null);
+
+    const result = await syncIcalCalendarSource('nonexistent');
+
+    expect(result.synced).toBe(0);
+    expect(result.errors).toContain('Calendar source not found');
+  });
+
+  it('returns error when provider is not ical', async () => {
+    mockFindFirst.mockResolvedValue(makeIcalSource({ provider: 'google' }));
+
+    const result = await syncIcalCalendarSource('ical-source-1');
+
+    expect(result.synced).toBe(0);
+    expect(result.errors).toContain('Not an iCal calendar source');
+  });
+
+  it('returns error when ical_url is missing', async () => {
+    mockFindFirst.mockResolvedValue(makeIcalSource({ icalUrl: null }));
+
+    const result = await syncIcalCalendarSource('ical-source-1');
+
+    expect(result.synced).toBe(0);
+    expect(result.errors).toContain('No iCal URL configured');
+  });
+
+  it('upserts a single non-recurring VEVENT', async () => {
+    mockFindFirst.mockResolvedValue(makeIcalSource());
+    mockIcalFromURL.mockResolvedValue({
+      'event-uid-1': makeVEvent(),
+    });
+
+    const result = await syncIcalCalendarSource('ical-source-1');
+
+    expect(result.synced).toBe(1);
+    expect(result.errors).toHaveLength(0);
+    expect(mockInsertValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        externalEventId: 'event-uid-1',
+        title: 'Sample Event',
+        recurring: false,
+      })
+    );
+  });
+
+  it('skips CANCELLED VEVENTs', async () => {
+    mockFindFirst.mockResolvedValue(makeIcalSource());
+    mockIcalFromURL.mockResolvedValue({
+      'event-uid-1': makeVEvent({ status: 'CANCELLED' }),
+    });
+
+    const result = await syncIcalCalendarSource('ical-source-1');
+
+    expect(result.synced).toBe(0);
+    expect(mockInsertValues).not.toHaveBeenCalled();
+  });
+
+  it('records consecutiveFailures on fetch failure', async () => {
+    mockFindFirst.mockResolvedValue(makeIcalSource());
+    mockIcalFromURL.mockRejectedValue(new Error('connection refused'));
+
+    const result = await syncIcalCalendarSource('ical-source-1');
+
+    expect(result.synced).toBe(0);
+    expect(result.errors[0]).toContain('connection refused');
+    expect(mockUpdateSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        syncErrors: expect.objectContaining({
+          consecutiveFailures: 1,
+          lastError: expect.stringContaining('connection refused'),
+        }),
+      })
+    );
   });
 });
