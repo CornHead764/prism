@@ -364,6 +364,22 @@ function instanceExternalId(uid: string, occurrence: Date): string {
 }
 
 /**
+ * Coerce an iCal property to a plain string. node-ical returns
+ * { params, val } objects when the source property carries parameters
+ * (e.g. `SUMMARY;LANGUAGE=en-us:New Year's Day`), even though its types
+ * declare these fields as plain strings.
+ */
+function readIcalString(value: unknown): string | null {
+  if (value == null) return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object' && value !== null && 'val' in value) {
+    const inner = (value as { val: unknown }).val;
+    return typeof inner === 'string' ? inner : null;
+  }
+  return null;
+}
+
+/**
  * Sync events from a single iCal subscription source.
  *
  * Mirrors syncGoogleCalendarSource: fetches and parses the feed, upserts
@@ -471,9 +487,9 @@ export async function syncIcalCalendarSource(
       }
 
       const recurrenceRule = vevent.rrule ? vevent.rrule.toString() : null;
-      const title = vevent.summary || '(no title)';
-      const description = vevent.description || null;
-      const location = vevent.location || null;
+      const title = readIcalString(vevent.summary) || '(no title)';
+      const description = readIcalString(vevent.description);
+      const location = readIcalString(vevent.location);
 
       for (const inst of instances) {
         externalIds.add(inst.externalId);
