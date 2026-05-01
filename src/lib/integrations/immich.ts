@@ -89,40 +89,70 @@ export function parseImmichShareUrl(url: string): { serverUrl: string; shareKey:
   return { serverUrl, shareKey };
 }
 
+interface RawAsset {
+  id: string;
+  originalFileName: string;
+  originalMimeType: string;
+  type: 'IMAGE' | 'VIDEO' | 'AUDIO' | 'OTHER';
+  fileCreatedAt: string;
+  width?: number | null;
+  height?: number | null;
+  exifInfo?: { latitude?: number | null; longitude?: number | null } | null;
+}
+
 interface RawSharedLinkResponse {
+  type?: 'ALBUM' | 'INDIVIDUAL';
   album?: { id?: string; albumName?: string } | null;
   allowDownload?: boolean;
   password?: string | null;
-  assets?: Array<{
-    id: string;
-    originalFileName: string;
-    originalMimeType: string;
-    type: 'IMAGE' | 'VIDEO' | 'OTHER';
-    fileCreatedAt: string;
-    width?: number | null;
-    height?: number | null;
-    exifInfo?: { latitude?: number | null; longitude?: number | null } | null;
-  }>;
+  assets?: RawAsset[];
 }
 
-function mapSharedLink(raw: RawSharedLinkResponse): ImmichSharedLink {
-  return {
-    albumId: raw.album?.id ?? null,
-    albumName: raw.album?.albumName ?? null,
-    allowDownload: !!raw.allowDownload,
-    hasPassword: raw.password != null,
-    assets: (raw.assets ?? []).map((a) => ({
+function mapAssets(rawAssets: RawAsset[]): ImmichAsset[] {
+  return rawAssets
+    .filter((a): a is RawAsset => !!a && typeof a.id === 'string')
+    .map((a) => ({
       id: a.id,
       originalFileName: a.originalFileName,
       originalMimeType: a.originalMimeType,
-      type: a.type,
+      type: a.type === 'IMAGE' || a.type === 'VIDEO' || a.type === 'OTHER' ? a.type : 'OTHER',
       fileCreatedAt: a.fileCreatedAt,
       width: a.width ?? null,
       height: a.height ?? null,
       latitude: a.exifInfo?.latitude ?? null,
       longitude: a.exifInfo?.longitude ?? null,
-    })),
+    }));
+}
+
+function mapSharedLink(raw: RawSharedLinkResponse, assetsRaw: RawAsset[]): ImmichSharedLink {
+  return {
+    albumId: raw.album?.id ?? null,
+    albumName: raw.album?.albumName ?? null,
+    allowDownload: !!raw.allowDownload,
+    hasPassword: raw.password != null,
+    assets: mapAssets(assetsRaw),
   };
+}
+
+async function fetchAlbumAssets(
+  serverUrl: string,
+  shareKey: string,
+  albumId: string,
+  cookie: string | null,
+): Promise<RawAsset[]> {
+  const url = `${serverUrl}/api/albums/${albumId}?key=${encodeURIComponent(shareKey)}`;
+  const headers: Record<string, string> = {};
+  if (cookie) headers.Cookie = cookie;
+
+  const res = await fetch(url, { headers });
+  if (!res.ok) {
+    throw new Error(
+      `Failed to fetch Immich album ${albumId}: ${res.status} ${res.statusText}`,
+    );
+  }
+
+  const data = (await res.json()) as { assets?: RawAsset[] };
+  return data.assets ?? [];
 }
 
 function extractCookies(headers: Headers): string | null {
@@ -148,7 +178,7 @@ async function loginShare(
   serverUrl: string,
   shareKey: string,
   password: string,
-): Promise<{ link: ImmichSharedLink; cookie: string | null }> {
+): Promise<{ raw: RawSharedLinkResponse; cookie: string | null }> {
   const url = `${serverUrl}/api/shared-links/login?key=${encodeURIComponent(shareKey)}`;
   const res = await fetch(url, {
     method: 'POST',
@@ -167,19 +197,14 @@ async function loginShare(
   }
 
   const raw = (await res.json()) as RawSharedLinkResponse;
-  return { link: mapSharedLink(raw), cookie: extractCookies(res.headers) };
+  return { raw, cookie: extractCookies(res.headers) };
 }
 
-/**
- * Fetch shared link metadata + asset list. Throws typed errors when the share
- * requires a password, the password is wrong, or the share is missing.
- */
-export async function fetchSharedLink(
+async function fetchSharedLinkRaw(
   creds: ImmichShareCredentials,
-): Promise<ImmichSharedLink> {
+): Promise<{ raw: RawSharedLinkResponse; cookie: string | null }> {
   if (creds.password) {
-    const { link } = await loginShare(creds.serverUrl, creds.shareKey, creds.password);
-    return link;
+    return loginShare(creds.serverUrl, creds.shareKey, creds.password);
   }
 
   const url = `${creds.serverUrl}/api/shared-links/me?key=${encodeURIComponent(creds.shareKey)}`;
@@ -195,8 +220,31 @@ export async function fetchSharedLink(
     throw new Error(`Immich shared-link fetch failed: ${res.status} ${res.statusText}`);
   }
 
-  const raw = (await res.json()) as RawSharedLinkResponse;
-  return mapSharedLink(raw);
+  return { raw: (await res.json()) as RawSharedLinkResponse, cookie: null };
+}
+
+/**
+ * Fetch shared link metadata + asset list. Throws typed errors when the share
+ * requires a password, the password is wrong, or the share is missing.
+ *
+ * For ALBUM-type shares, Immich's /shared-links/* endpoints return the album
+ * metadata but exclude its asset list — so we follow up with /albums/{id} to
+ * get the photos. For INDIVIDUAL-type shares, the asset list is returned
+ * inline on the share response itself.
+ */
+export async function fetchSharedLink(
+  creds: ImmichShareCredentials,
+): Promise<ImmichSharedLink> {
+  const { raw, cookie } = await fetchSharedLinkRaw(creds);
+
+  let assetsRaw: RawAsset[];
+  if (raw.type === 'ALBUM' && raw.album?.id) {
+    assetsRaw = await fetchAlbumAssets(creds.serverUrl, creds.shareKey, raw.album.id, cookie);
+  } else {
+    assetsRaw = raw.assets ?? [];
+  }
+
+  return mapSharedLink(raw, assetsRaw);
 }
 
 /**

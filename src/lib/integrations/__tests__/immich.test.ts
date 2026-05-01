@@ -140,6 +140,122 @@ describe('fetchSharedLink (public)', () => {
   });
 });
 
+describe('fetchSharedLink (ALBUM-type follow-up)', () => {
+  it('follows up with /albums/{id} when share type is ALBUM (assets live there, not on the share)', async () => {
+    mockFetchSequence([
+      // /shared-links/me — ALBUM-type shares return album metadata only, no assets.
+      () => ({
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        json: () =>
+          Promise.resolve({
+            type: 'ALBUM',
+            album: { id: 'album-uuid', albumName: 'Cats' },
+            allowDownload: true,
+            password: null,
+            assets: [],
+          }),
+      }),
+      // /albums/{id} — the actual asset list.
+      () => ({
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        json: () =>
+          Promise.resolve({
+            id: 'album-uuid',
+            albumName: 'Cats',
+            assets: [
+              {
+                id: 'a1',
+                originalFileName: 'kitten.jpg',
+                originalMimeType: 'image/jpeg',
+                type: 'IMAGE',
+                fileCreatedAt: '2025-06-01T00:00:00.000Z',
+                width: 1920,
+                height: 1080,
+                exifInfo: { latitude: null, longitude: null },
+              },
+            ],
+          }),
+      }),
+    ]);
+
+    const link = await fetchSharedLink({ serverUrl: 'https://im', shareKey: 'k' });
+
+    const calls = (global.fetch as jest.Mock).mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(calls[0][0]).toBe('https://im/api/shared-links/me?key=k');
+    expect(calls[1][0]).toBe('https://im/api/albums/album-uuid?key=k');
+
+    expect(link.albumId).toBe('album-uuid');
+    expect(link.assets).toHaveLength(1);
+    expect(link.assets[0]).toMatchObject({ id: 'a1', originalFileName: 'kitten.jpg' });
+  });
+
+  it('forwards the login session cookie on the album request for password-protected ALBUM shares', async () => {
+    const loginHeaders = new Headers();
+    loginHeaders.append('set-cookie', 'immich_shared_link_token=abc; Path=/; HttpOnly');
+
+    mockFetchSequence([
+      () => ({
+        ok: true,
+        status: 201,
+        headers: loginHeaders,
+        json: () =>
+          Promise.resolve({
+            type: 'ALBUM',
+            album: { id: 'album-uuid' },
+            password: 'hash',
+            assets: [],
+          }),
+      }),
+      () => ({
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        json: () => Promise.resolve({ assets: [] }),
+      }),
+    ]);
+
+    await fetchSharedLink({ serverUrl: 'https://im', shareKey: 'k', password: 'pw' });
+
+    const albumCall = (global.fetch as jest.Mock).mock.calls[1];
+    expect(albumCall[0]).toBe('https://im/api/albums/album-uuid?key=k');
+    expect(albumCall[1].headers.Cookie).toContain('immich_shared_link_token=abc');
+  });
+
+  it('skips the follow-up call for INDIVIDUAL-type shares (assets are inline)', async () => {
+    mockFetchOnce(() => ({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      json: () =>
+        Promise.resolve({
+          type: 'INDIVIDUAL',
+          album: null,
+          password: null,
+          assets: [
+            {
+              id: 'a1',
+              originalFileName: 'one.jpg',
+              originalMimeType: 'image/jpeg',
+              type: 'IMAGE',
+              fileCreatedAt: '2025-01-01T00:00:00.000Z',
+              exifInfo: null,
+            },
+          ],
+        }),
+    }));
+
+    const link = await fetchSharedLink({ serverUrl: 'https://im', shareKey: 'k' });
+
+    expect((global.fetch as jest.Mock).mock.calls).toHaveLength(1);
+    expect(link.assets).toHaveLength(1);
+  });
+});
+
 describe('fetchSharedLink (password-protected)', () => {
   it('POSTs to /shared-links/login with the password as JSON body', async () => {
     mockFetchOnce(() => ({
