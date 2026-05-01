@@ -10,9 +10,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { logError } from '@/lib/utils/logError';
+import { db } from '@/lib/db/client';
+import { calendarSources } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 import {
   syncAllGoogleCalendars,
   syncGoogleCalendarSource,
+  syncAllIcalCalendars,
+  syncIcalCalendarSource,
 } from '@/lib/services/calendar-sync';
 
 /**
@@ -57,13 +62,31 @@ export async function POST(request: NextRequest) {
     let result: { synced?: number; total?: number; errors: string[] };
 
     if (body.calendarId) {
-      // Sync specific calendar
-      const syncResult = await syncGoogleCalendarSource(body.calendarId, options);
+      // Sync specific calendar — dispatch by provider
+      const source = await db.query.calendarSources.findFirst({
+        where: eq(calendarSources.id, body.calendarId),
+        columns: { id: true, provider: true },
+      });
+      if (!source) {
+        return NextResponse.json(
+          { error: 'Calendar source not found' },
+          { status: 404 }
+        );
+      }
+      const syncResult = source.provider === 'ical'
+        ? await syncIcalCalendarSource(body.calendarId, options)
+        : await syncGoogleCalendarSource(body.calendarId, options);
       result = { synced: syncResult.synced, errors: syncResult.errors };
     } else {
-      // Sync all calendars
-      const syncResult = await syncAllGoogleCalendars(options);
-      result = { total: syncResult.total, errors: syncResult.errors };
+      // Sync all calendars across all supported providers
+      const [google, ical] = await Promise.all([
+        syncAllGoogleCalendars(options),
+        syncAllIcalCalendars(options),
+      ]);
+      result = {
+        total: google.total + ical.total,
+        errors: [...google.errors, ...ical.errors],
+      };
     }
 
     // Return appropriate response based on results
