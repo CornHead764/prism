@@ -1,12 +1,14 @@
 import { db } from '@/lib/db/client';
 import { photos, photoSources } from '@/lib/db/schema';
-import { eq, isNull, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import {
   listPhotosInFolder,
   downloadPhoto,
   refreshAccessToken,
 } from '@/lib/integrations/onedrive';
+import { fetchSharedLink, type ImmichShareCredentials } from '@/lib/integrations/immich';
 import { savePhoto, deletePhoto, getPhotoPath } from './photo-storage';
+import { clearPhotoCache } from './photo-cache';
 import { promises as fs } from 'fs';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
 import exifr from 'exifr';
@@ -168,6 +170,104 @@ export async function syncOneDriveSource(sourceId: string) {
   }
 
   // Update last synced
+  await db
+    .update(photoSources)
+    .set({ lastSynced: new Date(), updatedAt: new Date() })
+    .where(eq(photoSources.id, sourceId));
+}
+
+export async function syncImmichSource(sourceId: string) {
+  const source = await db.query.photoSources.findFirst({
+    where: eq(photoSources.id, sourceId),
+  });
+
+  if (!source || source.type !== 'immich') {
+    throw new Error('Invalid Immich photo source');
+  }
+  if (!source.immichServerUrl || !source.immichShareKey) {
+    throw new Error('Immich photo source is missing server URL or share key');
+  }
+
+  const creds: ImmichShareCredentials = {
+    serverUrl: source.immichServerUrl,
+    shareKey: source.immichShareKey,
+    password: source.immichPasswordEnc ? decrypt(source.immichPasswordEnc) : null,
+  };
+
+  const link = await fetchSharedLink(creds);
+
+  // Cache the album ID on first successful sync so we have it for diagnostics.
+  if (link.albumId && link.albumId !== source.immichAlbumId) {
+    await db
+      .update(photoSources)
+      .set({ immichAlbumId: link.albumId, updatedAt: new Date() })
+      .where(eq(photoSources.id, sourceId));
+  }
+
+  // Only sync image assets — video/other types aren't displayed in the gallery.
+  const remoteImages = link.assets.filter((a) => a.type === 'IMAGE');
+  const remoteIds = new Set(remoteImages.map((a) => a.id));
+
+  const existingPhotos = await db
+    .select()
+    .from(photos)
+    .where(eq(photos.sourceId, sourceId));
+
+  const existingExternalIds = new Set(
+    existingPhotos.map((p) => p.externalId).filter((x): x is string => !!x),
+  );
+
+  // Insert new assets as external metadata-only records (proxy serves bytes
+  // on demand, with the local cache absorbing repeat requests).
+  for (const asset of remoteImages) {
+    if (existingExternalIds.has(asset.id)) continue;
+
+    const takenAt = asset.fileCreatedAt ? new Date(asset.fileCreatedAt) : null;
+
+    await db.insert(photos).values({
+      sourceId,
+      filename: asset.id,
+      originalFilename: asset.originalFileName,
+      mimeType: asset.originalMimeType || 'image/jpeg',
+      width: asset.width,
+      height: asset.height,
+      sizeBytes: null,
+      takenAt,
+      externalId: asset.id,
+      thumbnailPath: null,
+      latitude: asset.latitude != null ? asset.latitude.toString() : null,
+      longitude: asset.longitude != null ? asset.longitude.toString() : null,
+      isExternal: true,
+      usage: 'wallpaper,gallery,screensaver',
+    });
+  }
+
+  // Backfill GPS for existing rows whose coordinates are still null but
+  // Immich now has them (e.g. user added geotags after the first sync).
+  for (const existing of existingPhotos) {
+    if (existing.latitude != null && existing.longitude != null) continue;
+    if (!existing.externalId) continue;
+    const remote = remoteImages.find((a) => a.id === existing.externalId);
+    if (!remote) continue;
+    if (remote.latitude == null || remote.longitude == null) continue;
+
+    await db
+      .update(photos)
+      .set({
+        latitude: remote.latitude.toString(),
+        longitude: remote.longitude.toString(),
+      })
+      .where(eq(photos.id, existing.id));
+  }
+
+  // Remove photos no longer in the album, including any cached bytes.
+  for (const existing of existingPhotos) {
+    if (existing.externalId && !remoteIds.has(existing.externalId)) {
+      await clearPhotoCache(sourceId, existing.externalId);
+      await db.delete(photos).where(eq(photos.id, existing.id));
+    }
+  }
+
   await db
     .update(photoSources)
     .set({ lastSynced: new Date(), updatedAt: new Date() })

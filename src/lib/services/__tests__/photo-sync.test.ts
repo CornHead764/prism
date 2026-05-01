@@ -46,6 +46,13 @@ jest.mock('@/lib/integrations/onedrive', () => ({
   refreshAccessToken: (...args: unknown[]) => mockRefreshAccessToken(...args),
 }));
 
+// --- Immich mock ---
+const mockFetchSharedLink = jest.fn();
+
+jest.mock('@/lib/integrations/immich', () => ({
+  fetchSharedLink: (...args: unknown[]) => mockFetchSharedLink(...args),
+}));
+
 // --- Photo storage mock ---
 const mockSavePhoto = jest.fn();
 const mockDeletePhoto = jest.fn();
@@ -55,13 +62,20 @@ jest.mock('../photo-storage', () => ({
   deletePhoto: (...args: unknown[]) => mockDeletePhoto(...args),
 }));
 
+// --- Photo cache mock ---
+const mockClearPhotoCache = jest.fn().mockResolvedValue(undefined);
+
+jest.mock('../photo-cache', () => ({
+  clearPhotoCache: (...args: unknown[]) => mockClearPhotoCache(...args),
+}));
+
 // --- Crypto mock ---
 jest.mock('@/lib/utils/crypto', () => ({
   decrypt: jest.fn((val: string) => `decrypted-${val}`),
   encrypt: jest.fn((val: string) => `encrypted-${val}`),
 }));
 
-import { syncOneDriveSource } from '../photo-sync';
+import { syncOneDriveSource, syncImmichSource } from '../photo-sync';
 
 const validSource = {
   id: 'source-1',
@@ -188,5 +202,197 @@ describe('syncOneDriveSource', () => {
 
     // Last call to update...set...where is the lastSynced update
     expect(mockUpdateSetWhere).toHaveBeenCalled();
+  });
+});
+
+const validImmichSource = {
+  id: 'immich-source-1',
+  type: 'immich',
+  immichServerUrl: 'https://immich.example.com',
+  immichShareKey: 'share-key-abc',
+  immichPasswordEnc: null,
+  immichAlbumId: null,
+};
+
+function makeAsset(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'asset-1',
+    originalFileName: 'IMG.jpg',
+    originalMimeType: 'image/jpeg',
+    type: 'IMAGE',
+    fileCreatedAt: '2025-01-01T00:00:00.000Z',
+    width: 4032,
+    height: 3024,
+    latitude: null,
+    longitude: null,
+    ...overrides,
+  };
+}
+
+describe('syncImmichSource', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockFindFirst.mockResolvedValue(validImmichSource);
+    mockSelectFrom.mockResolvedValue([]);
+    mockFetchSharedLink.mockResolvedValue({
+      albumId: 'album-1',
+      albumName: 'Vacation',
+      allowDownload: true,
+      hasPassword: false,
+      assets: [],
+    });
+  });
+
+  it('throws when source does not exist', async () => {
+    mockFindFirst.mockResolvedValue(null);
+    await expect(syncImmichSource('bad-id')).rejects.toThrow('Invalid Immich photo source');
+  });
+
+  it('throws when source type is not immich', async () => {
+    mockFindFirst.mockResolvedValue({ ...validImmichSource, type: 'onedrive' });
+    await expect(syncImmichSource('immich-source-1')).rejects.toThrow('Invalid Immich photo source');
+  });
+
+  it('throws when missing server URL or share key', async () => {
+    mockFindFirst.mockResolvedValue({ ...validImmichSource, immichServerUrl: null });
+    await expect(syncImmichSource('immich-source-1')).rejects.toThrow(
+      'missing server URL or share key',
+    );
+  });
+
+  it('decrypts the password before calling fetchSharedLink', async () => {
+    mockFindFirst.mockResolvedValue({
+      ...validImmichSource,
+      immichPasswordEnc: 'enc-pw',
+    });
+
+    await syncImmichSource('immich-source-1');
+
+    expect(mockFetchSharedLink).toHaveBeenCalledWith({
+      serverUrl: 'https://immich.example.com',
+      shareKey: 'share-key-abc',
+      password: 'decrypted-enc-pw',
+    });
+  });
+
+  it('passes null password when no encrypted password is stored', async () => {
+    await syncImmichSource('immich-source-1');
+
+    expect(mockFetchSharedLink).toHaveBeenCalledWith({
+      serverUrl: 'https://immich.example.com',
+      shareKey: 'share-key-abc',
+      password: null,
+    });
+  });
+
+  it('inserts new IMAGE assets as external rows', async () => {
+    mockFetchSharedLink.mockResolvedValue({
+      albumId: 'album-1',
+      albumName: null,
+      allowDownload: true,
+      hasPassword: false,
+      assets: [
+        makeAsset({ id: 'a1', originalFileName: 'one.jpg' }),
+        makeAsset({ id: 'a2', originalFileName: 'two.jpg', latitude: 37.5, longitude: -122.3 }),
+      ],
+    });
+
+    await syncImmichSource('immich-source-1');
+
+    const inserted = mockInsertValues.mock.calls.map((c) => c[0]);
+    expect(inserted).toHaveLength(2);
+    expect(inserted[0]).toMatchObject({
+      sourceId: 'immich-source-1',
+      filename: 'a1',
+      externalId: 'a1',
+      isExternal: true,
+      latitude: null,
+      longitude: null,
+    });
+    expect(inserted[1]).toMatchObject({
+      filename: 'a2',
+      latitude: '37.5',
+      longitude: '-122.3',
+    });
+  });
+
+  it('skips non-IMAGE assets (videos, other)', async () => {
+    mockFetchSharedLink.mockResolvedValue({
+      albumId: 'album-1',
+      albumName: null,
+      allowDownload: true,
+      hasPassword: false,
+      assets: [
+        makeAsset({ id: 'a1', type: 'IMAGE' }),
+        makeAsset({ id: 'v1', type: 'VIDEO' }),
+        makeAsset({ id: 'o1', type: 'OTHER' }),
+      ],
+    });
+
+    await syncImmichSource('immich-source-1');
+
+    expect(mockInsertValues).toHaveBeenCalledTimes(1);
+    expect(mockInsertValues.mock.calls[0][0]).toMatchObject({ filename: 'a1' });
+  });
+
+  it('does not re-insert assets already present locally', async () => {
+    mockFetchSharedLink.mockResolvedValue({
+      albumId: 'album-1',
+      albumName: null,
+      allowDownload: true,
+      hasPassword: false,
+      assets: [makeAsset({ id: 'a1' })],
+    });
+    mockSelectFrom.mockResolvedValue([
+      { id: 'photo-1', externalId: 'a1', latitude: null, longitude: null },
+    ]);
+
+    await syncImmichSource('immich-source-1');
+
+    expect(mockInsertValues).not.toHaveBeenCalled();
+  });
+
+  it('removes photos no longer in the album and clears their cache', async () => {
+    mockFetchSharedLink.mockResolvedValue({
+      albumId: 'album-1',
+      albumName: null,
+      allowDownload: true,
+      hasPassword: false,
+      assets: [],
+    });
+    mockSelectFrom.mockResolvedValue([
+      { id: 'photo-1', externalId: 'gone-asset', latitude: null, longitude: null },
+    ]);
+
+    await syncImmichSource('immich-source-1');
+
+    expect(mockClearPhotoCache).toHaveBeenCalledWith('immich-source-1', 'gone-asset');
+    expect(mockDeleteWhere).toHaveBeenCalled();
+  });
+
+  it('backfills GPS for existing rows when Immich now has coordinates', async () => {
+    mockFetchSharedLink.mockResolvedValue({
+      albumId: 'album-1',
+      albumName: null,
+      allowDownload: true,
+      hasPassword: false,
+      assets: [makeAsset({ id: 'a1', latitude: 12.34, longitude: 56.78 })],
+    });
+    mockSelectFrom.mockResolvedValue([
+      { id: 'photo-1', externalId: 'a1', latitude: null, longitude: null },
+    ]);
+
+    await syncImmichSource('immich-source-1');
+
+    // The GPS backfill update + the final lastSynced update both go through
+    // mockUpdateSetWhere; both should fire.
+    expect(mockUpdateSetWhere).toHaveBeenCalled();
+  });
+
+  it('caches the album ID on first successful sync', async () => {
+    await syncImmichSource('immich-source-1');
+
+    // album ID update + lastSynced update => at least 2 calls
+    expect(mockUpdateSetWhere.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 });

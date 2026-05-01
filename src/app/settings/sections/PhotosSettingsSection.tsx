@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Plus, RefreshCw, Trash2, Cloud, HardDrive, Pin, X, FolderOpen, MapPin, ChevronRight } from 'lucide-react';
+import { Plus, RefreshCw, Trash2, Cloud, HardDrive, Pin, X, FolderOpen, MapPin, ChevronRight, Image as ImageIcon } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useConfirmDialog } from '@/lib/hooks/useConfirmDialog';
 import { cn } from '@/lib/utils';
@@ -15,7 +15,7 @@ import { toast } from '@/components/ui/use-toast';
 
 interface PhotoSource {
   id: string;
-  type: 'local' | 'onedrive';
+  type: 'local' | 'onedrive' | 'immich';
   name: string;
   onedriveFolderId: string | null;
   enabled: boolean;
@@ -39,6 +39,13 @@ export function PhotosSettingsSection() {
   const [folderStack, setFolderStack] = React.useState<{ id: string; name: string }[]>([]);
   const [folders, setFolders] = React.useState<OneDriveFolder[]>([]);
   const [foldersLoading, setFoldersLoading] = React.useState(false);
+
+  const [showImmichForm, setShowImmichForm] = React.useState(false);
+  const [immichShareUrl, setImmichShareUrl] = React.useState('');
+  const [immichPassword, setImmichPassword] = React.useState('');
+  const [immichPasswordRequired, setImmichPasswordRequired] = React.useState(false);
+  const [immichSubmitting, setImmichSubmitting] = React.useState(false);
+  const [immichError, setImmichError] = React.useState<string | null>(null);
 
   const fetchSources = React.useCallback(async () => {
     try {
@@ -142,6 +149,63 @@ export function PhotosSettingsSection() {
       handleSync(sourceId);
     } catch (err) {
       console.error('Error setting folder:', err);
+    }
+  };
+
+  const resetImmichForm = () => {
+    setShowImmichForm(false);
+    setImmichShareUrl('');
+    setImmichPassword('');
+    setImmichPasswordRequired(false);
+    setImmichError(null);
+  };
+
+  const handleConnectImmich = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!immichShareUrl.trim()) {
+      setImmichError('Share URL is required');
+      return;
+    }
+
+    setImmichSubmitting(true);
+    setImmichError(null);
+    try {
+      const res = await fetch('/api/photo-sources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'immich',
+          shareUrl: immichShareUrl.trim(),
+          password: immichPassword || undefined,
+        }),
+      });
+
+      if (res.ok) {
+        const created = await res.json().catch(() => null);
+        resetImmichForm();
+        await fetchSources();
+        if (created?.id) {
+          handleSync(created.id);
+        }
+        return;
+      }
+
+      const data = await res.json().catch(() => ({}));
+      if (data.error === 'password_required') {
+        setImmichPasswordRequired(true);
+        setImmichError('This shared link is password-protected. Enter the password below.');
+      } else if (data.error === 'invalid_password') {
+        setImmichPasswordRequired(true);
+        setImmichError('Incorrect password.');
+      } else if (data.error === 'not_found') {
+        setImmichError('Shared link not found at that URL.');
+      } else {
+        setImmichError(data.message || data.error || 'Failed to connect to Immich.');
+      }
+    } catch (err) {
+      setImmichError(err instanceof Error ? err.message : 'Failed to connect to Immich.');
+    } finally {
+      setImmichSubmitting(false);
     }
   };
 
@@ -280,9 +344,13 @@ export function PhotosSettingsSection() {
                 <div key={source.id} className="space-y-0">
                   <div className="flex items-center justify-between p-3 rounded-lg border">
                     <div className="flex items-center gap-3 min-w-0">
-                      {source.type === 'onedrive'
-                        ? <Cloud className="h-5 w-5 text-blue-500 shrink-0" />
-                        : <HardDrive className="h-5 w-5 text-muted-foreground shrink-0" />}
+                      {source.type === 'onedrive' ? (
+                        <Cloud className="h-5 w-5 text-blue-500 shrink-0" />
+                      ) : source.type === 'immich' ? (
+                        <ImageIcon className="h-5 w-5 text-purple-500 shrink-0" />
+                      ) : (
+                        <HardDrive className="h-5 w-5 text-muted-foreground shrink-0" />
+                      )}
                       <div className="min-w-0">
                         <p className="font-medium text-sm truncate">{source.name}</p>
                         <p className="text-xs text-muted-foreground">
@@ -295,6 +363,18 @@ export function PhotosSettingsSection() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0 ml-2">
+                      {source.type === 'immich' && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleSync(source.id)}
+                          disabled={syncing === source.id}
+                          title="Sync now"
+                        >
+                          <RefreshCw className={cn('h-4 w-4', syncing === source.id && 'animate-spin')} />
+                        </Button>
+                      )}
                       {source.type === 'onedrive' && (
                         <>
                           <Button
@@ -428,6 +508,83 @@ export function PhotosSettingsSection() {
                   <Cloud className="h-5 w-5 text-blue-500" />
                   Connect OneDrive to sync photos
                 </button>
+              )}
+
+              {/* Connect Immich CTA — always available, since multiple albums are fine */}
+              {!showImmichForm && (
+                <button
+                  onClick={() => setShowImmichForm(true)}
+                  className="flex items-center gap-3 w-full p-3 rounded-lg border border-dashed hover:bg-muted/50 transition-colors text-sm text-muted-foreground hover:text-foreground"
+                >
+                  <ImageIcon className="h-5 w-5 text-purple-500" />
+                  Connect Immich shared album
+                </button>
+              )}
+
+              {showImmichForm && (
+                <form
+                  onSubmit={handleConnectImmich}
+                  className="rounded-lg border p-4 space-y-3 bg-muted/20"
+                >
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <ImageIcon className="h-4 w-4 text-purple-500" />
+                    Connect Immich shared album
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1" htmlFor="immich-share-url">
+                      Shared link URL
+                    </label>
+                    <Input
+                      id="immich-share-url"
+                      type="url"
+                      required
+                      placeholder="https://immich.example.com/share/abc123"
+                      value={immichShareUrl}
+                      onChange={(e) => setImmichShareUrl(e.target.value)}
+                      disabled={immichSubmitting}
+                      className="text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Photos are pulled from the album each time you sync.
+                    </p>
+                  </div>
+
+                  {immichPasswordRequired && (
+                    <div>
+                      <label className="block text-xs font-medium mb-1" htmlFor="immich-password">
+                        Password
+                      </label>
+                      <Input
+                        id="immich-password"
+                        type="password"
+                        value={immichPassword}
+                        onChange={(e) => setImmichPassword(e.target.value)}
+                        disabled={immichSubmitting}
+                        autoFocus
+                        className="text-sm"
+                      />
+                    </div>
+                  )}
+
+                  {immichError && (
+                    <p className="text-xs text-destructive">{immichError}</p>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Button type="submit" size="sm" disabled={immichSubmitting}>
+                      {immichSubmitting ? 'Connecting…' : 'Connect'}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={resetImmichForm}
+                      disabled={immichSubmitting}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
               )}
             </>
           )}

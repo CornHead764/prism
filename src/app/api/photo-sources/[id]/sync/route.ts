@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
-import { syncOneDriveSource } from '@/lib/services/photo-sync';
+import { db } from '@/lib/db/client';
+import { photoSources } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
+import { syncOneDriveSource, syncImmichSource } from '@/lib/services/photo-sync';
 import { logError } from '@/lib/utils/logError';
 
 export async function POST(
@@ -12,7 +15,24 @@ export async function POST(
 
   try {
     const { id } = await params;
-    await syncOneDriveSource(id);
+    const source = await db.query.photoSources.findFirst({
+      where: eq(photoSources.id, id),
+    });
+    if (!source) {
+      return NextResponse.json({ error: 'Source not found' }, { status: 404 });
+    }
+
+    if (source.type === 'immich') {
+      await syncImmichSource(id);
+    } else if (source.type === 'onedrive') {
+      await syncOneDriveSource(id);
+    } else {
+      return NextResponse.json(
+        { error: `Sync not supported for source type "${source.type}"` },
+        { status: 400 },
+      );
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     logError('Error syncing photo source:', error);
