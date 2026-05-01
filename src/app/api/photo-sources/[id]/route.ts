@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client';
 import { photoSources, photos } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { deletePhoto } from '@/lib/services/photo-storage';
+import { clearSourceCache } from '@/lib/services/photo-cache';
 import { logError } from '@/lib/utils/logError';
 
 export async function PATCH(
@@ -49,15 +50,20 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    // Delete all photo files for this source
+    // Delete locally-stored files (skip external/proxied photos — they have
+    // no file on disk under data/photos/originals).
     const sourcePhotos = await db
       .select()
       .from(photos)
       .where(eq(photos.sourceId, id));
 
     for (const photo of sourcePhotos) {
+      if (photo.isExternal) continue;
       await deletePhoto(photo.filename, photo.thumbnailPath);
     }
+
+    // Wipe the proxy cache for this source (no-op for non-Immich sources).
+    await clearSourceCache(id);
 
     // Cascade delete will remove photos from DB
     await db.delete(photoSources).where(eq(photoSources.id, id));

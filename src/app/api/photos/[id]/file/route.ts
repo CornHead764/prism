@@ -4,9 +4,11 @@ import { db } from '@/lib/db/client';
 import { photos, photoSources } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { getPhotoPath } from '@/lib/services/photo-storage';
+import { readPhotoCache, writePhotoCache } from '@/lib/services/photo-cache';
 import { promises as fs } from 'fs';
 import { decrypt, encrypt } from '@/lib/utils/crypto';
 import { refreshAccessToken } from '@/lib/integrations/onedrive';
+import { downloadImmichAsset, type ImmichShareCredentials } from '@/lib/integrations/immich';
 import { logError } from '@/lib/utils/logError';
 
 const GRAPH_API = 'https://graph.microsoft.com/v1.0';
@@ -55,8 +57,59 @@ export async function GET(
       return NextResponse.json({ error: 'Photo not found' }, { status: 404 });
     }
 
-    // External photos: proxy through OneDrive on demand
+    // External photos: proxy through the upstream source on demand.
     if (photo.isExternal && photo.externalId) {
+      const source = await db.query.photoSources.findFirst({
+        where: eq(photoSources.id, photo.sourceId),
+      });
+      if (!source) {
+        return NextResponse.json({ error: 'Source not found' }, { status: 404 });
+      }
+
+      if (source.type === 'immich') {
+        // Try the local cache first; on miss, fetch from Immich and populate.
+        const cached = await readPhotoCache(photo.sourceId, photo.externalId, thumb);
+        if (cached) {
+          return new NextResponse(cached.buffer, {
+            headers: {
+              'Content-Type': cached.contentType,
+              'Cache-Control': 'public, max-age=3600',
+              'Content-Length': cached.buffer.length.toString(),
+            },
+          });
+        }
+
+        if (!source.immichServerUrl || !source.immichShareKey) {
+          return NextResponse.json(
+            { error: 'Immich source missing credentials' },
+            { status: 500 },
+          );
+        }
+
+        const creds: ImmichShareCredentials = {
+          serverUrl: source.immichServerUrl,
+          shareKey: source.immichShareKey,
+          password: source.immichPasswordEnc ? decrypt(source.immichPasswordEnc) : null,
+        };
+
+        const { buffer, contentType } = await downloadImmichAsset(
+          creds,
+          photo.externalId,
+          { thumb },
+        );
+
+        await writePhotoCache(photo.sourceId, photo.externalId, thumb, buffer, contentType);
+
+        return new NextResponse(buffer, {
+          headers: {
+            'Content-Type': contentType,
+            'Cache-Control': 'public, max-age=3600',
+            'Content-Length': buffer.length.toString(),
+          },
+        });
+      }
+
+      // OneDrive: proxy through Graph with token refresh.
       const accessToken = await getValidToken(photo.sourceId);
 
       let url: string;

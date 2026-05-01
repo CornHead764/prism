@@ -1017,7 +1017,7 @@ export const photoSources = pgTable('photo_sources', {
   id: uuid('id').defaultRandom().primaryKey(),
 
   type: varchar('type', { length: 20 }).notNull()
-    .$type<'local' | 'onedrive'>(),
+    .$type<'local' | 'onedrive' | 'immich'>(),
 
   name: varchar('name', { length: 255 }).notNull(),
 
@@ -1027,6 +1027,12 @@ export const photoSources = pgTable('photo_sources', {
   accessToken: text('access_token'),
   refreshToken: text('refresh_token'),
   tokenExpiresAt: timestamp('token_expires_at'),
+
+  // Immich shared-link sources
+  immichServerUrl: text('immich_server_url'),
+  immichShareKey: text('immich_share_key'),
+  immichPasswordEnc: text('immich_password_enc'),
+  immichAlbumId: text('immich_album_id'),
 
   lastSynced: timestamp('last_synced'),
   syncErrors: jsonb('sync_errors'),
