@@ -64,6 +64,7 @@ interface UseGoalsResult {
   deleteGoal: (id: string) => Promise<void>;
   reorderGoals: (goalIds: string[]) => Promise<void>;
   resetGoal: (goalId: string) => Promise<void>;
+  redeemGoal: (goalId: string, userId: string, notes?: string) => Promise<void>;
 }
 
 export function useGoals(options: { refreshInterval?: number; enabled?: boolean } = {}): UseGoalsResult {
@@ -162,12 +163,25 @@ export function useGoals(options: { refreshInterval?: number; enabled?: boolean 
     await fetchGoals();
   }, [fetchGoals]);
 
+  const redeemGoal = useCallback(async (goalId: string, userId: string, notes?: string) => {
+    const response = await fetch(`/api/goals/${goalId}/redeem`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, notes }),
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'Failed to redeem goal');
+    }
+    await fetchGoals();
+  }, [fetchGoals]);
+
   useEffect(() => { if (enabled) fetchGoals(); }, [fetchGoals, enabled]);
 
   useVisibilityPolling(fetchGoals, enabled ? refreshInterval : 0);
 
   return {
     goals, progress, goalChildren, loading, error,
-    refresh: fetchGoals, createGoal, updateGoal, deleteGoal, reorderGoals, resetGoal,
+    refresh: fetchGoals, createGoal, updateGoal, deleteGoal, reorderGoals, resetGoal, redeemGoal,
   };
 }

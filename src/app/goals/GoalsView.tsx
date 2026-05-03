@@ -10,10 +10,12 @@ import {
   ChevronUp,
   ChevronDown,
   GripVertical,
-  RotateCcw,
+  Gift,
+  History,
   AlertCircle,
   RefreshCw,
 } from 'lucide-react';
+import { format, formatDistanceToNow, parseISO } from 'date-fns';
 import { useDragReorder } from '@/lib/hooks/useDragReorder';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { UserAvatar } from '@/components/ui/avatar';
 import {
   Dialog,
   DialogContent,
@@ -38,6 +41,7 @@ import {
 import { PageWrapper, SubpageHeader } from '@/components/layout';
 import { useGoals, type Goal } from '@/lib/hooks/useGoals';
 import { usePoints } from '@/lib/hooks/usePoints';
+import { useRedemptions } from '@/lib/hooks/useRedemptions';
 import { useAuth } from '@/components/providers';
 import { GoalCelebration } from '@/components/ui/GoalCelebration';
 import { cn } from '@/lib/utils';
@@ -50,9 +54,10 @@ export function GoalsView() {
 
   const {
     goals, progress, goalChildren, loading: goalsLoading, error: goalsError,
-    createGoal, updateGoal, deleteGoal, reorderGoals, resetGoal, refresh: refreshGoals,
+    createGoal, updateGoal, deleteGoal, reorderGoals, redeemGoal, refresh: refreshGoals,
   } = useGoals();
   const { points, loading: pointsLoading, error: pointsError } = usePoints();
+  const { redemptions, refresh: refreshRedemptions } = useRedemptions();
 
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
@@ -173,8 +178,38 @@ export function GoalsView() {
     try { await reorderGoals(ids); } catch (err) { console.error('Failed to reorder:', err); }
   };
 
-  const handleReset = async (goalId: string) => {
-    try { await resetGoal(goalId); } catch (err) { console.error('Failed to reset:', err); }
+  // Redeem dialog state
+  const [redeemingGoal, setRedeemingGoal] = useState<Goal | null>(null);
+  const [redeemUserId, setRedeemUserId] = useState<string>('');
+  const [redeemNotes, setRedeemNotes] = useState('');
+  const [redeemSubmitting, setRedeemSubmitting] = useState(false);
+
+  const openRedeemDialog = (goal: Goal) => {
+    setRedeemingGoal(goal);
+    // Default to first child who actually achieved this goal
+    const firstAchiever = goalChildren.find((c) => progress[c.userId]?.[goal.id]?.achieved);
+    setRedeemUserId(firstAchiever?.userId ?? goalChildren[0]?.userId ?? '');
+    setRedeemNotes('');
+  };
+
+  const closeRedeemDialog = () => {
+    setRedeemingGoal(null);
+    setRedeemUserId('');
+    setRedeemNotes('');
+  };
+
+  const handleConfirmRedeem = async () => {
+    if (!redeemingGoal || !redeemUserId) return;
+    setRedeemSubmitting(true);
+    try {
+      await redeemGoal(redeemingGoal.id, redeemUserId, redeemNotes.trim() || undefined);
+      await refreshRedemptions();
+      closeRedeemDialog();
+    } catch (err) {
+      console.error('Failed to redeem:', err);
+    } finally {
+      setRedeemSubmitting(false);
+    }
   };
 
   return (
@@ -358,11 +393,11 @@ export function GoalsView() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleReset(goal.id)}
+                            onClick={() => openRedeemDialog(goal)}
                             className="text-green-600 hover:text-green-700"
                           >
-                            <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                            Reset
+                            <Gift className="h-3.5 w-3.5 mr-1" />
+                            Redeem
                           </Button>
                         )}
                         <Button variant="ghost" size="sm" onClick={() => openEditModal(goal)} aria-label="Edit goal">
@@ -384,6 +419,51 @@ export function GoalsView() {
               </div>
             )}
           </section>
+
+          {/* Redemption History */}
+          {redemptions.length > 0 && (
+            <section>
+              <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                <History className="h-5 w-5" />
+                Redemption History
+              </h2>
+              <div className="space-y-2">
+                {redemptions.map((r) => (
+                  <div
+                    key={r.id}
+                    className="flex items-center gap-3 p-3 rounded-lg border bg-card/85 backdrop-blur-sm"
+                  >
+                    <span className="text-lg shrink-0">{r.goalEmoji || '🎯'}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium">{r.goalName || 'Goal'}</span>
+                        <Badge variant="secondary" className="text-xs">
+                          {r.pointsCost} pts
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
+                        {r.userName && (
+                          <div className="flex items-center gap-1">
+                            <UserAvatar
+                              name={r.userName}
+                              color={r.userColor || undefined}
+                              size="sm"
+                              className="h-4 w-4 text-[8px]"
+                            />
+                            <span>{r.userName}</span>
+                          </div>
+                        )}
+                        <span title={format(parseISO(r.redeemedAt), 'PPpp')}>
+                          {formatDistanceToNow(parseISO(r.redeemedAt), { addSuffix: true })}
+                        </span>
+                        {r.notes && <span className="italic truncate">"{r.notes}"</span>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
 
         <GoalCelebration
@@ -479,6 +559,60 @@ export function GoalsView() {
                   disabled={saving || !formName.trim() || !formPointCost || parseInt(formPointCost) < 1}
                 >
                   {saving ? 'Saving...' : editingGoal ? 'Update' : 'Create'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* Redeem Goal Modal */}
+        {redeemingGoal && (
+          <Dialog open={!!redeemingGoal} onOpenChange={(open) => { if (!open) closeRedeemDialog(); }}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  {redeemingGoal.emoji || '🎯'} Redeem "{redeemingGoal.name}"
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Records the redemption ({redeemingGoal.pointCost} pts) and resets this goal so it can be earned again.
+                </p>
+                <div className="space-y-2">
+                  <Label>Redeemed by</Label>
+                  <Select value={redeemUserId} onValueChange={setRedeemUserId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a child" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {goalChildren.map((c) => {
+                        const achieved = progress[c.userId]?.[redeemingGoal.id]?.achieved;
+                        return (
+                          <SelectItem key={c.userId} value={c.userId}>
+                            {c.name}{achieved ? ' ✓' : ''}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="redeem-notes">Notes (optional)</Label>
+                  <Textarea
+                    id="redeem-notes"
+                    value={redeemNotes}
+                    onChange={(e) => setRedeemNotes(e.target.value)}
+                    placeholder="e.g. Movie night with the family"
+                    rows={2}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={closeRedeemDialog} disabled={redeemSubmitting}>
+                  Cancel
+                </Button>
+                <Button onClick={handleConfirmRedeem} disabled={redeemSubmitting || !redeemUserId}>
+                  {redeemSubmitting ? 'Redeeming...' : 'Redeem'}
                 </Button>
               </DialogFooter>
             </DialogContent>

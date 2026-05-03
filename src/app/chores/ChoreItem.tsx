@@ -43,6 +43,8 @@ export function ChoreItem({
   const isOverdue = chore.nextDue && isPast(parseISO(chore.nextDue));
   const isPendingApproval = !!chore.pendingApproval;
   const categoryEmoji = getCategoryEmoji(chore.category);
+  const isDueNow = !chore.nextDue || new Date(chore.nextDue) <= new Date();
+  const completeDisabled = !isDueNow && !isPendingApproval;
 
   const formatDueDate = (dateString: string) => {
     const date = parseISO(dateString);
@@ -72,18 +74,25 @@ export function ChoreItem({
         isPendingApproval && 'bg-amber-100/85 dark:bg-amber-950/85 border-amber-500/30'
       )}
     >
-      {/* Complete button - always enabled for parents, shows pending state visually */}
+      {/* Complete button — disabled when chore was already completed this period */}
       <Button
         size="icon"
         variant="ghost"
         onClick={onComplete}
-        disabled={!chore.enabled}
+        disabled={!chore.enabled || completeDisabled}
         className={cn(
           'flex-shrink-0 h-9 w-9',
           isOverdue && !isPendingApproval && 'text-destructive hover:text-destructive',
-          isPendingApproval && 'text-amber-500'
+          isPendingApproval && 'text-amber-500',
+          completeDisabled && 'text-muted-foreground/40'
         )}
-        title={isPendingApproval ? 'Approve and complete chore' : 'Mark as complete'}
+        title={
+          isPendingApproval
+            ? 'Approve and complete chore'
+            : completeDisabled
+              ? `Already done — next due ${chore.nextDue}`
+              : 'Mark as complete'
+        }
       >
         {isPendingApproval ? (
           <Hourglass className="h-5 w-5" />

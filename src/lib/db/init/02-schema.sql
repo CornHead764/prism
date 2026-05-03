@@ -374,6 +374,21 @@ CREATE TABLE IF NOT EXISTS public.goals (
 
 
 --
+-- Name: goal_redemptions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.goal_redemptions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    goal_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    redeemed_by_parent uuid,
+    points_cost integer NOT NULL,
+    notes text,
+    redeemed_at timestamp without time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: layouts; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1028,6 +1043,14 @@ ALTER TABLE ONLY public.goals
 
 
 --
+-- Name: goal_redemptions goal_redemptions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.goal_redemptions
+    ADD CONSTRAINT goal_redemptions_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: layouts layouts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1484,6 +1507,27 @@ CREATE UNIQUE INDEX IF NOT EXISTS goal_achievements_unique_idx ON public.goal_ac
 --
 
 CREATE INDEX IF NOT EXISTS goal_achievements_user_id_idx ON public.goal_achievements USING btree (user_id);
+
+
+--
+-- Name: goal_redemptions_goal_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS goal_redemptions_goal_id_idx ON public.goal_redemptions USING btree (goal_id);
+
+
+--
+-- Name: goal_redemptions_user_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS goal_redemptions_user_id_idx ON public.goal_redemptions USING btree (user_id);
+
+
+--
+-- Name: goal_redemptions_redeemed_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX IF NOT EXISTS goal_redemptions_redeemed_at_idx ON public.goal_redemptions USING btree (redeemed_at);
 
 
 --
@@ -2105,6 +2149,30 @@ ALTER TABLE ONLY public.goal_achievements
 
 ALTER TABLE ONLY public.goal_achievements
     ADD CONSTRAINT goal_achievements_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: goal_redemptions goal_redemptions_goal_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.goal_redemptions
+    ADD CONSTRAINT goal_redemptions_goal_id_fkey FOREIGN KEY (goal_id) REFERENCES public.goals(id) ON DELETE CASCADE;
+
+
+--
+-- Name: goal_redemptions goal_redemptions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.goal_redemptions
+    ADD CONSTRAINT goal_redemptions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: goal_redemptions goal_redemptions_redeemed_by_parent_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.goal_redemptions
+    ADD CONSTRAINT goal_redemptions_redeemed_by_parent_fkey FOREIGN KEY (redeemed_by_parent) REFERENCES public.users(id) ON DELETE SET NULL;
 
 
 --

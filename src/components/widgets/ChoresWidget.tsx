@@ -221,6 +221,11 @@ function ChoreItem({
   // Check if pending approval
   const isPendingApproval = !!chore.pendingApproval;
 
+  // Due means: no nextDue (never completed) OR nextDue is today or earlier.
+  // A chore not yet due was completed already this period — don't allow re-completing.
+  const isDueNow = !chore.nextDue || new Date(chore.nextDue) <= new Date();
+  const completeDisabled = !isDueNow && !isPendingApproval;
+
   // Get category emoji
   const categoryEmoji = getCategoryEmoji(chore.category);
 
@@ -239,19 +244,28 @@ function ChoreItem({
         size="icon"
         variant="ghost"
         onClick={(e) => { e.stopPropagation(); onComplete(); }}
-        disabled={completing}
+        disabled={completing || completeDisabled}
         className={cn(
           'h-8 w-8 shrink-0',
           isOverdue && !isPendingApproval && 'text-destructive hover:text-destructive',
-          isPendingApproval && 'text-amber-500'
+          isPendingApproval && 'text-amber-500',
+          completeDisabled && 'text-muted-foreground/40'
         )}
-        title={isPendingApproval ? 'Pending approval - click to complete or approve' : 'Mark as complete'}
-        aria-label={isPendingApproval ? 'Pending approval' : 'Mark as complete'}
+        title={
+          isPendingApproval
+            ? 'Pending approval - click to complete or approve'
+            : completeDisabled
+              ? `Already done — next due ${chore.nextDue}`
+              : 'Mark as complete'
+        }
+        aria-label={isPendingApproval ? 'Pending approval' : completeDisabled ? 'Already completed' : 'Mark as complete'}
       >
         {completing ? (
           <Clock className="h-4 w-4 animate-spin" />
         ) : isPendingApproval ? (
           <Hourglass className="h-4 w-4" />
+        ) : completeDisabled ? (
+          <CheckCircle className="h-4 w-4" />
         ) : (
           <CheckCircle className="h-4 w-4" />
         )}

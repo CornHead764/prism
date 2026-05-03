@@ -79,6 +79,7 @@ export async function POST(
         frequency: chores.frequency,
         customIntervalDays: chores.customIntervalDays,
         startDay: chores.startDay,
+        nextDue: chores.nextDue,
       })
       .from(chores)
       .where(eq(chores.id, choreId));
@@ -96,6 +97,22 @@ export async function POST(
         { error: 'Cannot complete a disabled chore' },
         { status: 400 }
       );
+    }
+
+    // Block re-completing a chore that isn't due yet (already done this period).
+    // chore.nextDue is a date string ('yyyy-MM-dd'); compare against today's date.
+    if (chore.nextDue) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const dueDate = new Date(`${chore.nextDue}T00:00:00`);
+      if (dueDate > today) {
+        return NextResponse.json({
+          error: 'Chore not currently due',
+          message: 'This chore has already been completed and is not due again until ' + chore.nextDue + '.',
+          notDue: true,
+          nextDue: chore.nextDue,
+        }, { status: 409 });
+      }
     }
 
     // Validate completion data
@@ -158,17 +175,14 @@ export async function POST(
       );
 
     if (existingPendingCompletion) {
-      // If a child tries to complete a chore that's already pending, reject it
-      if (isChild) {
-        return NextResponse.json({
-          error: 'This chore is already pending parental approval',
-          message: 'This chore has already been completed and is waiting for a parent to approve it.',
-          alreadyPending: true,
-        }, { status: 409 }); // 409 Conflict
-      }
-      // If a parent completes, they're approving - but that should go through /approve endpoint
-      // This path means a parent is clicking "complete" on a pending chore in the dashboard
-      // The dashboard logic should route to approve, but as a fallback, we can handle it here
+      return NextResponse.json({
+        error: 'This chore is already pending parental approval',
+        message: isChild
+          ? 'This chore has already been completed and is waiting for a parent to approve it.'
+          : 'A completion is already pending — use the approve action on the existing entry instead of completing again.',
+        alreadyPending: true,
+        pendingCompletionId: existingPendingCompletion.id,
+      }, { status: 409 });
     }
 
     // Determine if approval is required:

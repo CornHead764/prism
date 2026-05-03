@@ -77,20 +77,30 @@ export async function GET(request: NextRequest) {
 
         const childProgress: Record<string, { allocated: number; achieved: boolean }> = {};
         for (const gp of result.goals) {
-          // Check if already achieved (from achievements table)
-          const periodKey = getGoalPeriodKey(
-            goalDefs.find((g) => g.id === gp.goalId)!,
-            now,
-            weekStartsOn
-          );
+          const def = goalDefs.find((g) => g.id === gp.goalId)!;
+          const periodKey = getGoalPeriodKey(def, now, weekStartsOn);
           const hasAchievement = achievements.some(
             (a) => a.goalId === gp.goalId && a.userId === child.id && a.periodStart === periodKey
           );
 
-          childProgress[gp.goalId] = {
-            allocated: gp.allocated,
-            achieved: gp.achieved || hasAchievement,
-          };
+          // Non-recurring goals: filter completions by lastResetAt so a redemption
+          // (which bumps lastResetAt) actually wipes progress until the child earns
+          // points again. computeWaterfall ignores lastResetAt; we override here.
+          if (!def.recurring) {
+            const filteredAllocated = childCompletions
+              .filter((c) => c.completedAt > def.lastResetAt)
+              .reduce((sum, c) => sum + (c.pointsAwarded ?? 0), 0);
+            const allocated = Math.min(filteredAllocated, def.pointCost);
+            childProgress[gp.goalId] = {
+              allocated,
+              achieved: allocated >= def.pointCost || hasAchievement,
+            };
+          } else {
+            childProgress[gp.goalId] = {
+              allocated: gp.allocated,
+              achieved: gp.achieved || hasAchievement,
+            };
+          }
         }
         progress[child.id] = childProgress;
 

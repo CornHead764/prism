@@ -1016,6 +1016,34 @@ export const goalAchievements = pgTable('goal_achievements', {
 }));
 
 
+export const goalRedemptions = pgTable('goal_redemptions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+
+  goalId: uuid('goal_id')
+    .references(() => goals.id, { onDelete: 'cascade' })
+    .notNull(),
+
+  // Child who redeemed the goal
+  userId: uuid('user_id')
+    .references(() => users.id, { onDelete: 'cascade' })
+    .notNull(),
+
+  // Parent who recorded the redemption (may be null if recorded by automation)
+  redeemedByParent: uuid('redeemed_by_parent')
+    .references(() => users.id, { onDelete: 'set null' }),
+
+  pointsCost: integer('points_cost').notNull(),
+
+  notes: text('notes'),
+
+  redeemedAt: timestamp('redeemed_at').defaultNow().notNull(),
+}, (table) => ({
+  goalIdIdx: index('goal_redemptions_goal_id_idx').on(table.goalId),
+  userIdIdx: index('goal_redemptions_user_id_idx').on(table.userId),
+  redeemedAtIdx: index('goal_redemptions_redeemed_at_idx').on(table.redeemedAt),
+}));
+
+
 export const photoSources = pgTable('photo_sources', {
   id: uuid('id').defaultRandom().primaryKey(),
 
@@ -1123,6 +1151,7 @@ export const apiTokensRelations = relations(apiTokens, ({ one }) => ({
 
 export const goalsRelations = relations(goals, ({ many }) => ({
   achievements: many(goalAchievements),
+  redemptions: many(goalRedemptions),
 }));
 
 export const goalAchievementsRelations = relations(goalAchievements, ({ one }) => ({
@@ -1132,6 +1161,17 @@ export const goalAchievementsRelations = relations(goalAchievements, ({ one }) =
   }),
   user: one(users, {
     fields: [goalAchievements.userId],
+    references: [users.id],
+  }),
+}));
+
+export const goalRedemptionsRelations = relations(goalRedemptions, ({ one }) => ({
+  goal: one(goals, {
+    fields: [goalRedemptions.goalId],
+    references: [goals.id],
+  }),
+  user: one(users, {
+    fields: [goalRedemptions.userId],
     references: [users.id],
   }),
 }));
