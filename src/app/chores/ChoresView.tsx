@@ -50,7 +50,7 @@ export function ChoresView() {
     showAddModal, setShowAddModal,
     editingChore, setEditingChore,
     filteredChores,
-    completeChore, toggleEnabled, deleteChore, editChore, undoCompletion,
+    completeChore, toggleEnabled, deleteChore, editChore, undoCompletion, markChoreDue,
     inlineAddChore,
     enabledCount, dueCount,
     confirmDialogProps,
@@ -204,7 +204,8 @@ export function ChoresView() {
                   onComplete={() => completeChore(chore.id)}
                   onToggleEnabled={() => toggleEnabled(chore.id)}
                   onEdit={() => editChore(chore)}
-                  onDelete={() => deleteChore(chore.id)} />
+                  onDelete={() => deleteChore(chore.id)}
+                  onMarkDue={() => markChoreDue(chore.id)} />
               ))}
             </div>
           )}

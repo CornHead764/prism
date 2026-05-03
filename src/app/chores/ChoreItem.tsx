@@ -7,6 +7,7 @@ import {
   Edit2,
   CheckCircle2,
   Hourglass,
+  CalendarPlus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -33,12 +34,14 @@ export function ChoreItem({
   onToggleEnabled,
   onEdit,
   onDelete,
+  onMarkDue,
 }: {
   chore: Chore;
   onComplete: () => void;
   onToggleEnabled: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onMarkDue?: () => void;
 }) {
   const isOverdue = chore.nextDue && isPast(parseISO(chore.nextDue));
   const isPendingApproval = !!chore.pendingApproval;
@@ -180,6 +183,20 @@ export function ChoreItem({
 
       {/* Actions */}
       <div className="flex items-center gap-1">
+        {/* Mark-due: visible only when chore was already done this period */}
+        {completeDisabled && onMarkDue && chore.enabled && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onMarkDue}
+            className="h-8 px-2 text-xs"
+            title="Mark this chore due now (parent only)"
+          >
+            <CalendarPlus className="h-3.5 w-3.5 mr-1" />
+            Mark due
+          </Button>
+        )}
+
         <div className="flex items-center gap-1">
           <span className="text-xs text-muted-foreground mr-1">
             {chore.enabled ? 'Enabled' : 'Disabled'}

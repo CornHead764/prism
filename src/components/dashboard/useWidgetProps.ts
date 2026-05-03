@@ -136,6 +136,22 @@ export function buildWidgetProps(
         if (user) modals.setShowAddChore(true);
       },
       onChoreClick: editHandlers?.onEditChore,
+      onChoreMarkDue: async (choreId: string) => {
+        const user = await requireAuth("Who's marking this chore due?");
+        if (!user) return;
+        if (user.role !== 'parent') {
+          toast({ title: 'Only parents can mark chores due', variant: 'warning' });
+          return;
+        }
+        try {
+          await data.chores.markChoreDue(choreId);
+          toast({ title: 'Marked due — complete it whenever you like.', variant: 'success' });
+          data.chores.refresh();
+        } catch (err) {
+          console.error('Failed to mark chore due:', err);
+          toast({ title: 'Failed to mark chore due. Please try again.', variant: 'destructive' });
+        }
+      },
       titleHref: '/chores',
     },
     shopping: {

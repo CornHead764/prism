@@ -162,6 +162,14 @@ export function useChoresViewData() {
       if (!response.ok) {
         const data = await response.json();
         if (data.alreadyPending) { toast({ title: data.message, variant: 'warning' }); return false; }
+        if (data.notDue) {
+          toast({
+            title: data.message,
+            description: isParent ? 'Tap "Mark due" to make this chore due again.' : undefined,
+            variant: 'warning',
+          });
+          return false;
+        }
         throw new Error(data.error || 'Failed to complete chore');
       }
       const result = await response.json();
@@ -177,6 +185,25 @@ export function useChoresViewData() {
       console.error('Error completing chore:', err);
       toast({ title: err instanceof Error ? err.message : 'Failed to complete chore', variant: 'destructive' });
       return false;
+    }
+  };
+
+  const markChoreDue = async (choreId: string) => {
+    const user = await requireAuth("Who's marking this chore due?");
+    if (!user) return;
+    if (user.role !== 'parent') {
+      toast({ title: 'Only parents can mark chores due', variant: 'warning' });
+      return;
+    }
+    try {
+      const response = await fetch(`/api/chores/${choreId}/mark-due`, { method: 'POST' });
+      if (!response.ok) throw new Error('Failed to mark chore due');
+      const today = new Date().toISOString().slice(0, 10);
+      setChores((prev) => prev.map((c) => c.id === choreId ? { ...c, nextDue: today } : c));
+      toast({ title: 'Marked due — complete it whenever you like.', variant: 'success' });
+    } catch (err) {
+      console.error('Error marking chore due:', err);
+      toast({ title: 'Failed to mark chore due', variant: 'destructive' });
     }
   };
 
@@ -292,7 +319,7 @@ export function useChoresViewData() {
     showAddModal, setShowAddModal,
     editingChore, setEditingChore,
     filteredChores,
-    completeChore, toggleEnabled, deleteChore, editChore, undoCompletion,
+    completeChore, toggleEnabled, deleteChore, editChore, undoCompletion, markChoreDue,
     inlineAddChore,
     enabledCount, dueCount,
     confirmDialogProps,

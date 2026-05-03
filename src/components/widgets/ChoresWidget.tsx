@@ -62,6 +62,8 @@ export interface ChoresWidgetProps {
   onAddClick?: () => void;
   /** Callback when a chore row is clicked (opens edit modal). */
   onChoreClick?: (chore: Chore) => void;
+  /** Callback when "Mark due" is clicked on a not-yet-due chore (parent action). */
+  onChoreMarkDue?: (choreId: string) => void;
   /** URL for the full chores page (makes title clickable) */
   titleHref?: string;
   /** Additional CSS classes */
@@ -94,6 +96,7 @@ export const ChoresWidget = React.memo(function ChoresWidget({
   onChoreComplete,
   onAddClick,
   onChoreClick,
+  onChoreMarkDue,
   titleHref,
   className,
 }: ChoresWidgetProps) {
@@ -181,6 +184,7 @@ export const ChoresWidget = React.memo(function ChoresWidget({
                 completing={completingChores.has(chore.id)}
                 onComplete={() => handleComplete(chore.id)}
                 onClick={onChoreClick ? () => onChoreClick(chore) : undefined}
+                onMarkDue={onChoreMarkDue ? () => onChoreMarkDue(chore.id) : undefined}
               />
             ))}
           </div>
@@ -206,11 +210,13 @@ function ChoreItem({
   completing,
   onComplete,
   onClick,
+  onMarkDue,
 }: {
   chore: Chore;
   completing: boolean;
   onComplete: () => void;
   onClick?: () => void;
+  onMarkDue?: () => void;
 }) {
   // Format next due date
   const dueDateDisplay = chore.nextDue ? formatDueDate(chore.nextDue) : null;
@@ -358,6 +364,18 @@ function ChoreItem({
               {isOverdue && <AlertCircle className="h-3 w-3 inline mr-0.5" />}
               {dueDateDisplay}
             </span>
+          )}
+
+          {/* Mark-due (parent only) — surfaced when chore was already done this period */}
+          {completeDisabled && onMarkDue && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onMarkDue(); }}
+              className="text-[10px] underline text-muted-foreground hover:text-foreground"
+              title="Mark this chore due now"
+            >
+              Mark due
+            </button>
           )}
         </div>
       </div>

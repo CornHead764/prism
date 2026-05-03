@@ -55,6 +55,7 @@ interface UseChoresResult {
   refresh: () => Promise<void>;
   completeChore: (choreId: string, data?: { completedBy?: string; notes?: string }) => Promise<ChoreCompletion>;
   approveChore: (choreId: string, completionId?: string) => Promise<void>;
+  markChoreDue: (choreId: string) => Promise<void>;
 }
 
 /**
@@ -226,6 +227,30 @@ export function useChores(options: UseChoresOptions = {}): UseChoresResult {
     [fetchChores]
   );
 
+  /**
+   * Mark a chore as due now (parent-only). Pulls nextDue forward to today
+   * so it can be re-completed ad hoc.
+   */
+  const markChoreDue = useCallback(
+    async (choreId: string) => {
+      try {
+        const response = await fetch(`/api/chores/${choreId}/mark-due`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to mark chore due');
+        }
+        await fetchChores();
+      } catch (err) {
+        console.error('Error marking chore due:', err);
+        throw err;
+      }
+    },
+    [fetchChores]
+  );
+
   // Initial fetch (skipped when disabled)
   useEffect(() => {
     if (enabled) fetchChores();
@@ -241,5 +266,6 @@ export function useChores(options: UseChoresOptions = {}): UseChoresResult {
     refresh: fetchChores,
     completeChore,
     approveChore,
+    markChoreDue,
   };
 }

@@ -80,6 +80,7 @@ export function useDashboardData(visibleWidgets?: Set<string>) {
     refresh: refreshChores,
     completeChore,
     approveChore,
+    markChoreDue,
   } = useChores({ showDisabled: false, enabled: isEnabled('chores') });
 
   const {
@@ -183,7 +184,7 @@ export function useDashboardData(visibleWidgets?: Set<string>) {
     weather: { data: weatherData, loading: weatherLoading, error: weatherError },
     messages: { messages, loading: messagesLoading, error: messagesError, refresh: refreshMessages, deleteMessage },
     tasks: { tasks, loading: tasksLoading, error: tasksError, refresh: refreshTasks, toggleTask },
-    chores: { chores, loading: choresLoading, error: choresError, refresh: refreshChores, completeChore, approveChore },
+    chores: { chores, loading: choresLoading, error: choresError, refresh: refreshChores, completeChore, approveChore, markChoreDue },
     shopping: { lists: shoppingLists, loading: shoppingLoading, error: shoppingError, refresh: refreshShopping, toggleItem: toggleShoppingItem },
     meals: { meals, loading: mealsLoading, error: mealsError, refresh: refreshMeals, markCooked },
     birthdays: { birthdays: birthdaysList, loading: birthdaysLoading, error: birthdaysError, syncFromGoogle: syncBirthdays },
