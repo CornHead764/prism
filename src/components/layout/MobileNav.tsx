@@ -14,31 +14,18 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  ShoppingCart,
-  CheckSquare,
-  ClipboardList,
-  MessageSquare,
   MoreHorizontal,
-  UtensilsCrossed,
-  ChefHat,
-  Trophy,
   X,
   Sun,
   Moon,
   Monitor,
   User,
-  LogOut,
   HelpCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/providers/ThemeProvider';
 import { useHiddenPages } from '@/lib/hooks/useHiddenPages';
-
-interface NavItem {
-  label: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
+import { ALL_NAV_ITEMS, type NavItem } from '@/lib/constants/navItems';
 
 export interface MobileNavProps {
   user?: {
@@ -52,19 +39,15 @@ export interface MobileNavProps {
   uiHidden?: boolean;
 }
 
-// Primary items shown in bottom bar (most used for companion app)
-// Note: Chores and Goals removed from mobile - these are kiosk-focused features
-const primaryItems: NavItem[] = [
-  { label: 'Shopping', href: '/shopping', icon: ShoppingCart },
-  { label: 'Tasks', href: '/tasks', icon: CheckSquare },
-  { label: 'Meals', href: '/meals', icon: UtensilsCrossed },
-  { label: 'Messages', href: '/messages', icon: MessageSquare },
-];
+const PRIMARY_HREFS = ['/calendar', '/tasks', '/shopping', '/messages'];
 
-// Secondary items shown in "More" menu
-const secondaryItems: NavItem[] = [
-  { label: 'Recipes', href: '/recipes', icon: ChefHat },
-];
+const primaryItems: NavItem[] = PRIMARY_HREFS.map(
+  (href) => ALL_NAV_ITEMS.find((item) => item.href === href)!,
+);
+
+const secondaryItems: NavItem[] = ALL_NAV_ITEMS.filter(
+  (item) => item.href !== '/' && !PRIMARY_HREFS.includes(item.href),
+);
 
 export function MobileNav({ user, onLogin, onLogout, uiHidden }: MobileNavProps) {
   const pathname = usePathname();

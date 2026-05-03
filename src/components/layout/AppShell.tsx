@@ -25,6 +25,7 @@
 import * as React from 'react';
 import { SideNav } from './SideNav';
 import { MobileFab } from './MobileFab';
+import { MobileNav } from './MobileNav';
 import { PortraitNav } from './PortraitNav';
 import { WallpaperBackground } from './WallpaperBackground';
 import { cn } from '@/lib/utils';
@@ -140,6 +141,7 @@ export function AppShell({
           // just needs to reflow once when the class changes.
           !hideNav && showSideNav && !measureHideNav && !uiHidden && 'ml-16',
           !hideNav && showPortraitNav && !measureHideNav && !uiHidden && 'pb-24',
+          !hideNav && showMobileNav && !measureHideNav && !uiHidden && 'pb-16',
           className
         )}
       >
@@ -151,9 +153,12 @@ export function AppShell({
         <PortraitNav user={user} onLogin={onLogin} onLogout={onLogout} uiHidden={uiHidden || measureHideNav} />
       )}
 
-      {/* MOBILE FAB - small screens only */}
+      {/* MOBILE BOTTOM NAV + FAB - small screens only */}
       {!hideNav && showMobileNav && (
-        <MobileFab user={user} onLogin={onLogin} onLogout={onLogout} uiHidden={uiHidden || measureHideNav} />
+        <>
+          <MobileNav user={user} onLogin={onLogin} onLogout={onLogout} uiHidden={uiHidden || measureHideNav} />
+          <MobileFab user={user} onLogin={onLogin} onLogout={onLogout} uiHidden={uiHidden || measureHideNav} />
+        </>
       )}
     </div>
   );
