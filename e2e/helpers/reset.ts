@@ -10,8 +10,9 @@ import { tmpdir } from 'os';
 function runSQL(sql: string) {
   const tmpFile = join(tmpdir(), `prism-e2e-${Date.now()}.sql`);
   writeFileSync(tmpFile, sql, 'utf-8');
+  const dbName = process.env.E2E_DB_NAME || 'prism';
   try {
-    execSync(`docker exec -i prism-db psql -U prism -d prism < "${tmpFile}"`, {
+    execSync(`docker exec -i prism-db psql -U prism -d ${dbName} < "${tmpFile}"`, {
       stdio: 'pipe',
       shell: 'cmd.exe',
     });

@@ -13,6 +13,9 @@ function transformWeather(json: unknown): WeatherData {
   const raw = json as {
     lastUpdated: string;
     forecast: Array<{ date: string; dayName: string; high: number; low: number; condition: string }>;
+    hourly?: Array<{ time: string; condition: string; temp: number }>;
+    sunrise?: string;
+    sunset?: string;
     [key: string]: unknown;
   };
   return {
@@ -22,6 +25,12 @@ function transformWeather(json: unknown): WeatherData {
       ...day,
       date: new Date(day.date),
     })),
+    hourly: raw.hourly?.map((h) => ({
+      ...h,
+      time: new Date(h.time),
+    })),
+    sunrise: raw.sunrise ? new Date(raw.sunrise) : undefined,
+    sunset:  raw.sunset  ? new Date(raw.sunset)  : undefined,
   } as unknown as WeatherData;
 }
 

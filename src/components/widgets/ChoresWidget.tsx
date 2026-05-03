@@ -60,6 +60,8 @@ export interface ChoresWidgetProps {
   onChoreComplete?: (choreId: string) => void;
   /** Callback when add button is clicked */
   onAddClick?: () => void;
+  /** Callback when a chore row is clicked (opens edit modal). */
+  onChoreClick?: (chore: Chore) => void;
   /** URL for the full chores page (makes title clickable) */
   titleHref?: string;
   /** Additional CSS classes */
@@ -91,6 +93,7 @@ export const ChoresWidget = React.memo(function ChoresWidget({
   error = null,
   onChoreComplete,
   onAddClick,
+  onChoreClick,
   titleHref,
   className,
 }: ChoresWidgetProps) {
@@ -177,6 +180,7 @@ export const ChoresWidget = React.memo(function ChoresWidget({
                 chore={chore}
                 completing={completingChores.has(chore.id)}
                 onComplete={() => handleComplete(chore.id)}
+                onClick={onChoreClick ? () => onChoreClick(chore) : undefined}
               />
             ))}
           </div>
@@ -201,10 +205,12 @@ function ChoreItem({
   chore,
   completing,
   onComplete,
+  onClick,
 }: {
   chore: Chore;
   completing: boolean;
   onComplete: () => void;
+  onClick?: () => void;
 }) {
   // Format next due date
   const dueDateDisplay = chore.nextDue ? formatDueDate(chore.nextDue) : null;
@@ -227,11 +233,12 @@ function ChoreItem({
         isPendingApproval && 'bg-amber-500/10 border border-amber-500/30'
       )}
     >
-      {/* Complete button - always enabled, shows pending state visually */}
+      {/* Complete button — stops propagation so the row click doesn't also
+          fire when the user just wants to mark complete. */}
       <Button
         size="icon"
         variant="ghost"
-        onClick={onComplete}
+        onClick={(e) => { e.stopPropagation(); onComplete(); }}
         disabled={completing}
         className={cn(
           'h-8 w-8 shrink-0',
@@ -250,8 +257,14 @@ function ChoreItem({
         )}
       </Button>
 
-      {/* Chore content */}
-      <div className="flex-1 min-w-0">
+      {/* Chore content — clickable surface that opens the edit modal. */}
+      <div
+        className={cn('flex-1 min-w-0', onClick && 'cursor-pointer')}
+        role={onClick ? 'button' : undefined}
+        tabIndex={onClick ? 0 : undefined}
+        onClick={onClick}
+        onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
+      >
         <div className="flex items-center gap-2">
           {/* Category emoji */}
           <span className="text-base">{categoryEmoji}</span>

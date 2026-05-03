@@ -4,9 +4,12 @@
  * Integration tests against the real prism_test PostgreSQL database.
  * No DB query mocks — all queries hit the actual database.
  *
- * Prerequisites:
- *   - Docker container prism-db running on host port 5433
- *   - prism_test database created and schema applied
+ * Gated on `E2E_HAS_TEST_DB=1` — without it the suite is skipped (not failed)
+ * so `npx jest` runs cleanly on a dev machine that doesn't expose Postgres.
+ * CI's e2e-modality job sets the flag and provides a real `prism_test` DB.
+ *
+ * Prerequisites (when running with E2E_HAS_TEST_DB=1):
+ *   - Postgres reachable at localhost:5433 with the `prism_test` database
  *   - DB_PASSWORD in .env (or as env var)
  */
 
@@ -14,9 +17,21 @@ import { eq } from 'drizzle-orm';
 import { getTestDb, closeTestDb } from './testDb';
 import * as schema from '../schema';
 
+const HAS_TEST_DB = process.env.E2E_HAS_TEST_DB === '1';
+const describeIf = HAS_TEST_DB ? describe : describe.skip;
+
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
-const db = getTestDb();
+// Only initialize when E2E_HAS_TEST_DB is set — getTestDb() reads .env for
+// DB_PASSWORD at module load and throws in environments (like CI's plain
+// unit-tests job) where there's no .env file. The definite-assignment `!`
+// is safe because lifecycle hooks below only fire when at least one test
+// in this file runs, and `describeIf` skips every suite when HAS_TEST_DB
+// is false.
+let db!: ReturnType<typeof getTestDb>;
+if (HAS_TEST_DB) {
+  db = getTestDb();
+}
 
 async function truncateTables(): Promise<void> {
   // Order matters due to FK constraints: dependents first
@@ -39,7 +54,7 @@ afterAll(async () => {
 
 // ─── Events CRUD ──────────────────────────────────────────────────────────────
 
-describe('Events CRUD', () => {
+describeIf('Events CRUD', () => {
   it('inserts an event and reads it back with all fields matching', async () => {
     const startTime = new Date('2026-06-01T09:00:00Z');
     const endTime = new Date('2026-06-01T10:00:00Z');
@@ -115,7 +130,7 @@ describe('Events CRUD', () => {
 
 // ─── Chore completion flow ────────────────────────────────────────────────────
 
-describe('Chore completion flow', () => {
+describeIf('Chore completion flow', () => {
   it('creates a user and chore, inserts a completion, verifies it, then deletes it', async () => {
     // Create a family member
     const [user] = await db.insert(schema.users).values({
@@ -211,7 +226,7 @@ describe('Chore completion flow', () => {
 
 // ─── Auth: login + session lifecycle ─────────────────────────────────────────
 
-describe('Auth: session lifecycle', () => {
+describeIf('Auth: session lifecycle', () => {
   /**
    * Check if Redis is reachable from the test runner (outside Docker).
    * Redis is typically only exposed inside the Docker network, so if

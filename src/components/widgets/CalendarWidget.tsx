@@ -1,14 +1,25 @@
 'use client';
 
 import * as React from 'react';
-import { useMemo, useCallback, lazy, Suspense } from 'react';
-import { format, isToday, isTomorrow, startOfWeek, addDays } from 'date-fns';
+import { useMemo, useCallback, useState, lazy, Suspense } from 'react';
+import { format, isToday, isTomorrow, startOfWeek, endOfWeek, addDays, addWeeks, startOfMonth, endOfMonth } from 'date-fns';
+import {
+  DndContext,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
 import { Calendar, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isLightColor } from '@/lib/utils/color';
 import { deduplicateEvents } from '@/lib/utils/calendarDedup';
 import { WidgetContainer, useWidgetBgOverride } from './WidgetContainer';
 import { useCalendarEvents, useCalendarFilter, useCalendarNotes } from '@/lib/hooks';
+import { useDayBucketsForRange } from '@/lib/hooks/useDayBucketsForRange';
+import { useWeekMutations } from '@/lib/hooks/useWeekMutations';
 import { useAuth } from '@/components/providers';
 import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
 import { useCalendarWidgetPrefs, VIEW_OPTIONS } from '@/lib/hooks/useCalendarWidgetPrefs';
@@ -55,17 +66,123 @@ export const CalendarWidget = React.memo(function CalendarWidget({
     mergedView, setMergedView,
     showNotes, setShowNotes,
     viewType, setViewType,
+    displayMode, setDisplayMode,
+    hideWeekends, setHideWeekends,
+    overlays, setOverlays,
     availableViews, effectiveView, resolvedView, resolvedWeekCount, viewUnavailable,
     goToToday, goToPrevious, goToNext,
   } = useCalendarWidgetPrefs(gridW, gridH);
 
-  const { events: apiEvents, loading: apiLoading, error: apiError } = useCalendarEvents({ daysToShow: 60 });
+  const { events: apiEvents, loading: apiLoading, error: apiError, refresh: refreshEvents } = useCalendarEvents({ daysToShow: 60 });
   const { selectedCalendarIds, toggleCalendar, filterEvents, calendarGroups } = useCalendarFilter();
 
   const loading = externalLoading ?? apiLoading;
   const error = externalError ?? apiError;
   const rawEvents = externalEvents ?? apiEvents;
   const events = useMemo(() => deduplicateEvents(filterEvents(rawEvents)), [filterEvents, rawEvents]);
+
+  // Date range for overlay buckets (meals/chores/tasks). Mirrors the page-level
+  // calculation so each view's visible window has the right data loaded.
+  const cardsMode = displayMode === 'cards';
+  const { from: bucketsFrom, to: bucketsTo } = useMemo(() => {
+    if (resolvedView === 'day') return { from: currentDate, to: currentDate };
+    if (resolvedView === 'list' || resolvedView === 'week') {
+      const ws = startOfWeek(currentDate, { weekStartsOn });
+      return { from: ws, to: endOfWeek(currentDate, { weekStartsOn }) };
+    }
+    if (resolvedView === 'multiWeek') {
+      const ws = startOfWeek(currentDate, { weekStartsOn });
+      return { from: ws, to: addDays(addWeeks(ws, resolvedWeekCount), -1) };
+    }
+    if (resolvedView === 'month') {
+      // MonthView renders a 6-week grid starting on the week containing the
+      // 1st and ending on the week containing the last day, so leading/trailing
+      // days from neighbouring months are visible. Bucket range must match,
+      // otherwise overlay items on those visible-but-out-of-month days are missing.
+      const monthStart = startOfMonth(currentDate);
+      const monthEnd = endOfMonth(currentDate);
+      return {
+        from: startOfWeek(monthStart, { weekStartsOn }),
+        to: endOfWeek(monthEnd, { weekStartsOn }),
+      };
+    }
+    // agenda — 14 day window
+    return { from: currentDate, to: addDays(currentDate, 13) };
+  }, [resolvedView, resolvedWeekCount, currentDate, weekStartsOn]);
+
+  const overlaysActive = cardsMode;
+  const effectiveOverlays = useMemo(() => ({
+    events: overlays.events,
+    meals: cardsMode && overlays.meals,
+    chores: cardsMode && overlays.chores,
+    tasks: cardsMode && overlays.tasks,
+  }), [cardsMode, overlays]);
+
+  const { bucketsByDate, refresh: refreshBuckets } = useDayBucketsForRange({
+    from: bucketsFrom,
+    to: bucketsTo,
+    overlays: effectiveOverlays,
+    externalEvents: events,
+  });
+
+  // Hide events from the calendar surface when the events overlay is off.
+  const visibleEvents = useMemo(() => (overlays.events ? events : []), [overlays.events, events]);
+
+  // Drag-and-drop wiring: same dnd-kit setup as /week and the calendar
+  // subpage so meals/chores/tasks can be reordered between days.
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor),
+  );
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [moveError, setMoveError] = useState<string | null>(null);
+  const refreshAll = useCallback(async () => {
+    await Promise.all([refreshEvents(), refreshBuckets()]);
+  }, [refreshEvents, refreshBuckets]);
+  const { moveChore, moveTask, moveMeal, moveEvent } = useWeekMutations({ refresh: refreshAll });
+
+  const handleDragStart = (e: DragStartEvent) => {
+    const id = String(e.active.id);
+    if (id.startsWith('__static__:')) return;
+    setActiveDragId(id);
+  };
+
+  const handleDragEnd = async (e: DragEndEvent) => {
+    setActiveDragId(null);
+    setMoveError(null);
+    const { active, over } = e;
+    if (!over) return;
+    const dragId = String(active.id);
+    const overId = String(over.id);
+    const targetIso = overId.includes(':') ? overId.slice(0, overId.indexOf(':')) : overId;
+    const colon = dragId.indexOf(':');
+    if (colon === -1) return;
+    const variant = dragId.slice(0, colon);
+    const itemId = dragId.slice(colon + 1);
+    const targetBucket = bucketsByDate.get(targetIso);
+    if (!targetBucket) return;
+    try {
+      if (variant === 'chore') await moveChore(itemId, targetBucket.date);
+      else if (variant === 'task') {
+        let originalDue: Date | null = null;
+        for (const b of bucketsByDate.values()) {
+          const t = b.tasks.find((x) => x.id === itemId);
+          if (t?.dueDate) { originalDue = new Date(t.dueDate); break; }
+        }
+        await moveTask(itemId, targetBucket.date, originalDue);
+      }
+      else if (variant === 'meal') await moveMeal(itemId, targetBucket.date);
+      else if (variant === 'event') {
+        const ev = events.find((e) => e.id === itemId);
+        if (!ev) return;
+        await moveEvent(itemId, ev.startTime, ev.endTime, targetBucket.date);
+      }
+    } catch (err) {
+      setMoveError(err instanceof Error ? err.message : 'Failed to move item');
+    }
+  };
+
+  const enableDnd = overlaysActive;
 
   const notesSupported = resolvedView === 'list' || resolvedView === 'day';
   const notesDays = useMemo(() => {
@@ -149,6 +266,12 @@ export const CalendarWidget = React.memo(function CalendarWidget({
           notesSupported={notesSupported}
           transparentMode={transparentMode}
           showMerge={showMerge}
+          displayMode={displayMode}
+          setDisplayMode={setDisplayMode}
+          hideWeekends={hideWeekends}
+          setHideWeekends={setHideWeekends}
+          overlays={overlays}
+          setOverlays={setOverlays}
           goToPrevious={goToPrevious}
           goToToday={goToToday}
           goToNext={goToNext}
@@ -163,87 +286,119 @@ export const CalendarWidget = React.memo(function CalendarWidget({
         </div>
       )}
 
+      {moveError && (
+        <div className="text-[10px] text-destructive text-center py-1 bg-destructive/10 rounded mb-1">
+          {moveError}
+        </div>
+      )}
+
       {/* flex-1 min-h-0: fills remaining space after chips / notices */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        <Suspense fallback={<div className="h-full flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>}>
-          {resolvedView === 'agenda' && (
-            <AgendaView
-              events={events}
-              days={14}
-              maxEventsPerDay={5}
-              onEventClick={handleEventClick}
-            />
-          )}
+        <DndContext
+          sensors={dndSensors}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={() => { setActiveDragId(null); setMoveError(null); }}
+        >
+          <Suspense fallback={<div className="h-full flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>}>
+            {resolvedView === 'agenda' && (
+              <AgendaView
+                events={visibleEvents}
+                days={14}
+                maxEventsPerDay={5}
+                onEventClick={handleEventClick}
+                displayMode={displayMode}
+                bucketsByDate={overlaysActive ? bucketsByDate : undefined}
+                enableDnd={enableDnd}
+              />
+            )}
 
-          {resolvedView === 'list' && (
-            <WeekVerticalView
-              currentDate={currentDate}
-              events={events}
-              calendarGroups={calendarGroups}
-              selectedCalendarIds={selectedCalendarIds}
-              mergedView={mergedView}
-              bordered={widgetBordered}
-              onEventClick={handleEventClick}
-              showNotes={showNotes}
-              notesByDate={notesByDate}
-              onNoteChange={activeUser ? upsertNote : undefined}
-            />
-          )}
+            {resolvedView === 'list' && (
+              <WeekVerticalView
+                currentDate={currentDate}
+                events={visibleEvents}
+                calendarGroups={calendarGroups}
+                selectedCalendarIds={selectedCalendarIds}
+                mergedView={mergedView}
+                bordered={widgetBordered}
+                displayMode={displayMode}
+                bucketsByDate={overlaysActive ? bucketsByDate : undefined}
+                enableDnd={enableDnd}
+                onEventClick={handleEventClick}
+                showNotes={showNotes}
+                notesByDate={notesByDate}
+                onNoteChange={activeUser ? upsertNote : undefined}
+              />
+            )}
 
-          {resolvedView === 'month' && (
-            <MonthView
-              currentDate={currentDate}
-              events={events}
-              onEventClick={handleEventClick}
-              bordered={widgetBordered}
-              onDateClick={(date) => {
-                setCurrentDate(date);
-                setViewType('day');
-              }}
-            />
-          )}
+            {resolvedView === 'month' && (
+              <MonthView
+                currentDate={currentDate}
+                events={visibleEvents}
+                onEventClick={handleEventClick}
+                bordered={widgetBordered}
+                displayMode={displayMode}
+                bucketsByDate={overlaysActive ? bucketsByDate : undefined}
+                enableDnd={enableDnd}
+                onDateClick={(date) => {
+                  setCurrentDate(date);
+                  setViewType('day');
+                }}
+              />
+            )}
 
-          {resolvedView === 'week' && (
-            <WeekView
-              currentDate={currentDate}
-              events={events}
-              onEventClick={handleEventClick}
-              bordered={widgetBordered}
-            />
-          )}
+            {resolvedView === 'week' && (
+              <WeekView
+                currentDate={currentDate}
+                events={visibleEvents}
+                onEventClick={handleEventClick}
+                bordered={widgetBordered}
+                displayMode={displayMode}
+                bucketsByDate={overlaysActive ? bucketsByDate : undefined}
+                enableDnd={enableDnd}
+              />
+            )}
 
-          {resolvedView === 'multiWeek' && (
-            <MultiWeekView
-              currentDate={currentDate}
-              events={events}
-              onEventClick={handleEventClick}
-              weekCount={resolvedWeekCount}
-              bordered={widgetBordered}
-            />
-          )}
+            {resolvedView === 'multiWeek' && (
+              <MultiWeekView
+                currentDate={currentDate}
+                events={visibleEvents}
+                onEventClick={handleEventClick}
+                weekCount={resolvedWeekCount}
+                bordered={widgetBordered}
+                displayMode={displayMode}
+                bucketsByDate={overlaysActive ? bucketsByDate : undefined}
+                enableDnd={enableDnd}
+                hideWeekends={hideWeekends}
+              />
+            )}
 
-          {resolvedView === 'day' && (
-            <div className="h-full flex flex-col">
-              <div className="text-center text-sm font-medium text-foreground mb-2 shrink-0">
-                {formatDayHeader(currentDate)}
+            {resolvedView === 'day' && (
+              <div className="h-full flex flex-col">
+                <div className="text-center text-sm font-medium text-foreground mb-2 shrink-0">
+                  {formatDayHeader(currentDate)}
+                </div>
+                <div className="flex-1 min-h-0">
+                  <DayViewSideBySide
+                    currentDate={currentDate}
+                    events={visibleEvents}
+                    calendarGroups={calendarGroups}
+                    selectedCalendarIds={selectedCalendarIds}
+                    mergedView={mergedView}
+                    bordered={widgetBordered}
+                    displayMode={displayMode}
+                    bucketsByDate={overlaysActive ? bucketsByDate : undefined}
+                    enableDnd={enableDnd}
+                    onEventClick={handleEventClick}
+                    showNotes={showNotes}
+                    notesByDate={notesByDate}
+                    onNoteChange={activeUser ? upsertNote : undefined}
+                  />
+                </div>
               </div>
-              <div className="flex-1 min-h-0">
-                <DayViewSideBySide
-                  currentDate={currentDate}
-                  events={events}
-                  calendarGroups={calendarGroups}
-                  selectedCalendarIds={selectedCalendarIds}
-                  mergedView={mergedView}
-                  bordered={widgetBordered}
-                  onEventClick={handleEventClick}
-                  showNotes={showNotes}
-                  notesByDate={notesByDate}
-                  onNoteChange={activeUser ? upsertNote : undefined}
-                />
-              </div>
-            </div>
-          )}
-        </Suspense>
+            )}
+          </Suspense>
+        </DndContext>
       </div>
     </WidgetContainer>
   );

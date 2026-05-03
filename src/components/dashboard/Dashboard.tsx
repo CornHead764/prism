@@ -1,19 +1,24 @@
 'use client';
 
 import * as React from 'react';
-import { Suspense, useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { Suspense, lazy, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 
 const VISIBLE_WIDGETS_KEY = 'prism-visible-widgets';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
 import { DashboardLayout, DashboardHeader } from '@/components/layout/DashboardGrid';
 import { LayoutGridEditor, SCREENSAVER_THEME } from '@/components/layout/LayoutGridEditor';
-import { useAuth } from '@/components/providers';
+import { useAuth, useFamily } from '@/components/providers';
 import { GRID_COLS } from '@/lib/constants/grid';
 import { useScreenSafeZones } from '@/lib/hooks/useScreenSafeZones';
 import { useOrientation } from '@/lib/hooks/useOrientation';
 import { useIsMobile } from '@/lib/hooks/useIsMobile';
 import { useAutoHideUI } from '@/lib/hooks/useAutoHideUI';
+import { useTaskLists } from '@/lib/hooks/useTaskLists';
+import { useRecipes } from '@/lib/hooks/useRecipes';
+import { useChoreModals } from '@/app/chores/useChoreModals';
+import { toast } from '@/components/ui/use-toast';
+import type { Chore, Task, Meal } from '@/types';
 import { MobileDashboard } from './MobileDashboard';
 import dynamic from 'next/dynamic';
 
@@ -22,6 +27,11 @@ const AddTaskModal = dynamic(() => import('@/components/modals/AddTaskModal').th
 const AddMessageModal = dynamic(() => import('@/components/modals/AddMessageModal').then(m => ({ default: m.AddMessageModal })));
 const AddChoreModal = dynamic(() => import('@/components/modals/AddChoreModal').then(m => ({ default: m.AddChoreModal })));
 const AddShoppingItemModal = dynamic(() => import('@/components/modals/AddShoppingItemModal').then(m => ({ default: m.AddShoppingItemModal })));
+// Edit modals — same pattern as CalendarView's overlay click-to-edit. Lazy-
+// loaded so the dashboard initial bundle stays small.
+const ChoreModal = lazy(() => import('@/app/chores/ChoreModal').then(m => ({ default: m.ChoreModal })));
+const TaskModal = lazy(() => import('@/app/tasks/TaskModal').then(m => ({ default: m.TaskModal })));
+const MealModal = lazy(() => import('@/app/meals/MealsView').then(m => ({ default: m.MealModal })));
 import { WIDGET_REGISTRY } from '@/components/widgets/widgetRegistry';
 import { renderScreensaverPreview } from '@/components/screensaver/ScreensaverWidgetPreview';
 import type { WidgetConfig } from '@/lib/hooks/useLayouts';
@@ -91,6 +101,22 @@ export function Dashboard({
   const [showAddTask, setShowAddTask] = useState(false);
   const [showAddChore, setShowAddChore] = useState(false);
   const [showAddShopping, setShowAddShopping] = useState(false);
+
+  // Edit modals for widget click-to-edit (mirrors the CalendarView overlay flow).
+  const [editingChore, setEditingChore] = useState<Chore | null>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
+
+  const { members: familyMembers } = useFamily();
+  const { lists: taskLists } = useTaskLists();
+  const { recipes } = useRecipes();
+
+  const { saveEditedChore } = useChoreModals({
+    refreshChores: data.chores.refresh,
+    setShowAddModal: () => {},
+    setEditingChore,
+    deleteChore: () => {},
+  });
 
   const layout = useDashboardLayout(data.layouts, slug);
 
@@ -228,7 +254,11 @@ export function Dashboard({
 
   const widgetProps = buildWidgetProps(data, requireAuth, {
     setShowAddTask, setShowAddMessage, setShowAddChore, setShowAddShopping,
-  }, weatherLocation, confirmAction);
+  }, weatherLocation, confirmAction, {
+    onEditTask: setEditingTask,
+    onEditChore: setEditingChore,
+    onEditMeal: setEditingMeal,
+  });
 
   const handleLogin = async () => {
     await requireAuth('Login', 'Select your profile');
@@ -399,6 +429,80 @@ export function Dashboard({
         {showAddShopping && (
           <AddShoppingItemModal open={showAddShopping} onOpenChange={setShowAddShopping}
             onItemCreated={() => { data.shopping.refresh(); }} />
+        )}
+
+        {editingChore && (
+          <Suspense fallback={null}>
+            <ChoreModal
+              chore={editingChore}
+              familyMembers={familyMembers}
+              onClose={() => setEditingChore(null)}
+              onSave={async (updated) => {
+                await saveEditedChore(editingChore.id, updated);
+              }}
+            />
+          </Suspense>
+        )}
+
+        {editingTask && (
+          <Suspense fallback={null}>
+            <TaskModal
+              task={editingTask}
+              familyMembers={familyMembers}
+              taskLists={taskLists}
+              onClose={() => setEditingTask(null)}
+              onSave={async (updated) => {
+                try {
+                  const res = await fetch(`/api/tasks/${editingTask.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      title: updated.title,
+                      priority: updated.priority,
+                      category: updated.category,
+                      assignedTo: updated.assignedTo?.id,
+                      dueDate: updated.dueDate === null ? null : updated.dueDate.toISOString(),
+                      completed: updated.completed,
+                      listId: updated.listId,
+                    }),
+                  });
+                  if (!res.ok) throw new Error('Failed to update task');
+                  data.tasks.refresh();
+                } catch (err) {
+                  toast({ title: err instanceof Error ? err.message : 'Failed to update task', variant: 'destructive' });
+                } finally {
+                  setEditingTask(null);
+                }
+              }}
+            />
+          </Suspense>
+        )}
+
+        {editingMeal && (
+          <Suspense fallback={null}>
+            <MealModal
+              meal={editingMeal}
+              weekOf={editingMeal.weekOf}
+              dayOptions={['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const}
+              recipes={recipes}
+              onClose={() => setEditingMeal(null)}
+              onSave={async (updates) => {
+                try {
+                  const res = await fetch(`/api/meals/${editingMeal.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates),
+                  });
+                  if (!res.ok) throw new Error('Failed to update meal');
+                  data.meals.refresh();
+                } catch (err) {
+                  toast({ title: err instanceof Error ? err.message : 'Failed to update meal', variant: 'destructive' });
+                } finally {
+                  setEditingMeal(null);
+                }
+              }}
+            />
+          </Suspense>
         )}
       </DashboardLayout>
       <ConfirmDialog {...confirmDialogProps} />

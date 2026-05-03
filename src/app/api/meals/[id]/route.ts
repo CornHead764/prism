@@ -55,6 +55,7 @@ export async function GET(
         ingredients: meals.ingredients,
         dayOfWeek: meals.dayOfWeek,
         mealType: meals.mealType,
+        mealTime: meals.mealTime,
         cookedAt: meals.cookedAt,
         cookedById: meals.cookedBy,
         weekOf: meals.weekOf,
@@ -153,6 +154,7 @@ export async function PATCH(
     if ('ingredients' in validation.data) updateData.ingredients = validation.data.ingredients || null;
     if ('dayOfWeek' in validation.data) updateData.dayOfWeek = validation.data.dayOfWeek;
     if ('mealType' in validation.data) updateData.mealType = validation.data.mealType;
+    if ('mealTime' in validation.data) updateData.mealTime = validation.data.mealTime;
     if ('weekOf' in validation.data) updateData.weekOf = validation.data.weekOf;
     if ('source' in validation.data) updateData.source = validation.data.source;
     if ('sourceId' in validation.data) updateData.sourceId = validation.data.sourceId || null;
@@ -184,6 +186,7 @@ export async function PATCH(
         ingredients: meals.ingredients,
         dayOfWeek: meals.dayOfWeek,
         mealType: meals.mealType,
+        mealTime: meals.mealTime,
         cookedAt: meals.cookedAt,
         cookedById: meals.cookedBy,
         weekOf: meals.weekOf,

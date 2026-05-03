@@ -279,6 +279,9 @@ export const chores = pgTable('chores', {
 
   lastCompleted: timestamp('last_completed'),
   nextDue: date('next_due'),
+  // Optional time-of-day for the chore (HH:mm). Null = "top of day" / floats.
+  // Used by time-grid calendar views to place the chore at a specific hour.
+  nextDueTime: varchar('next_due_time', { length: 5 }),
 
   pointValue: integer('point_value').default(0).notNull(),
 
@@ -512,6 +515,12 @@ export const meals = pgTable('meals', {
 
   mealType: varchar('meal_type', { length: 20 }).notNull()
     .$type<'breakfast' | 'lunch' | 'dinner' | 'snack'>(),
+
+  // Optional time-of-day (HH:mm) for time-grid calendar placement. When null,
+  // the UI substitutes a default based on mealType (breakfast 07:00, lunch
+  // 12:00, snack 15:00, dinner 18:00). Stored separately so a user-set time
+  // survives mealType changes.
+  mealTime: varchar('meal_time', { length: 5 }),
 
   cookedAt: timestamp('cooked_at'),
   cookedBy: uuid('cooked_by').references(() => users.id, { onDelete: 'set null' }),

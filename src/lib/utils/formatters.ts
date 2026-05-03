@@ -96,6 +96,7 @@ export function formatMealRow(row: {
   ingredients: string | null;
   dayOfWeek: string;
   mealType: string;
+  mealTime?: string | null;
   cookedAt: Date | null;
   cookedById: string | null;
   weekOf: string;
@@ -123,6 +124,7 @@ export function formatMealRow(row: {
     ingredients: row.ingredients,
     dayOfWeek: row.dayOfWeek,
     mealType: row.mealType,
+    mealTime: row.mealTime ?? null,
     cookedAt: row.cookedAt?.toISOString() || null,
     cookedBy: row.cookedByUserId ? {
       id: row.cookedByUserId,
@@ -244,6 +246,7 @@ export function formatChoreRow(row: {
   startDay: string | null;
   lastCompleted: Date | null;
   nextDue: string | null;
+  nextDueTime?: string | null;
   pointValue: number;
   requiresApproval: boolean;
   enabled: boolean;
@@ -267,6 +270,7 @@ export function formatChoreRow(row: {
     startDay: row.startDay || null,
     lastCompleted: row.lastCompleted?.toISOString() || null,
     nextDue: row.nextDue || null,
+    nextDueTime: row.nextDueTime ?? null,
     pointValue: row.pointValue,
     requiresApproval: row.requiresApproval,
     enabled: row.enabled,

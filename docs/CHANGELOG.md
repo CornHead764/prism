@@ -4,6 +4,74 @@ All notable changes to Prism are documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **Voice API foundation (`/api/v1/voice/*`)**: New versioned, token-authenticated API surface for voice and home-automation integrations. First endpoint: `GET /api/v1/voice/calendar/today` returns today's events with a pre-formatted natural-language `spoken` field (`"Today you have Soccer Practice at 4 PM."`) so callers don't need their own templating. Reuses the existing `apiTokens` Bearer-token system; per-token rate-limited at 60 req/min. Documented in `docs/voice-api.md`. Phase 1 of the Alexa + HA distribution plan — additional intents (shopping/add, chore/complete, calendar/upcoming, etc.) coming in follow-ups.
+- **Voice token scope (`voice`)**: `withAuth` now supports a `tokenScope` option that rejects session-cookie callers and requires an API token whose scopes include either the named scope or `*`. The Voice API uses `tokenScope: 'voice'` so a leaked browser session cannot reach it, and Voice tokens issued with `scopes: ['voice']` are confined to `/api/v1/voice/*` (vs. the legacy `['*']` default which grants full account access). Token-creation validator now restricts scopes to the known set `['*', 'voice']`.
+- **Voice API endpoints**: Six new endpoints filling out the `/api/v1/voice/*` surface — `GET /family`, `GET /calendar/upcoming`, `GET /tasks/today`, `POST /shopping/add`, `POST /chore/complete`, `POST /message/post`. Each returns the shared `{ ok, spoken, data }` shape. `chore/complete` enforces the documented security rules: completions inherit the chore's `assignedTo`, voice cannot bypass `requiresApproval` (pending completions stay pending until a parent approves in-app), and ambiguous chore names (e.g. both Emma and Sophie have "Feed the dog") return an `ok:false` disambiguation prompt with `data.candidates` for the caller to resend with `assignee`. Phrase-builder tests grew from 7 to 18 cases covering the new spoken templates.
+- **API token scope picker in Settings**: The Security section's token issuer now shows a scope dropdown ("Voice API only" / "Full access (legacy)") and the issued-token list shows each token's scopes as a colored badge (Voice = blue, `*` = amber). Voice is the default — picking the smallest scope that works means a leaked token can't reach data outside its surface.
+
+## [1.7.2] – 2026-05-02
+
+> Same-day patch follow-up: forecast past-day filter across all weather providers + a developer-experience fix for `npx jest`.
+
+### Bug Fixes
+- **Weather — forecast skips stale past-day entries (OWM, Pirate, Open-Meteo)**: When a cached weather response was generated before local midnight, the 7-day forecast would open with the **previous** local day (e.g. "Thu" on a Friday) until the cache TTL expired. Affected all three providers via three different mechanisms: OWM 3-hour intervals starting on non-zero UTC boundaries, Pirate Weather's pre-aggregated `daily.data[0]` carrying yesterday, and Open-Meteo's `daily.time[0]` doing the same. Each provider now filters past-day buckets server-side, and `WeatherWidget` adds a defense-in-depth client-side filter so a still-warm cache can't leak yesterday into the UI. The "N-Day Forecast" heading now matches the actual visible day count. Thanks to **@iann** for the diagnosis and the OWM/Pirate fix in PR #27 (merged via #31).
+
+### Internal
+- **Local jest no longer fails on integration tests**: `src/lib/db/__tests__/integration.test.ts` now self-skips when `E2E_HAS_TEST_DB !== '1'` so `npx jest` runs clean on a dev machine that doesn't expose Postgres on localhost:5433. CI keeps the same shape (no real DB → suite skips → unit-tests job stays green).
+
+## [1.7.1] – 2026-05-02
+
+> Patch follow-up to v1.7.0. Three small fixes surfaced by post-release verification: a stale-cache trap when switching weather providers, three tables missing from the fresh-install schema snapshot, and an e2e-test chicken-and-egg around the public `/api/family` response.
+
+### Bug Fixes
+- **Weather — provider in cache key**: Switching `WEATHER_PROVIDER` (e.g. `openweather` → `meteo`) used to serve a stale response shaped by the previous provider until the 10-minute TTL expired (manual mitigation: `redis-cli DEL weather:<location>`). Cache key now embeds the active provider, so a switch produces a non-colliding key automatically.
+- **Fresh-install schema — travel_trips + weekend_***: `src/lib/db/init/02-schema.sql` was 3 tables behind master. `travel_trips` (v1.4 — Travel Map), `weekend_places` and `weekend_visits` (v1.5 — Weekend Ideas) are now created cleanly on first init. `test-fresh-install.sh` reflects the full v1.7 surface.
+
+### Internal
+- **e2e helpers — test DB isolation + auth fallback**: `helpers/reset.ts` and `visual-regression.spec.ts` now respect `E2E_DB_NAME` (default `prism`) so suites can target a synthetic test database. `helpers/auth.ts` `loginViaAPI` falls back to `memberIndex` when `/api/family` returns the redacted public response (id `''`, loginIndex set) — needed for any spec that logs in from a fresh page.
+- **Weather — Open-Meteo provider, now the default** (carried over from the v1.7.0 unreleased section, shipped here): `WEATHER_PROVIDER=meteo` is the new zero-config default. No API key required. Tests cover lat/lon plumbing, env fallback, TZ-aware day labels, network error wrapping, and the no-API-key path.
+
+## [1.7.0] – 2026-05-02
+
+> Major calendar refactor (widget toolbar parity with the subpage, drag-and-drop in cards mode, ten view modes including 1W–4W and Schedule, click-to-edit on widget items) and a multi-provider weather system. The `/week` page is retired — the calendar subpage is now a strict superset.
+
+### Added
+- **Calendar — drag-and-drop everywhere**: Drag meals, chores, tasks, and events between days in cards mode across all calendar views (Day, List, Week, 1W–4W, Month, 3 Months, Agenda) and inside the dashboard CalendarWidget. Uses a 5px PointerSensor activation distance so drag and click-to-edit coexist on the same card. Drop targets in every cell via `DroppableOverlayCell`; `moveError` surfaces inline if the API rejects the move.
+- **Calendar — click-to-edit from the widget**: Tasks, Chores, and Meals widget items open the same edit modals as the calendar subpage. Modals are lazy-loaded via `React.lazy` + `Suspense` so the dashboard's first paint isn't taxed.
+- **Calendar — cards display mode**: New per-day card view (alongside the existing inline list view) renders meals at top, events in the middle, chores+tasks at bottom, with a dynamic per-cell capacity probe (`useCardCapacity`) that respects the current font scale and viewport. Overflow folds into a "+N more" popover so nothing is silently clipped. Toggle in the View Options gear; persists per surface (subpage and widget).
+- **Calendar — view modes**: Subpage and widget now expose Agenda, Day, List, Schedule (week vertical), 1W, 2W, 3W, 4W, Month, and 3 Months. View dropdown gains stacked ▲▼ triangles for one-click cycling. Multi-week navigation now advances/retreats by `weekCount` weeks (was 1).
+- **Calendar — view options**: Hide weekends (multi-week views), merge calendars into one column, show notes column (Day/Schedule), and overlay toggles for events/meals/chores/tasks. Settings persist to localStorage and the View Options trigger shows a badge when any toggle is non-default.
+- **Calendar — meal/chore/task overlays**: Cards mode renders these alongside events on every view; bucket data comes from a shared `useDayBucketsForRange` so the subpage and widget see the same data with the same TZ handling.
+- **Weather — multi-provider system**: `WEATHER_PROVIDER` env var (`meteo` | `pirate` | `openweather`) selects the active provider via a factory in `src/lib/integrations/weather.ts`. Default is `meteo` (Open-Meteo) — no API key required. `LocationParam` (string display name OR `{lat, lon}`) is the provider-neutral input.
+- **Weather — Open-Meteo** (new default, zero config): WMO weather-code mapping, `timezone=auto` so day-of-week labels respect the response's local timezone, °F + mph units. No API key required. Activated automatically when `WEATHER_PROVIDER` is unset or `meteo`.
+- **Weather — Pirate Weather** (Dark Sky-compatible, opt-in): sunrise/sunset arc, minutely precipitation forecast, hourly timeline rendered via `merry-timeline`. New `PIRATE_WEATHER_API_KEY` and `WEATHER_LAT`/`WEATHER_LON` env vars (see `.env.example`). Thanks to **@iann** for the original PR.
+
+### Improved
+- **Calendar widget — toolbar parity**: Layout now mirrors the subpage: Today | < > | View dropdown | View Options gear | Add Event. Today button gets explicit contrast classes for transparent vs normal mode (no more white-on-white). Calendar pill chips, view-mode persistence, and notes column all match.
+- **Calendar — TZ correctness**: Forecast day-of-week labels now use `Intl.DateTimeFormat` keyed off the response's IANA timezone (was `getUTCDay()`, which rolled past midnight for late-evening users). Chore overdue stripes parse `nextDue` (a YYYY-MM-DD DATE column) as a local date instead of UTC, so today's chore isn't flagged overdue in negative-UTC zones. Same fix applied in `DayColumn`, `useDayBucketsForRange`, and the drag preview.
+- **Calendar — month view bucket range**: CalendarWidget month view now spans the full 6-week rendered grid (start-of-week containing month start through end-of-week containing month end), so overlay items on leading/trailing days from neighboring months are no longer missing.
+- **Calendar — meal sort order**: Aligned across `useDayBucketsForRange`, `useWeekViewData`, and CalendarView's `sortMealsByType` to chronological order (breakfast → lunch → snack → dinner), matching `MEAL_TIME_DEFAULTS` in `cells/itemTime.ts`. Previously the widget rendered a 3pm snack below a 6pm dinner.
+
+### Bug Fixes
+- **Calendar drag — task time-of-day preserved**: `moveTask` now accepts the original `dueDate` and preserves its hour/minute on the target date instead of hardcoding 23:59:59 (a 9am task no longer becomes 11:59pm after drag).
+- **Calendar drag — multi-week capacity**: `MultiWeekView` cards-mode capacity now reserves space for the always-rendered overlay rows (meals at top, chores+tasks at bottom) in BOTH overflow branches via `useCardCapacity({ headerHeight, popoverHeight })`. Previously the no-overflow branch ignored overlay rows and dense days silently clipped chores/tasks with no `+N more` indicator.
+- **ChoreModal / TaskModal — clearable due dates**: Both modals now allow explicitly clearing a previously-set due date. `ChoreModal` no longer falls back to `chore?.nextDue` when the input is empty; `TaskModal`'s `onSave` widens `dueDate` to `Date | null` and the API consumers (TasksView, CalendarView, Dashboard) forward `null` so the server's clear branch fires.
+- **POST /api/meals — `mealTime` persisted**: `mealTime` field was destructured-then-not-inserted on creation, so meal time-of-day silently dropped on first save. Now persisted on both insert and the response payload.
+- **CalendarWidget DndContext — `onDragCancel`**: Escape during a drag now clears `activeDragId` and any prior `moveError` (was leaving stale state).
+- **CalendarWidget AgendaView — overlay props**: Widget's agenda view now receives `bucketsByDate`, `displayMode`, and `enableDnd` like the other six views — meals/chores/tasks no longer silently disappear in agenda mode.
+- **WeekVerticalView merged-view**: Recognizes the synthetic `all` group the same way DayViewSideBySide does — meals/chores/tasks no longer drop in the merged column.
+- **MonthView popover height**: Per-overlay-row reservation bumped from 20px to 26px (matches the actual sm-card + gap-1 height) so dense days don't push overlay items into clipped territory.
+- **`displayMode` default**: Aligned across state initializers, ViewOptionsMenu's non-default-count badge, and both Reset-to-defaults handlers — `inline` is the first-load default everywhere. Eliminates the spurious `1` badge on first load and the "Reset to defaults flips the calendar layout" surprise.
+- **`hideWeekends` toggle scope**: Tightened to multi-week only (the only view that honored it). Previously the toggle appeared in week / list / month view options and silently did nothing.
+- **Cookie `Secure` flag (logout)**: `/api/auth/logout` now derives HTTPS from `x-forwarded-proto` like the rest of the auth path, so cookies cleared during logout match the `Secure` flag they were set with behind a TLS-terminating proxy.
+
+### Internal
+- **Code review modalities — multi-agent cloud review (`/ultrareview`)**: This release was reviewed in three rounds (24 candidate findings → 16 confirmed → all addressed) — caught wiring/units/TZ regressions on weather, drag-and-drop time-of-day loss, capacity miscalculations, default-state divergence, and several silent-clipping bugs that text-only review structurally misses. See `docs/code-review-modalities.md`.
+- **`OverlayFlags` consolidated**: Single canonical definition in `useDayBucketsForRange`; cells/`DayColumn` re-exports.
+- **Dead code cleanup**: `src/app/calendar/OverlaysToolbar.tsx` (created but never imported) removed; duplicate `format as fmt` import in AgendaView removed.
+- **`/week` page retired**: `src/app/week/*` deleted, `useWeekMutations` moved to `src/lib/hooks/`. The calendar subpage is a strict superset.
+
 ## [1.6.0] – 2026-04-29
 
 > Consolidates the previously-prepared (but never tagged) v1.5.2 PWA fixes with substantial reverse-proxy / install-flow reliability work, Performance Mode polish, and new CI gating.

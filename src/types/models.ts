@@ -44,6 +44,8 @@ export interface Chore {
   startDay?: string | null;
   lastCompleted?: Date | string;
   nextDue?: string;
+  /** Optional HH:mm time-of-day; null/undefined → floats above the time grid. */
+  nextDueTime?: string | null;
   enabled: boolean;
   requiresApproval: boolean;
   pointValue: number;
@@ -146,6 +148,8 @@ export interface Meal {
   weekOf: string;
   dayOfWeek: DayOfWeek;
   mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+  /** Optional HH:mm time-of-day for time-grid placement; null/undefined → default by mealType. */
+  mealTime?: string | null;
   cookedAt?: Date | string | null;
   cookedBy?: { id: string; name: string; color: string } | null;
   createdBy?: { id: string; name: string; color: string } | null;

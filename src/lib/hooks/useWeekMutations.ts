@@ -1,0 +1,98 @@
+'use client';
+
+import { useCallback } from 'react';
+import { format, startOfWeek, startOfDay } from 'date-fns';
+import { DAYS_OF_WEEK, type DayOfWeek } from '@/lib/constants/days';
+import { useWeekStartsOn } from '@/lib/hooks/useWeekStartsOn';
+
+interface UseWeekMutationsOptions {
+  /** Called after a successful mutation to re-fetch upstream data. */
+  refresh: () => Promise<void>;
+}
+
+interface UseWeekMutationsResult {
+  moveChore: (choreId: string, targetDate: Date) => Promise<void>;
+  moveTask: (taskId: string, targetDate: Date, originalDue?: Date | null) => Promise<void>;
+  moveMeal: (mealId: string, targetDate: Date) => Promise<void>;
+  moveEvent: (eventId: string, originalStart: Date, originalEnd: Date, targetDate: Date) => Promise<void>;
+}
+
+async function patchJson(url: string, body: unknown): Promise<void> {
+  const res = await fetch(url, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let message = `PATCH ${url} failed: ${res.status}`;
+    try {
+      const data = await res.json();
+      if (typeof data?.error === 'string') message = data.error;
+    } catch { /* swallow */ }
+    throw new Error(message);
+  }
+}
+
+export function useWeekMutations({ refresh }: UseWeekMutationsOptions): UseWeekMutationsResult {
+  const { weekStartsOn } = useWeekStartsOn();
+
+  const moveChore = useCallback(
+    async (choreId: string, targetDate: Date) => {
+      await patchJson(`/api/chores/${choreId}`, {
+        nextDue: format(targetDate, 'yyyy-MM-dd'),
+      });
+      await refresh();
+    },
+    [refresh],
+  );
+
+  const moveTask = useCallback(
+    async (taskId: string, targetDate: Date, originalDue?: Date | null) => {
+      // Preserve the existing time-of-day if the caller supplies the prior
+      // dueDate; otherwise default to end-of-day (legacy behavior, also the
+      // server-side "no time" sentinel — see TaskModal).
+      const useExisting = originalDue && !Number.isNaN(originalDue.getTime());
+      const iso = new Date(
+        targetDate.getFullYear(),
+        targetDate.getMonth(),
+        targetDate.getDate(),
+        useExisting ? originalDue.getHours()   : 23,
+        useExisting ? originalDue.getMinutes() : 59,
+        useExisting ? originalDue.getSeconds() : 59,
+      ).toISOString();
+      await patchJson(`/api/tasks/${taskId}`, { dueDate: iso });
+      await refresh();
+    },
+    [refresh],
+  );
+
+  const moveMeal = useCallback(
+    async (mealId: string, targetDate: Date) => {
+      const dayOfWeek = DAYS_OF_WEEK[targetDate.getDay()] as DayOfWeek;
+      // Send weekOf alongside dayOfWeek so cross-week drags land on the
+      // dropped date instead of snapping to the same dayOfWeek in the
+      // meal's original week.
+      const weekOf = format(startOfWeek(targetDate, { weekStartsOn }), 'yyyy-MM-dd');
+      await patchJson(`/api/meals/${mealId}`, { dayOfWeek, weekOf });
+      await refresh();
+    },
+    [refresh, weekStartsOn],
+  );
+
+  const moveEvent = useCallback(
+    async (eventId: string, originalStart: Date, originalEnd: Date, targetDate: Date) => {
+      // Preserve time-of-day; shift only the date portion to the target.
+      const dayOffsetMs = startOfDay(targetDate).getTime() - startOfDay(originalStart).getTime();
+      const newStart = new Date(originalStart.getTime() + dayOffsetMs);
+      const newEnd = new Date(originalEnd.getTime() + dayOffsetMs);
+      await patchJson(`/api/events/${eventId}`, {
+        startTime: newStart.toISOString(),
+        endTime: newEnd.toISOString(),
+      });
+      await refresh();
+    },
+    [refresh],
+  );
+
+  return { moveChore, moveTask, moveMeal, moveEvent };
+}

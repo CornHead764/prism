@@ -28,6 +28,7 @@ function transformMeals(json: unknown): Meal[] {
       weekOf: string;
       dayOfWeek: DayOfWeek;
       mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+      mealTime: string | null;
       cookedAt: string | null;
       cookedBy: { id: string; name: string; color: string } | null;
       createdBy: { id: string; name: string; color: string } | null;
@@ -47,6 +48,7 @@ function transformMeals(json: unknown): Meal[] {
     weekOf: meal.weekOf,
     dayOfWeek: meal.dayOfWeek,
     mealType: meal.mealType,
+    mealTime: meal.mealTime ?? undefined,
     cookedAt: meal.cookedAt ? new Date(meal.cookedAt) : undefined,
     cookedBy: meal.cookedBy || undefined,
     createdBy: meal.createdBy || undefined,

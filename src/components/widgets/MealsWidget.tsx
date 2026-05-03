@@ -25,6 +25,8 @@ export interface MealsWidgetProps {
   onAddMeal?: (meal: Record<string, unknown>) => void;
   onAddClick?: () => void;
   onWeekChange?: (weekOf: string) => void;
+  /** Callback when a meal row is clicked (opens edit modal). */
+  onMealClick?: (meal: Meal) => void;
   titleHref?: string;
   className?: string;
 }
@@ -39,6 +41,7 @@ export const MealsWidget = React.memo(function MealsWidget({
   onAddMeal,
   onAddClick,
   onWeekChange,
+  onMealClick,
   titleHref,
   className,
 }: MealsWidgetProps) {
@@ -142,6 +145,7 @@ export const MealsWidget = React.memo(function MealsWidget({
                     isToday={isToday}
                     onMarkCooked={onMarkCooked}
                     onUnmarkCooked={onUnmarkCooked}
+                    onMealClick={onMealClick}
                   />
                 );
               })}
@@ -165,7 +169,7 @@ export const MealsWidget = React.memo(function MealsWidget({
 });
 
 function DaySection({
-  day, date, meals, isToday, onMarkCooked, onUnmarkCooked,
+  day, date, meals, isToday, onMarkCooked, onUnmarkCooked, onMealClick,
 }: {
   day: Meal['dayOfWeek'];
   date: Date;
@@ -173,6 +177,7 @@ function DaySection({
   isToday: boolean;
   onMarkCooked?: (mealId: string) => void;
   onUnmarkCooked?: (mealId: string) => void;
+  onMealClick?: (meal: Meal) => void;
 }) {
   if (meals.length === 0) return null;
   return (
@@ -184,7 +189,13 @@ function DaySection({
       </div>
       <div className="space-y-1">
         {meals.map((meal) => (
-          <MealItem key={meal.id} meal={meal} onMarkCooked={onMarkCooked} onUnmarkCooked={onUnmarkCooked} />
+          <MealItem
+            key={meal.id}
+            meal={meal}
+            onMarkCooked={onMarkCooked}
+            onUnmarkCooked={onUnmarkCooked}
+            onClick={onMealClick ? () => onMealClick(meal) : undefined}
+          />
         ))}
       </div>
     </div>
@@ -192,17 +203,25 @@ function DaySection({
 }
 
 function MealItem({
-  meal, onMarkCooked, onUnmarkCooked,
+  meal, onMarkCooked, onUnmarkCooked, onClick,
 }: {
   meal: Meal;
   onMarkCooked?: (mealId: string) => void;
   onUnmarkCooked?: (mealId: string) => void;
+  onClick?: () => void;
 }) {
   const isCooked = !!meal.cookedAt;
   return (
     <div className={cn('flex items-start gap-2 p-2 rounded-md', 'hover:bg-accent/50 transition-colors group', isCooked && 'opacity-60')}>
       <span className="text-base shrink-0">{getMealTypeEmoji(meal.mealType)}</span>
-      <div className="flex-1 min-w-0">
+      {/* Meal content — clickable surface that opens the edit modal. */}
+      <div
+        className={cn('flex-1 min-w-0', onClick && 'cursor-pointer')}
+        role={onClick ? 'button' : undefined}
+        tabIndex={onClick ? 0 : undefined}
+        onClick={onClick}
+        onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
+      >
         <div className="flex items-center gap-2">
           <span className={cn('text-sm font-medium truncate', isCooked && 'line-through text-muted-foreground')}>{meal.name}</span>
           <Badge variant="outline" className="text-[10px] px-1.5 py-0 capitalize">{meal.mealType}</Badge>
@@ -221,13 +240,14 @@ function MealItem({
           </div>
         )}
       </div>
+      {/* Cooked toggle — stops propagation so the row click doesn't fire too. */}
       {isCooked && onUnmarkCooked ? (
-        <Button size="icon" variant="ghost" onClick={() => onUnmarkCooked(meal.id)}
+        <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); onUnmarkCooked(meal.id); }}
           className="h-7 w-7 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" title="Undo" aria-label="Undo mark as cooked">
           <Undo2 className="h-4 w-4" />
         </Button>
       ) : !isCooked && onMarkCooked ? (
-        <Button size="icon" variant="ghost" onClick={() => onMarkCooked(meal.id)} className="h-7 w-7 shrink-0" aria-label="Mark as cooked">
+        <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); onMarkCooked(meal.id); }} className="h-7 w-7 shrink-0" aria-label="Mark as cooked">
           <CheckCircle2 className="h-4 w-4" />
         </Button>
       ) : null}

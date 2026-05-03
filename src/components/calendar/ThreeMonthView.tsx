@@ -84,9 +84,10 @@ function MiniMonth({
       !transparentMode && 'bg-card/85 backdrop-blur-sm',
       isCenter && 'ring-2 ring-primary/30'
     )}>
-      {/* Month header with themed color */}
+      {/* Month header with themed color — compact band so the three minis
+          can use more vertical space for actual day cells. */}
       <div
-        className="text-center py-3 font-bold text-base flex-shrink-0 text-white shadow-sm"
+        className="text-center py-1 font-semibold text-sm flex-shrink-0 text-white shadow-sm"
         style={{ backgroundColor: monthColor }}
       >
         {format(month, 'MMMM yyyy')}

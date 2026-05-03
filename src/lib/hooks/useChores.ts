@@ -43,6 +43,9 @@ interface UseChoresOptions {
   refreshInterval?: number;
   /** When false, skip initial fetch and polling. Fetch triggers when enabled transitions to true. */
   enabled?: boolean;
+  /** When true, also return future-dated chores. Calendar overlays use this
+   * so dragging a chore to a future date doesn't make it disappear. */
+  includeFuture?: boolean;
 }
 
 interface UseChoresResult {
@@ -63,9 +66,14 @@ export function useChores(options: UseChoresOptions = {}): UseChoresResult {
     showDisabled = false,
     refreshInterval = 5 * 60 * 1000,
     enabled = true,
+    includeFuture = false,
   } = options;
 
-  const cacheKey = `/api/chores?${new URLSearchParams({ ...(assignedTo ? { assignedTo } : {}), ...(!showDisabled ? { enabled: 'true' } : {}) }).toString()}`;
+  const cacheKey = `/api/chores?${new URLSearchParams({
+    ...(assignedTo ? { assignedTo } : {}),
+    ...(!showDisabled ? { enabled: 'true' } : {}),
+    ...(includeFuture ? { includeFuture: 'true' } : {}),
+  }).toString()}`;
   const cached = navCacheGet<Chore[]>(cacheKey);
   const [chores, setChores] = useState<Chore[]>(() => cached ?? []);
   const [loading, setLoading] = useState(!cached);
@@ -82,6 +90,7 @@ export function useChores(options: UseChoresOptions = {}): UseChoresResult {
       const params = new URLSearchParams();
       if (assignedTo) params.set('assignedTo', assignedTo);
       if (!showDisabled) params.set('enabled', 'true');
+      if (includeFuture) params.set('includeFuture', 'true');
 
       const response = await fetch(`/api/chores?${params.toString()}`);
 
@@ -102,6 +111,7 @@ export function useChores(options: UseChoresOptions = {}): UseChoresResult {
           customIntervalDays: number | null;
           lastCompleted: string | null;
           nextDue: string | null;
+          nextDueTime: string | null;
           enabled: boolean;
           requiresApproval: boolean;
           pointValue: number;
@@ -129,6 +139,7 @@ export function useChores(options: UseChoresOptions = {}): UseChoresResult {
           customIntervalDays: chore.customIntervalDays || undefined,
           lastCompleted: chore.lastCompleted ? new Date(chore.lastCompleted) : undefined,
           nextDue: chore.nextDue || undefined,
+          nextDueTime: chore.nextDueTime ?? null,
           enabled: chore.enabled,
           requiresApproval: chore.requiresApproval,
           pointValue: chore.pointValue,
@@ -146,7 +157,7 @@ export function useChores(options: UseChoresOptions = {}): UseChoresResult {
     } finally {
       setLoading(false);
     }
-  }, [assignedTo, showDisabled, cacheKey]);
+  }, [assignedTo, showDisabled, cacheKey, includeFuture]);
 
   /**
    * Mark a chore as completed

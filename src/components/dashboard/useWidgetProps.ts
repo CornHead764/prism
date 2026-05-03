@@ -1,6 +1,7 @@
 'use client';
 
 import { toast } from '@/components/ui/use-toast';
+import type { Chore, Task, Meal } from '@/types';
 import type { useDashboardData } from './useDashboardData';
 
 interface ModalSetters {
@@ -8,6 +9,12 @@ interface ModalSetters {
   setShowAddMessage: (v: boolean) => void;
   setShowAddChore: (v: boolean) => void;
   setShowAddShopping: (v: boolean) => void;
+}
+
+interface EditHandlers {
+  onEditTask?: (task: Task) => void;
+  onEditChore?: (chore: Chore) => void;
+  onEditMeal?: (meal: Meal) => void;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -21,6 +28,7 @@ export function buildWidgetProps(
   modals: ModalSetters,
   weatherLocation?: string,
   confirmAction?: ConfirmFn,
+  editHandlers?: EditHandlers,
 ): Record<string, Record<string, unknown>> {
   return {
     clock: {},
@@ -52,6 +60,7 @@ export function buildWidgetProps(
         const user = await requireAuth("Who's adding a task?");
         if (user) modals.setShowAddTask(true);
       },
+      onTaskClick: editHandlers?.onEditTask,
       titleHref: '/tasks',
     },
     messages: {
@@ -126,6 +135,7 @@ export function buildWidgetProps(
         const user = await requireAuth("Who's adding a chore?");
         if (user) modals.setShowAddChore(true);
       },
+      onChoreClick: editHandlers?.onEditChore,
       titleHref: '/chores',
     },
     shopping: {
@@ -182,6 +192,7 @@ export function buildWidgetProps(
           data.meals.refresh();
         } catch { /* ignore */ }
       },
+      onMealClick: editHandlers?.onEditMeal,
       titleHref: '/meals',
     },
   };

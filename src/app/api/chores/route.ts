@@ -40,8 +40,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const assignedTo = searchParams.get('assignedTo');
     const enabledOnly = searchParams.get('enabled') !== 'false';
+    // When true, return future-dated chores too (calendar overlay needs them
+    // so a chore dragged onto a date later this month doesn't disappear).
+    // The chores list page omits this and gets only currently-due items.
+    const includeFuture = searchParams.get('includeFuture') === 'true';
 
-    const cacheKey = `chores:${assignedTo || 'all'}:${enabledOnly}`;
+    const cacheKey = `chores:${assignedTo || 'all'}:${enabledOnly}:future=${includeFuture}`;
 
     const data = await getCached(cacheKey, async () => {
       // First, get all pending completions
@@ -91,6 +95,7 @@ export async function GET(request: NextRequest) {
           startDay: chores.startDay,
           lastCompleted: chores.lastCompleted,
           nextDue: chores.nextDue,
+          nextDueTime: chores.nextDueTime,
           pointValue: chores.pointValue,
           requiresApproval: chores.requiresApproval,
           enabled: chores.enabled,
@@ -119,14 +124,18 @@ export async function GET(request: NextRequest) {
       // 1. Due today or earlier (nextDue <= today or no nextDue)
       // 2. Have a pending completion awaiting approval
       // 3. Were completed within the last 24 hours (so they still appear as "done" in the UI)
+      // When includeFuture=true (calendar overlay), skip the date filter so
+      // future-dated chores remain visible after a drag-and-drop reschedule.
       const today = format(new Date(), 'yyyy-MM-dd');
       const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      const filteredResults = results.filter(row => {
-        const isDue = !row.nextDue || row.nextDue <= today;
-        const hasPending = choreIdsWithPending.has(row.id);
-        const recentlyCompleted = row.lastCompleted && row.lastCompleted > oneDayAgo;
-        return isDue || hasPending || recentlyCompleted;
-      });
+      const filteredResults = includeFuture
+        ? results
+        : results.filter(row => {
+            const isDue = !row.nextDue || row.nextDue <= today;
+            const hasPending = choreIdsWithPending.has(row.id);
+            const recentlyCompleted = row.lastCompleted && row.lastCompleted > oneDayAgo;
+            return isDue || hasPending || recentlyCompleted;
+          });
 
       const formattedChores = filteredResults.map(row => {
         const pendingCompletion = pendingMap.get(row.id);
@@ -196,6 +205,8 @@ export async function POST(request: NextRequest) {
       pointValue,
       requiresApproval,
       createdBy,
+      nextDue,
+      nextDueTime,
     } = validation.data;
 
     // Insert the chore
@@ -212,6 +223,8 @@ export async function POST(request: NextRequest) {
         pointValue: pointValue || 0,
         requiresApproval: requiresApproval || false,
         createdBy: createdBy || null,
+        nextDue: nextDue || undefined,
+        nextDueTime: nextDueTime ?? null,
       })
       .returning();
 

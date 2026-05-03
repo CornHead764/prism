@@ -63,6 +63,8 @@ export interface TasksWidgetProps {
   onTaskToggle?: (taskId: string, completed: boolean) => void;
   /** Callback when add button is clicked */
   onAddClick?: () => void;
+  /** Callback when a task row is clicked (opens edit modal). */
+  onTaskClick?: (task: Task) => void;
   /** URL for the full tasks page (makes title clickable) */
   titleHref?: string;
   /** Additional CSS classes */
@@ -95,6 +97,7 @@ export const TasksWidget = React.memo(function TasksWidget({
   error = null,
   onTaskToggle,
   onAddClick,
+  onTaskClick,
   titleHref,
   className,
 }: TasksWidgetProps) {
@@ -169,6 +172,7 @@ export const TasksWidget = React.memo(function TasksWidget({
                 task={task}
                 completed={task.completed || false}
                 onToggle={() => handleToggle(task.id, task.completed || false)}
+                onClick={onTaskClick ? () => onTaskClick(task) : undefined}
               />
             ))}
           </div>
@@ -194,10 +198,12 @@ function TaskItem({
   task,
   completed,
   onToggle,
+  onClick,
 }: {
   task: Task;
   completed: boolean;
   onToggle: () => void;
+  onClick?: () => void;
 }) {
   // Format due date
   const dueDateDisplay = task.dueDate ? formatDueDate(task.dueDate) : null;
@@ -214,10 +220,12 @@ function TaskItem({
         completed && 'opacity-60'
       )}
     >
-      {/* Checkbox */}
+      {/* Checkbox — stops propagation so the row click doesn't open the
+          edit modal when the user is just toggling completion. */}
       <Checkbox
         checked={completed}
         onCheckedChange={onToggle}
+        onClick={(e) => e.stopPropagation()}
         className="mt-0.5"
         style={
           task.assignedTo
@@ -226,8 +234,14 @@ function TaskItem({
         }
       />
 
-      {/* Task content */}
-      <div className="flex-1 min-w-0">
+      {/* Task content — clickable surface that opens the edit modal. */}
+      <div
+        className={cn('flex-1 min-w-0', onClick && 'cursor-pointer')}
+        role={onClick ? 'button' : undefined}
+        tabIndex={onClick ? 0 : undefined}
+        onClick={onClick}
+        onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
+      >
         <div className="flex items-center gap-2">
           {/* Title */}
           <span

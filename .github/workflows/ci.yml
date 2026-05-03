@@ -55,9 +55,9 @@ jobs:
       - run: npm ci
 
       # Integration tests (src/lib/db/__tests__/integration.test.ts) require
-      # a real Postgres + seeded schema — they belong in a separate job, not
-      # the pure unit run.
-      - run: npm test -- --ci --testPathIgnorePatterns="integration\\.test\\.ts$"
+      # a real Postgres + seeded schema. They self-skip when E2E_HAS_TEST_DB
+      # is not '1' (this job doesn't set it), so a plain jest run is enough.
+      - run: npm test -- --ci
 
   migration-replay:
     name: Migration replay (modality TODO #3)

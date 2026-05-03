@@ -69,6 +69,10 @@ export const createChoreSchema = z.object({
   pointValue: z.number().int().min(0).max(1000).optional().default(0),
   requiresApproval: z.boolean().optional().default(false),
   createdBy: uuidSchema.optional(),
+  // Optional initial due date/time. When omitted, server computes nextDue
+  // from frequency.
+  nextDue: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').nullable().optional(),
+  nextDueTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format (HH:mm)').nullable().optional(),
 });
 
 export const updateChoreSchema = createChoreSchema.partial().extend({
@@ -128,6 +132,8 @@ export const createMealSchema = z.object({
   weekOf: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
   dayOfWeek: z.enum(DAYS_OF_WEEK),
   mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']),
+  // HH:mm time-of-day for time-grid placement; nullable to allow clearing.
+  mealTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format (HH:mm)').nullable().optional(),
   source: z.enum(['internal', 'external']).optional().default('internal'),
   sourceId: z.string().max(255).optional(),
   createdBy: uuidSchema.optional(),
@@ -281,12 +287,40 @@ export const calendarNotesQuerySchema = z.object({
 
 // API TOKEN SCHEMAS
 
+/**
+ * Known token scopes. `*` grants full account access (the legacy default).
+ * `voice` is restricted to the `/api/v1/voice/*` namespace. New scopes
+ * should be added here AND enforced by `withAuth({ tokenScope: ... })`
+ * on the endpoints they cover.
+ */
+export const TOKEN_SCOPES = ['*', 'voice'] as const;
+export type TokenScope = (typeof TOKEN_SCOPES)[number];
+
 export const createApiTokenSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
   scopes: z
-    .array(z.string().min(1).max(100))
+    .array(z.enum(TOKEN_SCOPES))
+    .min(1, 'At least one scope is required')
     .optional()
     .default(['*']),
+});
+
+// VOICE API SCHEMAS
+
+export const voiceShoppingAddSchema = z.object({
+  item: z.string().min(1, 'Item name is required').max(255),
+  list: z.string().min(1).max(100).optional(),
+  quantity: z.number().int().positive().optional(),
+  unit: z.string().min(1).max(50).optional(),
+});
+
+export const voiceChoreCompleteSchema = z.object({
+  chore: z.string().min(1, 'Chore name is required').max(255),
+  assignee: z.string().min(1).max(100).optional(),
+});
+
+export const voiceMessagePostSchema = z.object({
+  message: z.string().min(1, 'Message is required').max(2000),
 });
 
 // LAYOUT SCHEMAS

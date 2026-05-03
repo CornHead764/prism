@@ -63,6 +63,10 @@
     "2026-04-29": {
       "count": 650,
       "uniques": 104
+    },
+    "2026-04-30": {
+      "count": 64,
+      "uniques": 19
     }
   },
   "referrer_history": {
@@ -114,36 +118,90 @@
         "referrer": "Google",
         "uniques": 2
       }
+    ],
+    "2026-05-01": [
+      {
+        "count": 152,
+        "referrer": "reddit.com",
+        "uniques": 47
+      },
+      {
+        "count": 52,
+        "referrer": "github.com",
+        "uniques": 15
+      },
+      {
+        "count": 42,
+        "referrer": "community.home-assistant.io",
+        "uniques": 16
+      },
+      {
+        "count": 6,
+        "referrer": "com.reddit.frontpage",
+        "uniques": 6
+      },
+      {
+        "count": 2,
+        "referrer": "Google",
+        "uniques": 2
+      }
+    ],
+    "2026-05-02": [
+      {
+        "count": 140,
+        "referrer": "reddit.com",
+        "uniques": 48
+      },
+      {
+        "count": 88,
+        "referrer": "github.com",
+        "uniques": 13
+      },
+      {
+        "count": 32,
+        "referrer": "community.home-assistant.io",
+        "uniques": 14
+      },
+      {
+        "count": 9,
+        "referrer": "com.reddit.frontpage",
+        "uniques": 7
+      },
+      {
+        "count": 3,
+        "referrer": "Google",
+        "uniques": 2
+      }
     ]
   },
   "referrers": [
     {
-      "count": 152,
+      "count": 140,
       "referrer": "reddit.com",
-      "uniques": 47
+      "uniques": 48
     },
     {
-      "count": 52,
+      "count": 88,
       "referrer": "github.com",
-      "uniques": 15
+      "uniques": 13
     },
     {
-      "count": 42,
+      "count": 32,
       "referrer": "community.home-assistant.io",
-      "uniques": 16
+      "uniques": 14
     },
     {
-      "count": 6,
+      "count": 9,
       "referrer": "com.reddit.frontpage",
-      "uniques": 6
+      "uniques": 7
     },
     {
-      "count": 2,
+      "count": 3,
       "referrer": "Google",
       "uniques": 2
     }
   ],
-  "updated_at": "2026-04-30T05:34:28Z",
+  "updated_at": "2026-05-02T05:15:20Z",
   "views": {
     "2026-04-14": {
       "count": 64,
@@ -208,6 +266,10 @@
     "2026-04-29": {
       "count": 75,
       "uniques": 15
+    },
+    "2026-04-30": {
+      "count": 106,
+      "uniques": 11
     }
   }
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { addDays, addWeeks, addMonths, subDays, subWeeks, subMonths, startOfWeek } from 'date-fns';
+import type { OverlayFlags } from '@/lib/hooks/useDayBucketsForRange';
 
 export type WidgetViewType =
   | 'agenda'
@@ -22,9 +23,9 @@ const VALID_VIEWS: WidgetViewType[] = [
 
 export const VIEW_OPTIONS: { value: WidgetViewType; label: string }[] = [
   { value: 'agenda', label: 'Agenda' },
-  { value: 'list', label: 'List' },
   { value: 'day', label: 'Day' },
-  { value: 'week', label: 'Week' },
+  { value: 'list', label: 'List' },
+  { value: 'week', label: 'Schedule' },
   { value: 'multiWeek', label: '1W' },
   { value: 'multiWeek2', label: '2W' },
   { value: 'multiWeek3', label: '3W' },
@@ -82,11 +83,39 @@ export function useCalendarWidgetPrefs(gridW: number, gridH: number) {
     () => typeof window !== 'undefined' && localStorage.getItem('prism-calendar-notes-visible') === 'true'
   );
   const [viewType, setViewType] = useState<WidgetViewType>(readViewPref);
+  const [displayMode, setDisplayMode] = useState<'inline' | 'cards'>(
+    // Match useCalendarViewData's default: 'cards' only if explicitly set,
+    // else 'inline'. Same localStorage key — divergent defaults caused the
+    // widget and subpage to render differently on first load.
+    () => (typeof window !== 'undefined' && localStorage.getItem('prism-calendar-display-mode') === 'cards') ? 'cards' : 'inline'
+  );
+  const [hideWeekends, setHideWeekends] = useState<boolean>(
+    () => typeof window !== 'undefined' && localStorage.getItem('prism-calendar-hide-weekends') === 'true'
+  );
+  const [overlays, setOverlays] = useState<OverlayFlags>(() => {
+    if (typeof window === 'undefined') return { events: true, meals: true, chores: true, tasks: true };
+    try {
+      const raw = localStorage.getItem('prism-calendar-overlays');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return {
+          events: parsed.events !== false,
+          meals: parsed.meals !== false,
+          chores: parsed.chores !== false,
+          tasks: parsed.tasks !== false,
+        };
+      }
+    } catch { /* ignore */ }
+    return { events: true, meals: true, chores: true, tasks: true };
+  });
 
   // Persist prefs
   useEffect(() => { localStorage.setItem('prism-calendar-view', viewType); }, [viewType]);
   useEffect(() => { localStorage.setItem('prism-calendar-bordered', String(widgetBordered)); }, [widgetBordered]);
   useEffect(() => { localStorage.setItem('prism-calendar-notes-visible', String(showNotes)); }, [showNotes]);
+  useEffect(() => { localStorage.setItem('prism-calendar-display-mode', displayMode); }, [displayMode]);
+  useEffect(() => { localStorage.setItem('prism-calendar-hide-weekends', String(hideWeekends)); }, [hideWeekends]);
+  useEffect(() => { localStorage.setItem('prism-calendar-overlays', JSON.stringify(overlays)); }, [overlays]);
 
   // Derived view state
   const availableViews = useMemo(() => getAvailableViews(gridW, gridH), [gridW, gridH]);
@@ -127,6 +156,9 @@ export function useCalendarWidgetPrefs(gridW: number, gridH: number) {
     mergedView, setMergedView,
     showNotes, setShowNotes,
     viewType, setViewType,
+    displayMode, setDisplayMode,
+    hideWeekends, setHideWeekends,
+    overlays, setOverlays,
     availableViews,
     effectiveView,
     resolvedView,

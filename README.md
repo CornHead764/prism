@@ -14,11 +14,11 @@ Prism is a configurable family dashboard designed for large wall-mounted screens
 
 ---
 
-## What's New in v1.4.0
+## What's New in v1.7.0
 
-> **Travel Map: Trips** · **Globe always-on trip visualization** · **OneDrive folder picker** · **GPS photo backfill**
+> **Calendar refactor** · **Drag-and-drop everywhere** · **Cards display mode** · **Multi-provider weather** · **Click-to-edit from the widget**
 
-The Travel Map now supports multi-stop **trips** in three styles: Route (numbered stops connected by a polyline), Loop (route that closes back to the start), and Hub (home base with day-trip spokes). All trips are always visible on the globe as faint colored dots and lines. Selecting a trip brings it to full detail. National parks can be added as stops directly within a trip.
+The calendar subpage and the dashboard CalendarWidget now share a unified toolbar and support ten view modes (Agenda, Day, List, Schedule, 1W–4W, Month, 3 Months). A new **cards** display mode renders meals, events, chores, and tasks in per-day cards with full drag-and-drop between days; a dynamic capacity probe folds overflow into a "+N more" popover so nothing is silently clipped. Tasks/Chores/Meals widget items are click-to-edit, opening the same modals as the subpage. The weather stack is now multi-provider (`WEATHER_PROVIDER=meteo|pirate|openweather`) — Open-Meteo is the new zero-config default, with Pirate Weather adding a sunrise/sunset arc and minutely precipitation timeline when configured.
 
 See the [full changelog](docs/CHANGELOG.md) for details on every release.
 
@@ -225,7 +225,7 @@ I looked at open-source alternatives like MagicMirror², Homarr, Home Assistant,
 
 The integrations reflect the tools my family actually uses: Microsoft To Do for tasks and shopping, Google Calendar for scheduling, OneDrive for photos, OpenWeatherMap for weather. I have limited experience with other ecosystems, so if there’s a service you’d like to see supported, open an issue or submit a PR. I did look into Apple Notes integration since my spouse uses it, but the reverse engineering required more ongoing maintenance than I was willing to take on.
 
-I’m not a software developer, but I work in a technical field where AI tools are increasingly central to how work gets done. I pay for a Claude Code subscription and justify that cost as staying current in my field. I spent around two months on this, from research through testing and iteration. I hope you find it useful. If something is missing or broken, open an issue or submit a PR.
+I’m not a software developer, but I work in a technical field where AI tools are increasingly central to how work gets done. I pay for a Claude Code subscription and justify that cost as staying current in my field. I hope you find it useful. If something is missing or broken, open an issue or submit a PR.
 
 ### How It Was Built
 

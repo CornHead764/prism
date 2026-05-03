@@ -4,6 +4,12 @@ export interface FamilyMember {
   id: string;
   name: string;
   role: string;
+  /**
+   * Present on the unauthenticated `/api/family` response. Used as a fallback
+   * for `loginViaAPI` when the caller has no session yet — the public response
+   * intentionally redacts real UUIDs (id is '') and exposes loginIndex instead.
+   */
+  loginIndex?: number;
 }
 
 /**
@@ -85,9 +91,14 @@ export async function loginViaUI(page: Page, name: string, pin = DEFAULT_PIN) {
 export async function loginViaAPI(page: Page, name: string, pin = DEFAULT_PIN) {
   const member = await findMember(page, name);
 
-  const response = await page.request.post('/api/auth/login', {
-    data: { userId: member.id, pin },
-  });
+  // The public /api/family response redacts real UUIDs and returns loginIndex
+  // instead — fall back to memberIndex when we don't have a real id.
+  const data: Record<string, unknown> = { pin };
+  if (member.id) data.userId = member.id;
+  else if (typeof member.loginIndex === 'number') data.memberIndex = member.loginIndex;
+  else throw new Error(`Member "${name}" has neither id nor loginIndex`);
+
+  const response = await page.request.post('/api/auth/login', { data });
 
   if (!response.ok()) {
     throw new Error(`Login failed for ${name}: ${response.status()}`);

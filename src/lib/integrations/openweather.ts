@@ -16,7 +16,11 @@ import type {
   CurrentWeather,
   ForecastDay,
   ForecastPeriod,
+  HourlyForecast,
 } from '@/components/widgets/WeatherWidget';
+import type { LocationParam } from './weather';
+
+export type { LocationParam };
 
 /**
  * OpenWeatherMap API response types
@@ -36,6 +40,10 @@ interface OpenWeatherCurrent {
     description: string;
     icon: string;
   }>;
+  sys: {
+    sunrise: number; // Unix timestamp
+    sunset: number;  // Unix timestamp
+  };
   name: string;
 }
 
@@ -56,6 +64,7 @@ interface OpenWeatherForecast {
   city: {
     name: string;
     country: string;
+    timezone: number; // UTC offset in seconds (e.g., -18000 for CDT)
   };
 }
 
@@ -132,14 +141,13 @@ function buildLocationParam(loc: LocationParam): string {
   return `q=${encodeURIComponent(loc as string)}`;
 }
 
-export type LocationParam = string | { lat: number; lon: number };
 
 /**
  * Fetch current weather data
  */
 export async function fetchCurrentWeather(
   location?: LocationParam
-): Promise<CurrentWeather & { locationName: string }> {
+): Promise<CurrentWeather & { locationName: string; sunrise: Date; sunset: Date }> {
   const config = await getConfig();
   const loc = location ?? config.location;
 
@@ -167,6 +175,8 @@ export async function fetchCurrentWeather(
     windSpeed: mpsToMph(data.wind.speed),
     description: weather.description,
     locationName: data.name,
+    sunrise: new Date(data.sys.sunrise * 1000),
+    sunset: new Date(data.sys.sunset * 1000),
   };
 }
 
@@ -176,6 +186,7 @@ export async function fetchCurrentWeather(
 async function fetchForecastRaw(location?: LocationParam): Promise<{
   forecast: ForecastDay[];
   raw: OpenWeatherForecast['list'];
+  hourly: HourlyForecast[];
   locationName: string;
 }> {
   const config = await getConfig();
@@ -193,7 +204,19 @@ async function fetchForecastRaw(location?: LocationParam): Promise<{
   const data: OpenWeatherForecast = await response.json();
   const dayNames = DAYS_SHORT_ARRAY;
 
-  // Group forecast by day and find daily highs/lows
+  // Group forecast by location-local day (using the city's UTC offset)
+  // so that day boundaries align with midnight at the weather location,
+  // not UTC midnight (which can be as early as 7 PM in US time zones).
+  const tzOffsetSec = data.city.timezone;
+
+  // Today's date key in location-local time — used to skip stale past-day buckets.
+  // OWM's 3-hour intervals start from the next UTC boundary, so when shifted to local
+  // time the very first interval can still belong to the previous local day (e.g. a
+  // 3 AM UTC Friday interval is 10 PM CDT Thursday). Without this guard the forecast
+  // would open with "Thu" when it is already Friday locally.
+  const nowLocalMs = (Math.floor(Date.now() / 1000) + tzOffsetSec) * 1000;
+  const todayKey = new Date(nowLocalMs).toISOString().split('T')[0]!;
+
   const dailyData = new Map<
     string,
     { date: Date; temps: number[]; conditions: number[] }
@@ -201,7 +224,9 @@ async function fetchForecastRaw(location?: LocationParam): Promise<{
 
   for (const item of data.list) {
     const date = new Date(item.dt * 1000);
-    const dateKey = date.toISOString().split('T')[0]!;
+    // Shift by the location's UTC offset so the ISO date reflects local date
+    const localShifted = new Date((item.dt + tzOffsetSec) * 1000);
+    const dateKey = localShifted.toISOString().split('T')[0]!;
 
     if (!dailyData.has(dateKey)) {
       dailyData.set(dateKey, {
@@ -222,8 +247,10 @@ async function fetchForecastRaw(location?: LocationParam): Promise<{
   const forecast: ForecastDay[] = [];
   let count = 0;
 
-  for (const [, dayData] of dailyData) {
-    if (count >= 5) break;
+  for (const [dateKey, dayData] of dailyData) {
+    // Skip any bucket that belongs to a past local day
+    if (dateKey < todayKey) continue;
+    if (count >= 7) break;
 
     const high = Math.max(...dayData.temps);
     const low = Math.min(...dayData.temps);
@@ -241,7 +268,11 @@ async function fetchForecastRaw(location?: LocationParam): Promise<{
       }
     }
 
-    const dayIndex = dayData.date.getDay();
+    // Derive day-of-week directly from the local dateKey ("YYYY-MM-DD") so the
+    // label always matches the bucket's date, regardless of when the first
+    // 3-hour sample within that bucket happened to fall in UTC.
+    const [yr, mo, dy] = dateKey.split('-').map(Number);
+    const dayIndex = new Date(Date.UTC(yr!, mo! - 1, dy!)).getUTCDay();
     forecast.push({
       date: dayData.date,
       dayName: dayNames[dayIndex] || 'Day',
@@ -253,9 +284,24 @@ async function fetchForecastRaw(location?: LocationParam): Promise<{
     count++;
   }
 
+  const now = Date.now();
+  const cutoff = now + 24 * 3_600_000;
+  const hourly: HourlyForecast[] = data.list
+    .filter((item) => {
+      const t = item.dt * 1000;
+      // Include the currently-active 3-hour interval (its timestamp may be up to 3h in the past)
+      return t > now - 3 * 3_600_000 && t <= cutoff;
+    })
+    .map((item) => ({
+      time: new Date(item.dt * 1000),
+      condition: mapCondition(item.weather[0]?.id ?? 800),
+      temp: kelvinToFahrenheit(item.main.temp),
+    }));
+
   return {
     forecast,
     raw: data.list,
+    hourly,
     locationName: `${data.city.name}, ${data.city.country}`,
   };
 }
@@ -277,7 +323,7 @@ export async function fetchForecast(location?: LocationParam): Promise<{
  */
 function extractPeriods(forecastList: OpenWeatherForecast['list']): ForecastPeriod[] {
   const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const periods: ForecastPeriod[] = [];
 
   // Morning: 6am-12pm, Afternoon: 12pm-6pm, Evening: 6pm-12am
@@ -290,7 +336,7 @@ function extractPeriods(forecastList: OpenWeatherForecast['list']): ForecastPeri
   for (const def of periodDefs) {
     const matching = forecastList.filter((item) => {
       const d = new Date(item.dt * 1000);
-      const dateStr = d.toISOString().split('T')[0];
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       const hour = d.getHours();
       return dateStr === todayStr && hour >= def.minHour && hour < def.maxHour;
     });
@@ -321,6 +367,15 @@ export async function fetchWeatherData(location?: LocationParam): Promise<Weathe
 
   const periods = extractPeriods(forecastData.raw);
 
+  // Override the currently-active hourly interval with observed current conditions,
+  // since the forecast model can disagree with what's actually happening right now.
+  const nowMs = Date.now();
+  const patchedHourly = forecastData.hourly.map((h) =>
+    h.time.getTime() <= nowMs
+      ? { ...h, condition: currentData.condition, temp: currentData.temperature }
+      : h
+  );
+
   return {
     location: currentData.locationName,
     current: {
@@ -332,7 +387,10 @@ export async function fetchWeatherData(location?: LocationParam): Promise<Weathe
       description: currentData.description,
     },
     forecast: forecastData.forecast,
+    hourly: patchedHourly,
     periods,
+    sunrise: currentData.sunrise,
+    sunset: currentData.sunset,
     lastUpdated: new Date(),
   };
 }

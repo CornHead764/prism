@@ -184,7 +184,8 @@ export function TasksView() {
                   body: JSON.stringify({
                     title: task.title, description: task.description, priority: task.priority,
                     category: task.category, assignedTo: task.assignedTo?.id,
-                    dueDate: task.dueDate?.toISOString(), listId: task.listId,
+                    dueDate: task.dueDate ? task.dueDate.toISOString() : undefined,
+                    listId: task.listId,
                   }),
                 });
                 if (!res.ok) throw new Error('Failed to create task');
@@ -211,7 +212,9 @@ export function TasksView() {
                   body: JSON.stringify({
                     title: updatedTask.title, description: updatedTask.description, priority: updatedTask.priority,
                     category: updatedTask.category, assignedTo: updatedTask.assignedTo?.id,
-                    dueDate: updatedTask.dueDate?.toISOString(), completed: updatedTask.completed,
+                    // null forwards as JSON null and triggers the server-side clear branch.
+                    dueDate: updatedTask.dueDate === null ? null : updatedTask.dueDate.toISOString(),
+                    completed: updatedTask.completed,
                     listId: updatedTask.listId,
                   }),
                 });

@@ -34,6 +34,8 @@ export function ChoreModal({
   const [requiresApproval, setRequiresApproval] = useState(chore?.requiresApproval || false);
   const [enabled, setEnabled] = useState(chore?.enabled ?? true);
   const [assignedTo, setAssignedTo] = useState(chore?.assignedTo?.id || '');
+  const [nextDue, setNextDue] = useState<string>(chore?.nextDue || '');
+  const [nextDueTime, setNextDueTime] = useState<string>(chore?.nextDueTime || '');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +54,9 @@ export function ChoreModal({
       assignedTo: selectedMember || undefined,
       enabled,
       lastCompleted: chore?.lastCompleted,
-      nextDue: chore?.nextDue,
+      // Allow explicit clearing: empty input → null/undefined, not fallback to old value.
+      nextDue: nextDue || undefined,
+      nextDueTime: nextDueTime || null,
     });
   };
 
@@ -181,6 +185,28 @@ export function ChoreModal({
               <p className="text-xs text-muted-foreground mt-1">Month and day the chore resets (e.g., 03-15 for March 15)</p>
             </div>
           )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium">Due Date</label>
+              <Input
+                type="date"
+                value={nextDue}
+                onChange={(e) => setNextDue(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Due Time</label>
+              <Input
+                type="time"
+                value={nextDueTime}
+                onChange={(e) => setNextDueTime(e.target.value)}
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Optional. Reminder only.</p>
+            </div>
+          </div>
 
           <div>
             <label className="text-sm font-medium">Points</label>

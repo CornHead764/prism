@@ -54,8 +54,9 @@ import { resetAll } from './helpers/reset';
  * DB sidesteps the issue and keeps the parent's name out of the test source.
  */
 function getSeededParentName(): string {
+  const dbName = process.env.E2E_DB_NAME || 'prism';
   const out = execSync(
-    `docker exec prism-db psql -U prism -d prism -At -c "SELECT name FROM users WHERE role = 'parent' ORDER BY created_at LIMIT 1"`,
+    `docker exec prism-db psql -U prism -d ${dbName} -At -c "SELECT name FROM users WHERE role = 'parent' ORDER BY created_at LIMIT 1"`,
     { encoding: 'utf-8' },
   ).trim();
   if (!out) throw new Error('No seeded parent in DB — did seeds run?');
@@ -66,9 +67,9 @@ function getSeededParentName(): string {
 // screenshot (rendered as solid colored rectangles in the diff).
 function dynamicMasks(page: Page) {
   return [
-    page.locator('[role="region"]', { hasText: /^Clock$/ }),
-    page.locator('[role="region"]', { hasText: /^Weather$/ }),
-    page.locator('[role="region"]', { hasText: /^Photos?$/ }),
+    page.locator('[data-widget="Clock"]'),
+    page.locator('[data-widget="Weather"]'),
+    page.locator('[data-widget="Photo"]'),
   ];
 }
 
@@ -166,6 +167,106 @@ test.describe('Visual regression', () => {
 
       await expect(page).toHaveScreenshot(`settings-${theme}.png`, SCREENSHOT_OPTIONS);
     });
+  }
+
+  // ─── Calendar view modes ────────────────────────────────────────────────
+  // The v1.7.0 calendar refactor introduced ten view modes (Agenda, Day, List,
+  // Schedule, 1W, 2W, 3W, 4W, Month, 3M) and a cards display mode that can
+  // toggle on top of most of them. Each combination has its own layout
+  // primitives — capture the ones most likely to regress when the calendar
+  // surface is refactored next.
+  //
+  // Note: view modes are persisted to localStorage (`prism-calendar-view-type`,
+  // `prism-calendar-week-count`, `prism-calendar-display-mode`) so we set them
+  // via addInitScript before the page loads. That avoids racing the toolbar.
+
+  async function setCalendarPrefs(
+    page: Page,
+    opts: { viewType: string; displayMode?: 'inline' | 'cards'; weekCount?: number },
+  ) {
+    const { viewType, displayMode = 'inline', weekCount = 2 } = opts;
+    await page.addInitScript(
+      ([v, d, w]) => {
+        localStorage.setItem('prism-calendar-view-type', v as string);
+        localStorage.setItem('prism-calendar-display-mode', d as string);
+        localStorage.setItem('prism-calendar-week-count', String(w));
+      },
+      [viewType, displayMode, weekCount],
+    );
+  }
+
+  // We sweep light + dark for the highest-risk combinations only — full matrix
+  // (every view × every theme × every display mode) would be 60+ baselines and
+  // most would be redundant.
+  const calendarMatrix = [
+    { view: 'month',     displayMode: 'inline' as const, label: 'month-inline' },
+    { view: 'month',     displayMode: 'cards'  as const, label: 'month-cards' },
+    { view: 'multiWeek', displayMode: 'cards'  as const, label: 'multiweek-2w-cards', weekCount: 2 },
+    { view: 'week',      displayMode: 'cards'  as const, label: 'week-cards' },
+    { view: 'agenda',    displayMode: 'cards'  as const, label: 'agenda-cards' },
+  ];
+
+  for (const theme of ['light', 'dark'] as const) {
+    for (const cfg of calendarMatrix) {
+      test(`calendar ${cfg.label} - ${theme}`, async ({ page }) => {
+        test.skip(!HAS_TEST_DB, 'Set E2E_HAS_TEST_DB=1 against a fresh-seeded DB');
+        await setClientFlags(page, { theme });
+        await setCalendarPrefs(page, {
+          viewType: cfg.view,
+          displayMode: cfg.displayMode,
+          weekCount: cfg.weekCount,
+        });
+        await loginViaAPI(page, parentName);
+        await page.goto('/calendar');
+        await page.waitForLoadState('networkidle');
+        await page.waitForTimeout(800);
+
+        await expect(page).toHaveScreenshot(`calendar-${cfg.label}-${theme}.png`, {
+          ...SCREENSHOT_OPTIONS,
+          mask: dynamicMasks(page),
+        });
+      });
+    }
+  }
+
+  // ─── AddEventModal ──────────────────────────────────────────────────────
+  // The Add Event button on /calendar opens the AddEventModal. Capture both
+  // themes — modals overlay backdrop-blur which is a frequent stacking-context
+  // regression source.
+  for (const theme of ['light', 'dark'] as const) {
+    test(`AddEventModal - ${theme}`, async ({ page }) => {
+      test.skip(!HAS_TEST_DB, 'Set E2E_HAS_TEST_DB=1 against a fresh-seeded DB');
+      await setClientFlags(page, { theme });
+      await loginViaAPI(page, parentName);
+      await page.goto('/calendar');
+      await page.waitForLoadState('networkidle');
+      await page.click('button:has-text("Add Event")');
+      // Modal is portal-rendered; wait for its title rather than a specific selector.
+      await page.waitForSelector('text=/Add Event|New Event/i', { timeout: 5000 });
+      await page.waitForTimeout(400);
+
+      await expect(page).toHaveScreenshot(`add-event-modal-${theme}.png`, SCREENSHOT_OPTIONS);
+    });
+  }
+
+  // ─── Settings sub-sections ──────────────────────────────────────────────
+  // Settings is split into sections; each has its own layout. Capture the
+  // ones most exposed to theme/contrast regressions.
+  const settingsSections = ['family', 'display', 'integrations'] as const;
+
+  for (const theme of ['light', 'dark'] as const) {
+    for (const section of settingsSections) {
+      test(`settings/${section} - ${theme}`, async ({ page }) => {
+        test.skip(!HAS_TEST_DB, 'Set E2E_HAS_TEST_DB=1 against a fresh-seeded DB');
+        await setClientFlags(page, { theme });
+        await loginViaAPI(page, parentName);
+        await page.goto(`/settings#${section}`);
+        await page.waitForLoadState('networkidle');
+        await page.waitForTimeout(800);
+
+        await expect(page).toHaveScreenshot(`settings-${section}-${theme}.png`, SCREENSHOT_OPTIONS);
+      });
+    }
   }
 
   // PIN modal tests — also gated on E2E_HAS_TEST_DB because the modal
